@@ -10,6 +10,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 Fixed
 ^^^^^
 - [docs] move pip install requirements to building core section
+- [docs] fixed typos in simulation section and added dhrystone benchmarking method
 - updating verification repo version to avoid dirname error
 
 Changed

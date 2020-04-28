@@ -99,7 +99,7 @@ test-bench
    
    .. code-block:: bash
    
-     $ cd c-class/base-sim/bin/
+     $ cd c-class/bin/
      $ ./out > /dev/null
 
 2. Connect to OpenOCD
@@ -108,7 +108,7 @@ test-bench
    .. code-block:: bash
    
    
-     $ cd c-class/base-sim/gdb_setup/
+     $ cd c-class/test_soc/gdb_setup/
      $ openocd -f shakti_ocd.cfg
 
 3. Connect to GDB
@@ -116,10 +116,36 @@ test-bench
    
    .. code-block:: bash
    
-     $ cd c-class/base-sim/gdb_setup
+     $ cd c-class/test_soc/gdb_setup
      $ riscv64-unknown-elf-gdb -x gdb.script
 
 In this window you can now perform gdb commands like : ``set $pc, i r, etc``
+
+Dhrystone on Chromite
+---------------------
+
+The max DMIPS of the Chromite core is **1.72DMIPs/MHz.**
+
+.. code:: bash
+
+  $ git clone https://gitlab.com/shaktiproject/cores/benchmarks.git
+  $ cd benchmakrs
+  $ make dhrystone ITERATIONS=100000
+
+the ``output`` directory will contain a code.mem file which needs to be copied
+to the ``bin`` folder within the chromite folder and execute the cclass
+verilated binary:
+
+.. code:: bash
+
+   $ cp benchmarks/output/code.mem c-class/bin # change paths accordingly
+   $ cd c-class/bin
+   $ ./out
+   $ cat app_log
+
+      Microseconds for one run through Dhrystone:     10.0
+      Dhrystones per Second:                       95746.0
+
 
 Linux on C-Class
 ----------------
@@ -142,12 +168,12 @@ Linux on C-Class
      $ cd $SHAKTI_LINUX
      $ make -j16 ISA=rv64imafd
 
-3. Come back to the folder c-class/base-sim to simulate the kernel on the
+3. Come back to the folder c-class/ to simulate the kernel on the
    C-class executable:
 
    .. code-block:: bash
 
-     $ cd c-class/base-sim
+     $ cd c-class/
      $ cp $SHAKTI_LINUX/work/riscv-pk/bbl ./bin/
      $ cd bin
      $ elf2hex 8 33554432 bbl 2147483648 > code.mem
@@ -177,7 +203,7 @@ FreeRTOS on C-class
 
    .. code-block:: bash
 
-     $ cd c-class/base-sim
+     $ cd c-class/
      $ cp FreeRTOS/FreeRTOS-RISCV/Demo/shakti/frtos-shakti.elf ./bin
      $ cd bin
      $ elf2hex 8 4194304 frtos-shakti.elf 2147483648 > code.mem
