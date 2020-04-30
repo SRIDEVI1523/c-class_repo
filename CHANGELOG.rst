@@ -4,6 +4,16 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.9.3] - 2020-04-30
+--------------------
+
+- fixed reset logic handling in ccore.bsv to support reset by debugger.
+- updated SoC to decouple debug related logic into a separate module. This now allows for easy reset
+  control.
+- the debug module in the test-soc is now always enabled irrespective of the debug being enabled or
+  not
+- Fixed minor bug in Makefile when compiling for GDB sim.
+
 [1.9.2] - 2020-04-26
 --------------------
 

@@ -30,7 +30,7 @@ link_verilator: ## Generate simulation executable using Verilator
 		-y $(BS_VERILOG_LIB) -y common_verilog --exe
 	@ln -f -s ../test_soc/sim_main.cpp obj_dir/sim_main.cpp
 	@ln -f -s ../sim_main.h obj_dir/sim_main.h
-	make $(VERILATOR_SPEED) VM_PARALLEL_BUILDS=1 -j8 -C obj_dir -f V$(TOP_MODULE).mk
+	make $(VERILATOR_SPEED) VM_PARALLEL_BUILDS=1 -j4 -C obj_dir -f V$(TOP_MODULE).mk
 	@cp obj_dir/V$(TOP_MODULE) $(BSVOUTDIR)/out
 
 .PHONY: link_verilator_gdb
@@ -49,9 +49,9 @@ link_verilator_gdb: ## Generate simulation executable using Verilator and VPI fo
 	@ln -f -s ../sim_main.h obj_dir/sim_main.h
 	@ln -f -s ./devices/jtagdtm/RBB_Shakti.c obj_dir/RBB_Shakti.c
 	@echo "INFO: Linking verilated files"
-	make $(VERILATOR_SPEED) VM_PARALLEL_BUILDS=1 -j8 -C obj_dir -f V$(TOP_MODULE)_edited.mk
+	make $(VERILATOR_SPEED) VM_PARALLEL_BUILDS=1 -j4 -C obj_dir -f V$(TOP_MODULE)_edited.mk
 	@cp obj_dir/V$(TOP_MODULE)_edited $(BSVOUTDIR)/out
-	@cp test_soc/gdb_setup/code.mem$(XLEN) $(BSVOUTDIR)/
+	@cp test_soc/gdb_setup/code.mem$(XLEN) $(BSVOUTDIR)/code.mem
 	@echo Linking finished
 
 
