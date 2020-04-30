@@ -13,6 +13,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 - the debug module in the test-soc is now always enabled irrespective of the debug being enabled or
   not
 - Fixed minor bug in Makefile when compiling for GDB sim.
+- moved debug loop and dtvec_base to 0x100
 
 [1.9.2] - 2020-04-26
 --------------------
