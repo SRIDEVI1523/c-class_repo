@@ -1,4 +1,4 @@
-ISA: RV64IMACFDSU
+ISA: RV64IMAFDCSU
 iepoch_size: 2
 depoch_size: 1
 dtvec_base: 0
@@ -69,7 +69,7 @@ bsc_compile_options:
   top_module: mkTbSoc
   top_file: TbSoc.bsv
   top_dir: test_soc
-  open_ocd: false
+  open_ocd: False
 verilator_configuration:
   coverage: none
   trace: false

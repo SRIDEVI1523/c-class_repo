@@ -20,9 +20,10 @@ package TbSoc;
   `include "Soc.defines"
   import device_common::*;
   import DReg :: *;
-  import bram :: *;
   import Connectable :: *;
-  import bootrom :: *;
+`ifdef debug
+  import DebugSoc     :: * ;
+`endif
 
 `ifdef openocd
   import "BDPI" function ActionValue #(int) init_rbb_jtag(Bit#(1) dummy);
@@ -37,20 +38,16 @@ package TbSoc;
     MakeClockIfc#(Bit#(1)) tck_clk <-mkUngatedClock(1);
     MakeResetIfc trst <- mkReset(0,False,tck_clk.new_clk);
 
-
-    Ifc_Soc soc <- mkSoc(tck_clk.new_clk,trst.new_rst);
+  `ifdef debug
+    Ifc_DebugSoc soc <- mkDebugSoc(tck_clk.new_clk,trst.new_rst);
+  `else
+    Ifc_Soc soc <- mkSoc();
+  `endif
 
     UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5);
     Reg#(Bool) rg_read_rx<- mkDReg(False);
 
     Reg#(Bit#(5)) rg_cnt <-mkReg(0);
-
-    Ifc_bram_axi4#(`paddr, ELEN, USERSPACE, `Addr_space) main_memory <- mkbram_axi4(`MemoryBase,
-                                                "code.mem", "MainMEM");
-		Ifc_bootrom_axi4#(`paddr, ELEN, USERSPACE, 13) bootrom <-mkbootrom_axi4(`BootRomBase);
-
-  	mkConnection(soc.main_mem_master, main_memory.slave);
-		mkConnection(soc.boot_mem_master, bootrom.slave);
 
     `ifdef simulate
       rule display_eol;

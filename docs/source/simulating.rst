@@ -121,6 +121,17 @@ test-bench
 
 In this window you can now perform gdb commands like : ``set $pc, i r, etc``
 
+To reset the SoC via the debugger you can execute the following within the gdb shell:
+
+.. code:: bash
+
+  $ monitor reset halt
+  $ monitor gdb_sync
+  $ stepi
+  $ i r
+
+.. note:: The above will not reset memories like caches, brams, etc
+
 Dhrystone on Chromite
 ---------------------
 

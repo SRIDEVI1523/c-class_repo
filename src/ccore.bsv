@@ -94,6 +94,7 @@ package ccore;
   `ifdef debug
     Reg#(Maybe#(Bit#(DXLEN))) rg_abst_response <- mkReg(tagged Invalid); // registered container for responses
     Reg#(Bool) rg_debug_waitcsr <- mkReg(False);
+    Reg#(Bit#(1)) rg_has_reset <- mkReg(0);
     let csr_response = riscv.mv_resp_to_core;
   `endif
 
@@ -369,6 +370,9 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
 `endif   
 
   `ifdef debug
+    rule rl_gen_has_reset;
+      rg_has_reset <= 1;
+    endrule:rl_gen_has_reset
     rule rl_wait_for_csr_response(rg_debug_waitcsr && !isValid(rg_abst_response));
       if (csr_response.hit) begin
         rg_abst_response <= tagged Valid csr_response.data;
@@ -444,9 +448,7 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
         noAction;
       endmethod
 
-      method Bit#(1) has_reset;
-        return 1;
-      endmethod
+      method has_reset = rg_has_reset;
     endinterface;
   `endif
   endmodule : mkccore_axi4
