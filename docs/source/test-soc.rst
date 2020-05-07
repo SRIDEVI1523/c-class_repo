@@ -37,7 +37,7 @@ Description of the above modules:
   | mkimem             | The instruction memory subsystem. Includes the           |
   |                    | instruction-cache and the instruction-tlbs               |
   +--------------------+----------------------------------------------------------+
-  | mkccore_axi4      | Contains the above modules and the integrations across   |
+  | mkccore_axi4       | Contains the above modules and the integrations across   |
   |                    | them. Also provides 3 AXI-4 interfaces to be connected to| 
   |                    | the Cross-bar fabric                                     |
   +--------------------+----------------------------------------------------------+

@@ -3,22 +3,15 @@ include ./makefile.inc
 # ------------------------------------- Makefile TARGETS ----------------------------------------- #
 default: generate_verilog link_verilator generate_boot_files
 gdb: generate_verilog link_verilator_gdb generate_boot_files
+MOREDEFINES=$(addprefix -D , $(BSC_DEFINES))
 
-
-.PHONY: help
-help: ## This help dialog.
-	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//' | column	-c2 -t -s :
+%.bo:
+	$(info building $@)
+	@$(BSCCMD) $(MOREDEFINES) -p $(BSVINCDIR) $< || (echo "BSC COMPILE ERROR"; exit 1)
 
 .PHONY: generate_verilog
-generate_verilog: ## Generete verilog from BSV
-	@echo Compiling $(TOP_MODULE) in verilog ...
-	@mkdir -p $(BSVBUILDDIR) $(VERILOGDIR);
-	$(BSCCMD) -p $(BSVINCDIR) -g $(TOP_MODULE) $(TOP_DIR)/$(TOP_FILE)  || (echo "BSC COMPILE ERROR"; exit 1)
-	@cp ./common_verilog/bram_1r1w.v ${VERILOGDIR}
-	@cp ./common_verilog/bram_1rw.v ${VERILOGDIR}
-	@cp ./common_verilog/BRAM1Load.v ${VERILOGDIR}
-	@cp ./common_verilog/signedmul.v ${VERILOGDIR}
-	@echo Compilation Successful
+generate_verilog: $(BSVBUILDDIR)/$(TOP_BIN)
+
 
 .PHONY: link_verilator
 link_verilator: ## Generate simulation executable using Verilator
@@ -191,19 +184,9 @@ yml:
 
 .PHONY: clean
 clean:
-	rm -rf $(BSVBUILDDIR) *.log $(BSVOUTDIR) obj_dir
+	rm -rf $(BSVBUILDDIR)/* *.log $(BSVOUTDIR)/* obj_dir $(VERILOGDIR)/*
 	rm -f *.jou rm *.log *.mem log sim_main.h cds.lib hdl.var
-
-clean_verilog: clean
-	rm -rf $(VERILOGDIR)
-	rm -rf fpga/
-	rm -rf INCA*
-	rm -rf work
-	rm -f ./ncvlog.*
-	rm -f irun.*
 
 clean_verif:
 	rm -rf verification/workdir/*
 	rm -rf verification/riscv-torture/output/riscv-torture
-
-restore: clean_verilog

@@ -118,28 +118,23 @@ package ccore_types;
   typedef Tuple3#(Bit#(5), Bool, Bit#(XLEN)) OpFwding;
   typedef struct{
     Privilege_mode prv;
-    Bit#(TAdd#(17, `ifdef debug 2 `else 0 `endif )) csr_mip;
-    Bit#(17) csr_mie;
+    Bit#(19) csr_mip;
+    Bit#(19) csr_mie;
+    Bit#(26) csr_misa;
+    Bit#(3) frm;
+    Bit#(XLEN) csr_mstatus;
   `ifdef non_m_traps
     Bit#(12) csr_mideleg;
   `endif
-  `ifdef supervisor
-    Bit#(12) csr_sip;
-    Bit#(12) csr_sie;
-  `endif
   `ifdef usertraps
-    Bit#(12) csr_uip;
-    Bit#(12) csr_uie;
-  `ifdef supervisor
+    `ifdef supervisor
     Bit#(12) csr_sideleg;
+    `endif
   `endif
-  `endif
-    Bit#(26) csr_misa;
-    Bit#(XLEN) csr_mstatus;
-    Bit#(3) frm;
   `ifdef debug
     Bit#(32)  csr_dcsr;
-  `endif } CSRtoDecode deriving(Bits, Eq, FShow);
+  `endif 
+  } CSRtoDecode deriving(Bits, Eq, FShow);
 
   typedef struct {
       Bool debugger_available;

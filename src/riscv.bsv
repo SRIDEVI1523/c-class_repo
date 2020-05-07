@@ -54,7 +54,13 @@ package riscv;
     method Action ma_clint_msip(Bit#(1) intrpt);
     method Action ma_clint_mtip(Bit#(1) intrpt);
     method Action ma_clint_mtime(Bit#(64) c_mtime);
-	  method Action ma_set_external_interrupt(Bit#(1) ex_i);
+  	method Action ma_set_meip(Bit#(1) ex_i);
+  `ifdef supervisor
+  	method Action ma_set_seip(Bit#(1) ex_i);
+  `endif
+  `ifdef usertraps
+  	method Action ma_set_ueip(Bit#(1) ex_i);
+  `endif
   `ifdef rtldump
     interface Get#(DumpType) dump;
   `endif
@@ -436,7 +442,13 @@ package riscv;
     method Action cache_is_available(Bool avail);
       stage3.cache_is_available(avail);
     endmethod
-	  method ma_set_external_interrupt = stage5.ma_set_external_interrupt;
+  	method ma_set_meip = stage5.ma_set_meip;
+  `ifdef supervisor
+  	method ma_set_seip = stage5.ma_set_seip;
+  `endif
+  `ifdef usertraps
+  	method ma_set_ueip = stage5.ma_set_ueip;
+  `endif
     method mv_csr_mstatus = stage5.mv_csr_mstatus;
     method mv_cacheenable = stage5.mv_cacheenable;
     method mv_curr_priv = stage5.mv_curr_priv;

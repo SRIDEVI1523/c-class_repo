@@ -46,7 +46,13 @@ package csr;
     `ifdef spfpu
       method Action ma_update_fflags(Bit#(5) flags);
     `endif
-	  method Action ma_set_external_interrupt(Bit#(1) ex_i);
+  	method Action ma_set_meip(Bit#(1) ex_i);
+  `ifdef supervisor
+  	method Action ma_set_seip(Bit#(1) ex_i);
+  `endif
+  `ifdef usertraps
+  	method Action ma_set_ueip(Bit#(1) ex_i);
+  `endif
     method Bit#(1) mv_csr_misa_c;
     method Bit#(3) mv_cacheenable;
   `ifdef arith_trap
@@ -116,10 +122,8 @@ package csr;
 
   (*synthesize*)
   (*mutually_exclusive="system_instruction, take_trap"*)
-  (*conflict_free="system_instruction, ma_set_external_interrupt"*)
   (*mutually_exclusive="system_instruction,mv_resp_to_core"*)
   (*mutually_exclusive="take_trap,mv_resp_to_core"*)
-  (*conflict_free="take_trap, ma_set_external_interrupt"*)
 `ifdef debug
   (*preempts="ma_debug_access_csrs, take_trap"*)
   (*preempts="ma_debug_access_csrs,system_instruction"*)
@@ -177,7 +181,13 @@ package csr;
     `ifdef spfpu
       method ma_update_fflags = csrfile.ma_update_fflags;
     `endif
-	  method ma_set_external_interrupt = csrfile.ma_set_external_interrupt;
+  	method ma_set_meip = csrfile.ma_set_meip;
+  `ifdef supervisor
+  	method ma_set_seip = csrfile.ma_set_seip;
+  `endif
+  `ifdef usertraps
+  	method ma_set_ueip = csrfile.ma_set_ueip;
+  `endif
     method mv_csr_misa_c = csrfile.mv_csr_misa_c;
     method mv_cacheenable = csrfile.mv_cacheenable;
 

@@ -29,16 +29,18 @@ def main():
     logger.info('---------- Available under BSD License---------- ')
     logger.info('\n\n')
 
-    if args.ispec is None:
-        update_dep = False
-    else:
+    if args.clean is None:
         update_dep = True
-
+    else:
+        update_dep = False
+    if logging:
+        logger.info('Checking pre-requisites')
+    configure.check_prerequisites()
     configure.handle_dependencies(args.verbose, args.clean,update_dep,'patch')
     if args.ispec is None:
         logger.info('No Input YAML provided')
         sys.exit(0)
-    else:
+    elif args.clean is None:
         configure.validate_specs(os.path.abspath(args.ispec), True)
 
 if __name__ == "__main__":

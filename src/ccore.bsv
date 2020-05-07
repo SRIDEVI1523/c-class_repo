@@ -98,9 +98,6 @@ package ccore;
     let csr_response = riscv.mv_resp_to_core;
   `endif
 
-	  Reg#(Maybe#(Bit#(TLog#(TDiv#(ELEN,8))))) rg_fetch_lower_addr_bits <- mkReg(tagged Invalid);
-	  Reg#(Maybe#(Bit#(TLog#(TDiv#(ELEN,8))))) rg_memory_lower_addr_bits <- mkReg(tagged Invalid);
-
 	  let lv_pmp_cfg = riscv.mv_pmp_cfg;
 	  let lv_pmp_adr = riscv.mv_pmp_addr;
 
@@ -121,22 +118,15 @@ package ccore;
 	  	let request <- imem.get_read_mem_req.get;
 	  	AXI4_Rd_Addr#(`paddr, 0) imem_request = AXI4_Rd_Addr {araddr : truncate(request.address),
         aruser: ?, arlen : request.burst_len, arsize : request.burst_size, arburst : 'b10,
-        arid : 0, arprot:{1'b1, 1'b0, curr_priv[1]} }; // arburst : 00 - FIXED 01 - INCR 10 - WRAP
+        arid : zeroExtend(pack(request.io)), arprot:{1'b1, 1'b0, curr_priv[1]} }; // arburst : 00 - FIXED 01 - INCR 10 - WRAP
 	    fetch_xactor.i_rd_addr.enq(imem_request);
-			if(request.burst_len == 0)
-				rg_fetch_lower_addr_bits<= tagged Valid truncate(request.address);
-			else
-				rg_fetch_lower_addr_bits<= tagged Invalid;
 	  	`logLevel( core, 1, $format("[%2d]CORE : IMEM Line Requesting ",hartid, fshow(imem_request)))
 	  endrule
 
 	  rule rl_handle_imem_line_resp;
 	    let fab_resp <- pop_o (fetch_xactor.o_rd_data);
 	  	Bool bus_error = !(fab_resp.rresp == AXI4_OKAY);
-			Bit#(TLog#(TDiv#(ELEN,8))) lower_addr_bits= fromMaybe('d0, rg_fetch_lower_addr_bits);
-			Bit#(TAdd#(TLog#(TDiv#(ELEN,8)),3)) lv_shift = {lower_addr_bits,3'd0};
-			let lv_data= fab_resp.rdata >> lv_shift;
-      imem.put_read_mem_resp.put(ICache_mem_readresp{data   : truncate(lv_data),
+      imem.put_read_mem_resp.put(ICache_mem_readresp{data   : truncate(fab_resp.rdata),
                                                  last   : fab_resp.rlast,
                                                  err    : bus_error});
 	  	`logLevel( core, 1, $format("[%2d]CORE : IMEM Line Response ",hartid, fshow(fab_resp)))
@@ -194,10 +184,6 @@ package ccore;
     `endif
       if(perform_req)  begin
    	    memory_xactor.i_rd_addr.enq(dmem_request);
-				if(req.burst_len == 0)
-					rg_memory_lower_addr_bits<= tagged Valid truncate(req.address);
-				else
-					rg_memory_lower_addr_bits<= tagged Invalid;
         `logLevel( core, 1, $format("[%2d]CORE : DMEM Line Requesting ",hartid, fshow(dmem_request)))
       end
 	  endrule
@@ -206,10 +192,6 @@ package ccore;
     rule rl_handle_delayed_read(rg_read_line_req matches tagged Valid .r &&& 
                                   wr_write_req matches tagged Invalid);
   	  memory_xactor.i_rd_addr.enq(r);
-			if(r.arlen == 0)
-				rg_memory_lower_addr_bits<= tagged Valid truncate(r.araddr);
-			else
-				rg_memory_lower_addr_bits<= tagged Invalid;
       `logLevel( core, 1, $format("[%2d]CORE : DMEM Delayed Line Requesting ",hartid, fshow(r)))
       rg_read_line_req <= tagged Invalid;
     endrule
@@ -217,9 +199,7 @@ package ccore;
 
 	  rule rl_handle_dmem_line_resp;
 	    let fab_resp <- pop_o (memory_xactor.o_rd_data);
-			Bit#(TLog#(TDiv#(ELEN,8))) lower_addr_bits= fromMaybe('d0, rg_memory_lower_addr_bits);
-			Bit#(TAdd#(TLog#(TDiv#(ELEN,8)),3)) lv_shift = {lower_addr_bits, 3'd0};
-			let lv_data= fab_resp.rdata >> lv_shift;
+			let lv_data= fab_resp.rdata;
 	  	Bool bus_error = !(fab_resp.rresp == AXI4_OKAY);
       dmem.put_read_mem_resp.put(DCache_mem_readresp{data:truncate(lv_data),
                                                  last:fab_resp.rlast,
@@ -368,11 +348,14 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
     mkConnection(riscv.ma_dtlb_counters,dmem.mv_dtlb_perf_counters);
   `endif
 `endif   
-
+  
+  // TODO: remove this with new clint
+`ifdef supervisor
+  rule rl_pulldown_seip;
+    riscv.ma_set_seip(0);
+  endrule:rl_pulldown_seip
+`endif
   `ifdef debug
-    rule rl_gen_has_reset;
-      rg_has_reset <= 1;
-    endrule:rl_gen_has_reset
     rule rl_wait_for_csr_response(rg_debug_waitcsr && !isValid(rg_abst_response));
       if (csr_response.hit) begin
         rg_abst_response <= tagged Valid csr_response.data;
@@ -380,6 +363,9 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
       end
       else
         rg_debug_waitcsr <= True;
+    endrule
+    rule rl_indicate_has_reset;
+      rg_has_reset <= 1;
     endrule
   `endif
 
@@ -400,7 +386,7 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
     endinterface;
     interface sb_externalinterrupt = interface Put
       method Action put(Bit#(1) intrpt);
-        riscv.ma_set_external_interrupt(intrpt);
+        riscv.ma_set_meip(intrpt);
       endmethod
     endinterface;
 		interface master_i = fetch_xactor.axi_side;
@@ -442,7 +428,7 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
 
       method is_halted = riscv.mv_core_is_halted();
 
-      method is_unavailable = ~riscv.mv_core_debugenable;
+      method is_unavailable = ~(riscv.mv_core_debugenable & rg_has_reset);
 
       method Action hartReset(Bit#(1) hart_reset_v); // Change to reset type // Signal TO Reset HART -Active HIGH
         noAction;
