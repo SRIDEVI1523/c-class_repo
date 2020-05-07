@@ -3,8 +3,6 @@ common_bsv
 common_verilog
 devices
 fabrics
-bsv_build/
-verilog/
 obj_dir/
 bin/
 old_vars
@@ -38,3 +36,7 @@ makefile.inc
 _pycache_
 run.log
 .python-version
+
+build/
+
+depends.mk

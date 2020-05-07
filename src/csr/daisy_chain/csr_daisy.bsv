@@ -68,7 +68,13 @@ package csr_daisy;
     //(*doc = "method : sideband access from core to indicate timer interrupt pending \
     //           at machine level, modifies rg-meip/rg_ext_seip/rg_ext_ueip based on \
     //           current privilege level, all in grp-1"*)
-    method Action ma_set_external_interrupt(Bit#(1) ex_i); //tested
+  	method Action ma_set_meip(Bit#(1) ex_i);
+  `ifdef supervisor
+  	method Action ma_set_seip(Bit#(1) ex_i);
+  `endif
+  `ifdef usertraps
+  	method Action ma_set_ueip(Bit#(1) ex_i);
+  `endif
 
   `ifdef supervisor
   	//(*doc = "method : sideband access from core, the method returns current value of SATP \
@@ -380,7 +386,13 @@ package csr_daisy;
   	//side band connections from grp-1 to core-------------
     method ma_clint_msip = mk_grp1.ma_clint_msip;
     method ma_clint_mtip = mk_grp1.ma_clint_mtip;
-    method ma_set_external_interrupt = mk_grp1.ma_set_external_interrupt;
+  	method ma_set_meip = mk_grp1.ma_set_meip;
+  `ifdef supervisor
+  	method ma_set_seip = mk_grp1.ma_set_seip;
+  `endif
+  `ifdef usertraps
+  	method ma_set_ueip = mk_grp1.ma_set_ueip;
+  `endif
   `ifdef supervisor
 		method mv_csr_satp = mk_grp1.mv_csr_satp;
 	`endif

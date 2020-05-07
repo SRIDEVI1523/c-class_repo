@@ -88,6 +88,7 @@ def config_cmdline_args():
     parser.add_argument('-ispec','--ispec',
                         type=str,
                         metavar='YAML',
+                        default='sample_config/default.yaml',
                         help='The YAML which contains the specs.')
     parser.add_argument('--verbose',
                         action='store',
@@ -96,6 +97,7 @@ def config_cmdline_args():
                         metavar="")
     parser.add_argument('--clean',
                         action='store_true',
+                        default=None,
                         help='Clean the dependencies and other collaterals'
                         )
     return parser
@@ -103,7 +105,7 @@ def config_cmdline_args():
 def which(program):
     x = shutil.which(program)
     if x is None:
-        logger.error(program+' not found. Kindly install BSC')
+        logger.error(program+' not found')
         sys.exit(0)
     else:
         return x

@@ -64,8 +64,8 @@ bsc_compile_options:
   trace_dump: true
   compile_target: 'sim'
   suppress_warnings: ["all"]
-  verilog_dir: verilog
-  build_dir: bsv_build
+  verilog_dir: build/hw/verilog
+  build_dir: build/hw/intermediate
   top_module: mkTbSoc
   top_file: TbSoc.bsv
   top_dir: test_soc

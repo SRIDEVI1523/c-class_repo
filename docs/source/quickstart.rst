@@ -3,12 +3,14 @@ Quick Start
 ###########
 
 
-For this quick-start you will need the following tools:
+For this quick-start you will need the following tools. The user is requested to install
+these from the respective repositories/sources:
 
-* `Bluespec Compiler <https://github.com/B-Lang-org/bsc>`__
+* `Bluespec Compiler <https://github.com/B-Lang-org/bsc>`__ : Make sure you are using the version
+  post **April 26 2020**
 * `Verilator <https://www.veripool.org/projects/verilator/wiki/Installing>`__
 * `RISC-V GNU ToolChain <https://github.com/riscv/riscv-gnu-toolchain>`__
-* `RISC-V ISA Sim <https://gitlab.com/shaktiproject/tools/mod-spike.git>`__
+* `Modified RISC-V ISA Sim <https://gitlab.com/shaktiproject/tools/mod-spike/-/tree/bump-to-latest>`__
 * `RISC-V OpenOCD <https://github.com/riscv/riscv-openocd>`__
 * DTC 1.4.7: see dtc_
 * Python 3.7.0: see python_
@@ -19,64 +21,6 @@ For this quick-start you will need the following tools:
    We thereby suggest refering to the original repositories of the above tools to install them.
 
 If you already have the above tools installed you can directly jump to building your core: build_
-
-Install Open Bluespec Compiler
-------------------------------
-An open source version of the Bluespec Compiler is available `here
-<https://github.com/B-Lang-org/bsc>`_. 
-
-
-.. code-block:: bash
-
-  $ sudo apt-get install ghc libghc-regex-compat-dev libghc-syb-dev \
-    libghc-old-time-dev libfontconfig1-dev libx11-dev libxft-dev flex bison \
-    tcl-dev tk-dev libfontconfig1-dev libx11-dev libxft-dev gperf iverilog \
-    libghc-split-dev
-
-For Debian 8, Debian 9, Ubuntu 16.04, and Ubuntu 18.04 version 3.4 install the following:
-
-.. code-block:: bash
-
-  $ sudo apt-get install itcl3-dev itk3-dev
-  
-For Debian 10 and later, and Ubuntu 19.04 
-
-.. code-block:: bash
-
-  $ sudo apt-get install tk-itcl4-dev tk-itk4-dev
-  
-Clone and install BSC
-
-.. code-block:: bash
-  
-  $ git clone --recursive  https://github.com/B-Lang-org/bsc
-  $ cd bsc
-  $ make PREFIX=</path/to/install>
-
-After you have done the above, add the path you have installed the bsc compiler to your $PATH in the .bashrc or .cshrc 
-
-.. code-block:: bash
-
-  $ export PATH=$(pwd)/inst/bin:$PATH
-
-Typing bsc in your terminal should display the following help options:
-
-.. code-block:: yaml
-
-  Usage:
-   bsc -help                                to get help
-   bsc [flags] file.bsv                     to partially compile a Bluespec file
-   bsc [flags] -verilog -g mod file.bsv     to compile a module to Verilog
-   bsc [flags] -verilog -g mod -u file.bsv  to recursively compile modules to Verilog
-   bsc [flags] -verilog -e topmodule        to link Verilog into a simulation model
-   bsc [flags] -sim -g mod file.bsv         to compile to a Bluesim object
-   bsc [flags] -sim -g mod -u file.bsv      to recursively compile to Bluesim objects
-   bsc [flags] -sim -e topmodule            to link objects into a Bluesim binary
-   bsc [flags] -systemc -e topmodule        to link objects into a SystemC model
-
-.. note:: The latest compiler has been tested and known to work for Ubuntu
-   18.04. Also a binary built on 16.04 will not work on 18.04 due to libgc version mismatch. It is
-   suggested you do a fresh install for 16.04.
 
 .. _python:
 
@@ -124,77 +68,6 @@ Now you can activate this environment in any other terminal :
   pyenv activate myenv
   python --version
 
-Install Verilator
------------------
-
-While we support commercial verilog simulators, our entire verification and simulation environments
-are heavily driven by Verilator, and suggest you install verilator as well.
-
-.. code-block:: bash
-
-  $ sudo apt-get install git make autoconf g++ flex bison
-  $ git clone https://git.veripool.org/git/verilator
-  $ cd verilator
-  $ git checkout stable
-  $ autoconf
-  $ ./configure
-  $ make
-  $ sudo make install
-
-
-Install RISC-V Toolchain
-------------------------
-You will need to install the ``riscv-gnu-toolchain``, ``riscv-isa-sim`` and ``riscv-openocd``  
-in-order to compile assembly tests or C/C++ benchmarks, convert them to hex, compare with spike 
-and simulate them on the C-class cores through gdb. If you already have them installed
-then you can skip this step.
-
-To install riscv-gnu-toolchain:
-
-.. code-block:: bash
-
-  $ mkdir /path/to/install/riscv/toolchain
-  $ export RISCV=/path/to/install/riscv/toolchain
-  $ sudo apt-get install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev libgmp-dev libusb-1.0-0-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev device-tree-compiler pkg-config libexpat-dev
-  $ git clone --recursive https://github.com/riscv/riscv-opcodes.git
-  $ git clone --recursive https://github.com/riscv/riscv-gnu-toolchain
-  $ cd riscv-gnu-toolchain
-  $ ./configure --prefix=$RISCV # for 64-bit toolchain
-  $ make
-  $ ./configure --prefix=$RISCV --with-arch=rv32gc --with-abi=ilp32d # for  32-bit toolchain
-  $ make
-
-Now install our modified riscv-isa-sim: 
-
-.. code-block:: bash
-
-  $ git clone https://gitlab.com/shaktiproject/tools/mod-spike.git
-  $ cd mod-spike
-  $ git checkout bump-to-latest
-  $ git clone https://github.com/riscv/riscv-isa-sim.git
-  $ cd riscv-isa-sim
-  $ git checkout 6d15c93fd75db322981fe58ea1db13035e0f7add
-  $ git apply  ../shakti.patch
-  $ export RISCV=/path/to/install/riscv/toolchain # same path as riscv-gnu-toolchain 
-  $ mkdir build
-  $ cd build
-  $ ../configure --prefix=$RISCV
-  $ make
-  $ make install
-
-Now install riscv-openocd
-
-.. code-block:: bash
-
-  $ git clone https://github.com/riscv/riscv-openocd --recursive
-  $ ./bootstrap
-  $ ./configure --enable-jlink --enable-remote-bitbang --enable-jtag_vpi --enable-ftdi --prefix=$RISCV
-  $ make
-  $ make install
-
-Make sure to add the /path/to/install/riscv/toolchain/bin to your ``$PATH`` in
-the `.bashrc` or `.cshrc`
-
 .. _dtc:
 
 Install DTC (device tree compiler)
@@ -211,12 +84,10 @@ To install DTC follow the below commands:
   sudo make NO_PYTHON=1 PREFIX=/usr/                                                                  
   sudo make install NO_PYTHON=1 PREFIX=/usr/                                                          
 
-
 .. _build:
 
 Building the Core
 -----------------
-
 
 The code is hosted on Gitlab and can be checked out using the following
 command:
@@ -295,6 +166,12 @@ This should generate the following folders:
 2. bsv_build: contains all the intermediate and information files generated by bsc
 3. bin: contains final verilated executable :``out`` which is used for simulation along with some 
    boot and application hex files.
+
+.. note:: To leverage parallel builds you can do the following:
+
+   .. code-block:: bash
+
+      make -j<jobs> generate_verilog; make generate_boot_files link_verilator
 
 Run Smoke Tests
 ---------------

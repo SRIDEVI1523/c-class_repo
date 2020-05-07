@@ -14,10 +14,13 @@ from repomanager.rpm import rpm
 
 logger = logging.getLogger(__name__)
 
-bsc_path = utils.which("bsc")[:-3]
+bsc_path = utils.which("bsc")[:-7]
 
 bsv_path_file = open('bsvpath','r').read().splitlines()
 
+def check_prerequisites():
+    utils.which('bsc')
+    utils.which('bluetcl')
 
 def handle_dependencies(verbose,clean,update,apply):
     rpm(verbose,'./',clean,dependency_yaml,update,apply)
@@ -102,6 +105,7 @@ def specific_checks(foo):
 
 def capture_compile_cmd(foo):
     global bsc_cmd
+    global bsc_defines
 
     logger.info('Generating BSC compile options')
     s_mode = foo['s_extension']['mode']
@@ -110,184 +114,189 @@ def capture_compile_cmd(foo):
     s_asid_width = foo['s_extension']['asid_width']
     m_mulstages = foo['m_extension']['mul_stages']
     m_divstages = foo['m_extension']['div_stages']
+    suppress = ''
 
-    macros = ' -D Addr_space=25'
+    macros = 'Addr_space=25'
     if "all" in foo['bsc_compile_options']['suppress_warnings']:
-        macros += ' -suppress-warnings\
+        suppress += ' -suppress-warnings\
  G0010:T0054:G0020:G0024:G0023:G0096:G0036:G0117:G0015'
     elif "none" not in foo['bsc_compile_options']['suppress_warnings']:
-        macros += ' -suppress-warnings '
+        suppress += ' -suppress-warnings '
         for w in foo['bsc_compile_options']['suppress_warnings']:
-            macros += str(w)+':'
-        macros = macros[:-1]
+            suppress += str(w)+':'
+        suppress = suppress[:-1]
 
     if foo['bsc_compile_options']['assertions']:
-        macros += ' -D ASSERT'
+        macros += ' ASSERT'
     if foo['bsc_compile_options']['trace_dump']:
-        macros += ' -D rtldump'
+        macros += ' rtldump'
 
     xlen = 64
     if '32' in foo['ISA']:
         xlen = 32
 
-    macros += ' -D RV'+str(xlen)+' -D ibuswidth='+str(xlen)
-    macros += ' -D dbuswidth='+str(xlen)
-    macros += ' -D resetpc='+str(foo['reset_pc'])
-    macros += ' -D paddr='+str(foo['physical_addr_size'])
-    macros += ' -D vaddr='+str(xlen)
-    macros += ' -D causesize=6'
-    macros += ' -D CORE_'+str(foo['bus_protocol'])
-    macros += ' -D iesize='+str(foo['iepoch_size'])
-    macros += ' -D desize='+str(foo['depoch_size'])
-    macros += ' -D dtvec_base='+str(foo['dtvec_base'])
+    macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
+    macros += ' dbuswidth='+str(xlen)
+    macros += ' resetpc='+str(foo['reset_pc'])
+    macros += ' paddr='+str(foo['physical_addr_size'])
+    macros += ' vaddr='+str(xlen)
+    macros += ' causesize=6'
+    macros += ' CORE_'+str(foo['bus_protocol'])
+    macros += ' iesize='+str(foo['iepoch_size'])
+    macros += ' desize='+str(foo['depoch_size'])
+    macros += ' dtvec_base='+str(foo['dtvec_base'])
 
     if foo['bsc_compile_options']['compile_target'] == 'sim':
-        macros += ' -D simulate'
+        macros += ' simulate'
     if foo['bsc_compile_options']['open_ocd']:
-        macros += ' -D openocd'
+        macros += ' openocd'
     
     if 'A' in foo['ISA']:
-        macros += ' -D atomic'
+        macros += ' atomic'
     if 'F' in foo['ISA']:
-        macros += ' -D spfpu'
+        macros += ' spfpu'
     if 'D' in foo['ISA']:
-        macros += ' -D dpfpu'
+        macros += ' dpfpu'
     if 'C' in foo['ISA']:
-        macros += ' -D compressed'
+        macros += ' compressed'
     if 'M' in foo['ISA']:
-        macros += ' -D muldiv'
-        macros += ' -D MULSTAGES='+str(m_mulstages)
-        macros += ' -D DIVSTAGES='+str(m_divstages)
+        macros += ' muldiv'
+        macros += ' MULSTAGES='+str(m_mulstages)
+        macros += ' DIVSTAGES='+str(m_divstages)
     if 'U' in foo['ISA']:
-        macros += ' -D user'
+        macros += ' user'
     if 'N' in foo['ISA']:
-        macros += ' -D usertraps'
+        macros += ' usertraps'
     if 'S' in foo['ISA']:
-        macros += ' -D supervisor'
-        macros += ' -D asidwidth='+str(s_asid_width)
-        macros += ' -D itlbsize='+str(s_itlbsize)
-        macros += ' -D dtlbsize='+str(s_dtlbsize)
-        macros += ' -D '+str(s_mode)
+        macros += ' supervisor'
+        macros += ' asidwidth='+str(s_asid_width)
+        macros += ' itlbsize='+str(s_itlbsize)
+        macros += ' dtlbsize='+str(s_dtlbsize)
+        macros += ' '+str(s_mode)
     if foo['pmp']['enable']:
         grainbits = int(math.log2(foo['pmp']['granularity']))
         if xlen == 64 and grainbits < 3:
             logger.error('PMP Granularity for a 64-bit core has to be minimum \
 8 bytes')
             sys.exit(1)
-        macros += ' -D pmp -D pmpsize='+str(foo['pmp']['entries']) +\
-                ' -D pmp_grainbits='+str(grainbits)
+        macros += ' pmp pmpsize='+str(foo['pmp']['entries']) +\
+                ' pmp_grainbits='+str(grainbits)
     if foo['branch_predictor']['instantiate']:
-        macros += ' -D bpu'
-        macros += ' -D '+foo['branch_predictor']['predictor']
-        macros += ' -D btbdepth='+str(foo['branch_predictor']['btb_depth'])
-        macros += ' -D bhtdepth='+str(foo['branch_predictor']['bht_depth'])
-        macros += ' -D histlen='+str(foo['branch_predictor']['history_len'])
-        macros += ' -D extrahist='+str(foo['branch_predictor']['extra_hist'])
-        macros += ' -D rasdepth='+str(foo['branch_predictor']['ras_depth'])
+        macros += ' bpu'
+        macros += ' '+foo['branch_predictor']['predictor']
+        macros += ' btbdepth='+str(foo['branch_predictor']['btb_depth'])
+        macros += ' bhtdepth='+str(foo['branch_predictor']['bht_depth'])
+        macros += ' histlen='+str(foo['branch_predictor']['history_len'])
+        macros += ' extrahist='+str(foo['branch_predictor']['extra_hist'])
+        macros += ' rasdepth='+str(foo['branch_predictor']['ras_depth'])
         if 'enable' in foo['branch_predictor']['on_reset']:
-            macros += ' -D bpureset=1'
+            macros += ' bpureset=1'
         else:
-            macros += ' -D bpureset=0'
+            macros += ' bpureset=0'
         if foo['branch_predictor']['ras_depth'] > 0:
-            macros += ' -D bpu_ras'
+            macros += ' bpu_ras'
 
-    macros += ' -D iwords='+str(foo['icache_configuration']['word_size'])
-    macros += ' -D iblocks='+str(foo['icache_configuration']['block_size'])
-    macros += ' -D iways='+str(foo['icache_configuration']['ways'])
-    macros += ' -D isets='+str(foo['icache_configuration']['sets'])
-    macros += ' -D ifbsize='+str(foo['icache_configuration']['fb_size'])
+    macros += ' iwords='+str(foo['icache_configuration']['word_size'])
+    macros += ' iblocks='+str(foo['icache_configuration']['block_size'])
+    macros += ' iways='+str(foo['icache_configuration']['ways'])
+    macros += ' isets='+str(foo['icache_configuration']['sets'])
+    macros += ' ifbsize='+str(foo['icache_configuration']['fb_size'])
     if foo['icache_configuration']['one_hot_select']:
-        macros += ' -D icache_onehot=1'
+        macros += ' icache_onehot=1'
     else:
-        macros += ' -D icache_onehot=0'
+        macros += ' icache_onehot=0'
     if( foo['icache_configuration']['ecc_enable']):
-        macros += ' -D icache_ecc'
+        macros += ' icache_ecc'
     if foo['icache_configuration']['instantiate']:
-        macros += ' -D icache'
+        macros += ' icache'
         if foo['icache_configuration']['on_reset']:
-            macros += ' -D icachereset=1'
+            macros += ' icachereset=1'
         else:
-            macros += ' -D icachereset=0'
+            macros += ' icachereset=0'
     if foo['icache_configuration']['instantiate'] or \
             foo['branch_predictor']['instantiate']:
-        macros += ' -D ifence'
+        macros += ' ifence'
     if foo['icache_configuration']['replacement'] == "RANDOM":
-        macros += ' -D irepl=0'
+        macros += ' irepl=0'
     if foo['icache_configuration']['replacement'] == "RR":
-        macros += ' -D irepl=1'
+        macros += ' irepl=1'
     if foo['icache_configuration']['replacement'] == "PLRU":
-        macros += ' -D irepl=2'
+        macros += ' irepl=2'
     
-    macros += ' -D dwords='+str(foo['dcache_configuration']['word_size'])
-    macros += ' -D dblocks='+str(foo['dcache_configuration']['block_size'])
-    macros += ' -D dways='+str(foo['dcache_configuration']['ways'])
-    macros += ' -D dsets='+str(foo['dcache_configuration']['sets'])
-    macros += ' -D dfbsize='+str(foo['dcache_configuration']['fb_size'])
-    macros += ' -D dsbsize='+str(foo['dcache_configuration']['sb_size'])
+    macros += ' dwords='+str(foo['dcache_configuration']['word_size'])
+    macros += ' dblocks='+str(foo['dcache_configuration']['block_size'])
+    macros += ' dways='+str(foo['dcache_configuration']['ways'])
+    macros += ' dsets='+str(foo['dcache_configuration']['sets'])
+    macros += ' dfbsize='+str(foo['dcache_configuration']['fb_size'])
+    macros += ' dsbsize='+str(foo['dcache_configuration']['sb_size'])
     if foo['dcache_configuration']['rwports'] == 2:
-        macros += ' -D dcache_dualport'
+        macros += ' dcache_dualport'
     if foo['dcache_configuration']['one_hot_select']:
-        macros += ' -D dcache_onehot=1'
+        macros += ' dcache_onehot=1'
     else:
-        macros += ' -D dcache_onehot=0'
+        macros += ' dcache_onehot=0'
     if( foo['dcache_configuration']['ecc_enable']):
-        macros += ' -D dcache_ecc'
+        macros += ' dcache_ecc'
     if foo['dcache_configuration']['instantiate']:
-        macros += ' -D dcache'
+        macros += ' dcache'
         if foo['dcache_configuration']['on_reset']:
-            macros += ' -D dcachereset=1'
+            macros += ' dcachereset=1'
         else:
-            macros += ' -D dcachereset=0'
+            macros += ' dcachereset=0'
     if foo['dcache_configuration']['replacement'] == "RANDOM":
-        macros += ' -D drepl=0'
+        macros += ' drepl=0'
     if foo['dcache_configuration']['replacement'] == "RR":
-        macros += ' -D drepl=1'
+        macros += ' drepl=1'
     if foo['dcache_configuration']['replacement'] == "PLRU":
-        macros += ' -D drepl=2'
+        macros += ' drepl=2'
 
     if foo['fpu_trap']:
-        macros += ' -D arith_trap'
+        macros += ' arith_trap'
 
     if foo['debugger_support']:
-        macros += ' -D debug'
+        macros += ' debug'
 
-#    macros += ' -D csr_low_latency'
+#    macros += ' csr_low_latency'
     total_counters = foo['csr_configuration']['counters_in_grp4'] +\
         foo['csr_configuration']['counters_in_grp5'] +\
         foo['csr_configuration']['counters_in_grp6'] +\
         foo['csr_configuration']['counters_in_grp7']
     if total_counters > 0:
-        macros += ' -D perfmonitors'
+        macros += ' perfmonitors'
     if foo['csr_configuration']['counters_in_grp4'] >0 :
-        macros += ' -D csr_grp4'
+        macros += ' csr_grp4'
         if foo['csr_configuration']['counters_in_grp5'] >0 :
-            macros += ' -D csr_grp5'
+            macros += ' csr_grp5'
             if foo['csr_configuration']['counters_in_grp6'] >0 :
-                macros += ' -D csr_grp6'
+                macros += ' csr_grp6'
                 if foo['csr_configuration']['counters_in_grp7'] >0 :
-                    macros += ' -D csr_grp7'
-    macros += ' -D counters_grp4='+\
+                    macros += ' csr_grp7'
+    macros += ' counters_grp4='+\
             str(foo['csr_configuration']['counters_in_grp4'])+\
-            ' -D counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
-            ' -D counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
-            ' -D counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
-    macros += ' -D counters_size='+\
+            ' counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
+            ' counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
+            ' counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
+    macros += ' counters_size='+\
             str(foo['csr_configuration']['counters_in_grp4']+\
             foo['csr_configuration']['counters_in_grp5']+\
             foo['csr_configuration']['counters_in_grp6']+\
             foo['csr_configuration']['counters_in_grp7'])
 
     if foo['no_of_triggers'] > 0:
-        macros += ' -D triggers -D trigger_num='+str(foo['no_of_triggers'])
-        macros += ' -D mcontext=0 -D scontext=0'
+        macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
+        macros += ' mcontext=0  scontext=0'
         
 
     bsc_cmd = bsc_cmd.format(foo['bsc_compile_options']['verilog_dir'],
-            foo['bsc_compile_options']['build_dir'], macros)
+            foo['bsc_compile_options']['build_dir'], suppress)
+    bsc_defines = macros
 
 def generate_makefile(foo, logging=False):
     global bsc_cmd
     global verilator_cmd
+    global bsc_defines
+    
+    cwd = os.getcwd()
     make_file = open('makefile.inc','w')
     xlen = 64
     if '32' in foo['ISA']:
@@ -316,44 +325,31 @@ def generate_makefile(foo, logging=False):
         verilator_speed = ''
     verilator_cmd = verilator_cmd.format(verilator_trace, verilator_coverage,
             verilator_threads)
-    path = ''
+    path = '.:%/Libraries'
     for p in bsv_path_file:
         path += ':'+p
     curr_dir = os.getcwd()
     make_file.write(makefile_temp.format(verilog_dir, bsv_build_dir, 
-        "bin", bsc_cmd, path, top_module, top_dir, top_file, verilator_cmd, 
-        verilator_speed, bsc_path, curr_dir, xlen ))
+        "bin", bsc_cmd,bsc_defines,path, bsc_path, top_module, top_dir, top_file, verilator_cmd, 
+        verilator_speed, curr_dir, xlen, top_file[:-3]+'bo'))
     if logging:
         logger.info(str(make_file.name)+' generated')
 
-def generate_meson(foo):
-    global bsc_cmd
-    meson_file.write('''
-# project headers
-project('c-class-meson')
+    if logging:
+        logger.info('Creating Dependency graph')
 
-#executables
-bsc = find_program('bsc')
+    depends = ' BSC_PATH="{0}" BSC_DEFINES="{1}" BSC_BUILDDIR="{2}" \
+ BSC_TOPFILE="{3}" OUTPUTFILE=depends.mk ./genDependencies.tcl'.format(\
+ path, bsc_defines, bsv_build_dir, top_dir+'/'+top_file)
 
-options = {0}
-'''.format(bsc_cmd.split()))
-    # generate meson
-    top_file = foo['bsc_compile_options']['top_file']
-    top_module = foo['bsc_compile_options']['top_module']
-    bsv_files = []
-    for path in bsv_path_file:
-        for root, dirs, files in os.walk(path):
-            for f in files:
-                if f.endswith('.bsv'):
-                    bsv_files.append(os.path.join(root, f))
-    # Recurse on packages
-    rules = []
-    rules1 = utils.recurse_packages(top_file.rstrip('.bsv'), bsv_files, rules, [], prelude)
-    rules1.reverse()
-    for x in rules1:
-        print(x)
-    for rule in sorted(rules1, key = lambda x : x[0]):
-        meson_file.write(rule[1])
+    os.makedirs(verilog_dir, exist_ok=True)
+    os.makedirs(bsv_build_dir, exist_ok=True)
+    utils.shellCommand(depends).run(cwd=cwd)
+    dependency = open('depends.mk','r').read()
+    dependency = dependency.replace('$(BLUESPECDIR)',bsc_path+'/lib')
+    newdependency = open('depends.mk','w').write(dependency)
+    if logging:
+        logger.info('Dependency Graph Created')
     
 def validate_specs(inp_spec, logging=False):
    
@@ -389,5 +385,8 @@ def validate_specs(inp_spec, logging=False):
     capture_compile_cmd(normalized)
     generate_makefile(normalized, logging)
     cwd = os.getcwd()
-    logger.info('Cleaning previously built code')
-    utils.shellCommand('make restore').run(cwd=cwd)
+    if logging:
+        logger.info('Cleaning previously built code')
+    utils.shellCommand('make clean').run(cwd=cwd)
+    if logging:
+        logger.info('Run make -j<jobs>')

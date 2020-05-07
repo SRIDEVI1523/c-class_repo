@@ -50,7 +50,13 @@ package stage5;
 		`ifdef supervisor
 			method Bit#(XLEN) mv_csr_satp;
 		`endif
-	  method Action ma_set_external_interrupt(Bit#(1) ex_i);
+  	method Action ma_set_meip(Bit#(1) ex_i);
+  `ifdef supervisor
+  	method Action ma_set_seip(Bit#(1) ex_i);
+  `endif
+  `ifdef usertraps
+  	method Action ma_set_ueip(Bit#(1) ex_i);
+  `endif
     method Bit#(1) mv_csr_misa_c;
     method Tuple2#(Bool,Bool) initiate_store;
     method Action write_resp(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
@@ -125,9 +131,7 @@ package stage5;
   endinterface
 
   (*synthesize*)
-  (*conflict_free="instruction_commit,ma_set_external_interrupt"*)
   (*conflict_free="instruction_commit,increment_instruction_counter"*)
-  (*conflict_free="ma_set_external_interrupt,instruction_commit"*)
 `ifdef debug
   (*preempts="ma_debug_access_csrs,instruction_commit"*)
 `endif
@@ -474,7 +478,13 @@ package stage5;
 		`ifdef supervisor
 			method mv_csr_satp=csr.mv_csr_satp;
 		`endif
-	  method ma_set_external_interrupt = csr.ma_set_external_interrupt;
+  	method ma_set_meip = csr.ma_set_meip;
+  `ifdef supervisor
+  	method ma_set_seip = csr.ma_set_seip;
+  `endif
+  `ifdef usertraps
+  	method ma_set_ueip = csr.ma_set_ueip;
+  `endif
     method mv_csr_misa_c=csr.mv_csr_misa_c;
     method initiate_store=wr_initiate_store;
     method Action write_resp(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);

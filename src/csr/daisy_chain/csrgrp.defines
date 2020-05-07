@@ -81,7 +81,6 @@
 `define MTIME	12'hB01	
 `define MINSTRET 12'hb02	
 `define MCYCLEH 12'hb80
-`define MTIMEH 12'hB81	
 `define MINSTRETH 12'hb82	
 `define TSELECT 12'h7a0	
 `define TDATA1 12'h7a1	
