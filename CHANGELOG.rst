@@ -4,6 +4,16 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.9.5] - 2020-05-13
+--------------------
+
+- removed the concept of extra history bits from gshare_fa
+- added historybits as a new parameter to indicate the size of bits used from the ghr for indexing.
+- reduced tick resolution in test_soc
+- updated the 2 bit counter increment scheme to account for hysterisis bit separately
+- updated the gshare has function for improved collisions
+- updated repomanager to 1.2.0
+
 [1.9.4] - 2020-04-30
 --------------------
 

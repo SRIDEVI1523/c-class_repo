@@ -9,7 +9,12 @@ c-class:
         - schedules
     script:
         - echo -e "section_start:`date +%s`:source_tools\r\e[0KSetup Initialization"
+        - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
+        - eval "$(pyenv init -)"
+        - eval "$(pyenv virtualenv-init -)"
+        - pyenv activate venv
         - source /tools/setup.sh
+        - pip install -r requirements.txt
         - python -m configure.main
         - make clean
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
@@ -49,8 +54,12 @@ check-mr-build:
         - schedules
     script:
         - echo -e "section_start:`date +%s`:source_tools\r\e[0KSetup Initialization"
+        - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
+        - eval "$(pyenv init -)"
+        - eval "$(pyenv virtualenv-init -)"
+        - pyenv activate venv
         - source /tools/setup.sh
-        - python -m configure.main --clean
+        - pip install -r requirements.txt
         - python -m configure.main
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make generate_boot_files link_verilator

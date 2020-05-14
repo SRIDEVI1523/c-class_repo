@@ -9,8 +9,7 @@ import os
 import logging
 import sys
 import math
-from click.testing import CliRunner
-from repomanager.rpm import rpm
+from repomanager.rpm import repoman
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,8 @@ def check_prerequisites():
     utils.which('bsc')
     utils.which('bluetcl')
 
-def handle_dependencies(verbose,clean,update,apply):
-    rpm(verbose,'./',clean,dependency_yaml,update,apply)
+def handle_dependencies(verbose,clean,update,patch):
+    repoman(dependency_yaml,clean,update,patch,False,'./')
 
 def specific_checks(foo):
 
@@ -187,7 +186,7 @@ def capture_compile_cmd(foo):
         macros += ' btbdepth='+str(foo['branch_predictor']['btb_depth'])
         macros += ' bhtdepth='+str(foo['branch_predictor']['bht_depth'])
         macros += ' histlen='+str(foo['branch_predictor']['history_len'])
-        macros += ' extrahist='+str(foo['branch_predictor']['extra_hist'])
+        macros += ' histbits='+str(foo['branch_predictor']['history_bits'])
         macros += ' rasdepth='+str(foo['branch_predictor']['ras_depth'])
         if 'enable' in foo['branch_predictor']['on_reset']:
             macros += ' bpureset=1'

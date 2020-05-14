@@ -475,7 +475,7 @@ package ccore_types;
     Bool hi;
   `endif
   `ifdef gshare
-    Bit#(TAdd#(`extrahist, `histlen)) history;
+    Bit#(`histlen) history;
   `endif
   } BTBResponse deriving(Bits, Eq, FShow);
 
@@ -497,7 +497,7 @@ package ccore_types;
       Bool          instr16;
     `endif
     `ifdef gshare
-      Bit#(TAdd#(`extrahist, `histlen)) history;
+      Bit#(`histlen) history;
     `endif
   } Training_data deriving (Bits, Eq, FShow);
 

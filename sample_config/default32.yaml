@@ -12,7 +12,7 @@ pmp:
   entries: 4
   granularity: 8
 m_extension:
-  mul_stages: 2
+  mul_stages: 1
   div_stages: 32
 branch_predictor:
   instantiate: True
@@ -21,7 +21,7 @@ branch_predictor:
   btb_depth: 32
   bht_depth: 512
   history_len: 8
-  extra_hist: 3
+  history_bits: 5
   ras_depth: 8
 icache_configuration:
   instantiate: true
