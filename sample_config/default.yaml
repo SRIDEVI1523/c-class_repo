@@ -12,16 +12,16 @@ pmp:
   entries: 4
   granularity: 8
 m_extension:
-  mul_stages: 2
+  mul_stages: 1
   div_stages: 32
 branch_predictor:
   instantiate: True
   predictor: gshare
   on_reset: enable
   btb_depth: 32
-  bht_depth: 256
+  bht_depth: 512
   history_len: 8
-  extra_hist: 3
+  history_bits: 5
   ras_depth: 8
 icache_configuration:
   instantiate: true
@@ -41,7 +41,7 @@ dcache_configuration:
   word_size: 8
   block_size: 8
   ways: 4
-  fb_size: 4
+  fb_size: 8
   sb_size: 2
   replacement: RR
   ecc_enable: false

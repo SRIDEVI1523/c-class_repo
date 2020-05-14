@@ -100,7 +100,7 @@ package stage3;
 
     // This method sends out the return - address to be pushed on top of the stack.
     `ifdef gshare
-      method Tuple2#(Bool, Bit#(TAdd#(`extrahist, `histlen))) mv_mispredict;
+      method Tuple2#(Bool, Bit#(`histlen)) mv_mispredict;
     `endif
   `endif
 
@@ -153,7 +153,7 @@ package stage3;
 	  Reg#(Maybe#(Training_data)) wr_training_data <- mkDReg(tagged Invalid);
     // Wire to send the return - address on the stack.
     `ifdef gshare
-      Reg#(Maybe#(Tuple2#(Bool, Bit#(TAdd#(`extrahist, `histlen))))) wr_mispredict_ghr
+      Reg#(Maybe#(Tuple2#(Bool, Bit#(`histlen)))) wr_mispredict_ghr
                                                                        <- mkDReg( tagged Invalid);
     `endif
   `endif
@@ -251,7 +251,7 @@ package stage3;
 
     rule rl_capture_memory_stalls(rx_meta.u.notEmpty && !wr_cache_avail 
                     `ifdef multicycle && !rg_stall `endif );
-      `logLevel( stage3, 2, $format("[%2d]STAGE3: DCACHE is busy",hartid))
+      `logLevel( stage3, 4, $format("[%2d]STAGE3: DCACHE is busy",hartid))
     endrule
 
     // RuleName : execute_operation
@@ -466,9 +466,9 @@ package stage3;
     `endif
       // --------------------- logger statements ----------------------------------------------- //
       if(!operands_available && meta.inst_type != TRAP)
-        `logLevel( stage3, 2, $format("[%2d]STAGE3: RAW STALL PC:%h",hartid,meta.pc))
+        `logLevel( stage3, 4, $format("[%2d]STAGE3: RAW STALL PC:%h",hartid,meta.pc))
       if( (operands_available || meta.inst_type == TRAP) && !execute)
-        `logLevel( stage3, 2, $format("[%2d]STAGE3: NPC not Available PC:%h",hartid, meta.pc))
+        `logLevel( stage3, 4, $format("[%2d]STAGE3: NPC not Available PC:%h",hartid, meta.pc))
       // --------------------------------------------------------------------------------------- //
       if(!epochs_match)begin
         `logLevel( stage3, 0, $format("[%2d]STAGE3: Dropping Instructions",hartid))
@@ -491,7 +491,7 @@ package stage3;
         // -------------------------- sending training updates to predictors ----------------- //
       `ifdef bpu
         if(meta.inst_type == BRANCH && !control_trap)begin
-          if(aluout.branch_taken)begin
+          /*if(aluout.branch_taken)begin
             if(btbresponse.prediction < 3)begin
               btbresponse.prediction = btbresponse.prediction + 1;
             end
@@ -500,6 +500,20 @@ package stage3;
             if(btbresponse.prediction > 0) begin
               btbresponse.prediction = btbresponse.prediction - 1;
             end
+          end*/
+          if(aluout.branch_taken)begin
+            case(btbresponse.prediction)
+              'b00: btbresponse.prediction= 'b01;
+              'b01: btbresponse.prediction= 'b11;
+              'b10: btbresponse.prediction= 'b11;
+            endcase
+          end
+          else begin
+            case(btbresponse.prediction)
+              'b01: btbresponse.prediction= 'b00;
+              'b10: btbresponse.prediction= 'b00;
+              'b11: btbresponse.prediction= 'b10;
+            endcase
           end
           td.state = btbresponse.prediction;
           wr_training_data <= tagged Valid td;
@@ -510,7 +524,7 @@ package stage3;
         end
 
         if(aluout.redirect && !control_trap) begin
-          `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. Inst: ",hartid,
+          `logLevel( stage3, 4, $format("[%2d]STAGE3: Misprediction. Inst: ",hartid,
                                         fshow(meta.inst_type), " PC:%h Target:%h NextPC:%h",
                                         meta.pc, aluout.redirect_pc, fromMaybe(?,wr_next_pc)))
           `ifdef gshare
@@ -587,10 +601,12 @@ package stage3;
         `logLevel( stage3, 1, $format("[%2d]STAGE3: Enquing Delayed Result ",hartid))
         rg_stall <= False;
       end
-    `ifdef perfmonitors
-      else
+      else begin
+        `logLevel( stage3, 4, $format("MULDELAYED"))
+      `ifdef perfmonitors
         wr_count_exestalls <= 1;
-    `endif
+      `endif
+      end
     endrule
   `endif
 
@@ -677,7 +693,7 @@ package stage3;
       return x;
     endmethod
     `ifdef gshare
-      method Tuple2#(Bool, Bit#(TAdd#(`extrahist, `histlen))) mv_mispredict
+      method Tuple2#(Bool, Bit#(`histlen)) mv_mispredict
                                                     if(wr_mispredict_ghr matches tagged Valid .x);
         return x;
       endmethod

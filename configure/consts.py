@@ -53,39 +53,27 @@ include depends.mk
 
 dependency_yaml='''
 caches_mmu:
-  repo: https://gitlab.com/shaktiproject/uncore/caches_mmu
+  url: https://gitlab.com/shaktiproject/uncore/caches_mmu
   checkout: 8.2.1
-  commitid:   
-  patch:
 common_bsv:
-  repo: https://gitlab.com/shaktiproject/common_bsv
+  url: https://gitlab.com/shaktiproject/common_bsv
   checkout: master
-  commitid:
-  patch:
 devices:
-  repo: https://gitlab.com/shaktiproject/uncore/devices
+  url: https://gitlab.com/shaktiproject/uncore/devices
   checkout: 5.0.1
-  commitid:
-  patch:
 fabrics:
-  repo: https://gitlab.com/shaktiproject/uncore/fabrics
+  url: https://gitlab.com/shaktiproject/uncore/fabrics
   checkout: 1.2.0
-  commitid:
-  patch:
 common_verilog:
-  repo: https://gitlab.com/shaktiproject/common_verilog
+  url: https://gitlab.com/shaktiproject/common_verilog
   checkout: master
-  commitid:
-  patch:
 verification:
-  repo: https://gitlab.com/shaktiproject/verification_environment/verification
+  url: https://gitlab.com/shaktiproject/verification_environment/verification
   checkout: 4.0.0
-  commitid:
+  recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
 benchmarks:
-  repo: https://gitlab.com/shaktiproject/cores/benchmarks
+  url: https://gitlab.com/shaktiproject/cores/benchmarks
   checkout: master
-  commitid:
-  patch:
 '''

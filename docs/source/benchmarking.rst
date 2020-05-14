@@ -4,174 +4,100 @@ Benchmarking the Core
 
 The max DMIPS of the C-class core is **1.72DMIPs/MHz.**
 
-The C-class core is highly configurable and thus requires a specific kind of tuning to achieve the 
-maximum performance. This document will highlight some of the settings and their respective 
-benchmark numbers.
+The max CoreMarks of the C-class core is **2.9CoreMarks/MHz**
 
-## Benchmarking Dhrystone
-The dhrystone benchmark has been compiled using the following opts:
+The C-class core is highly configurable and thus requires a specific kind of tuning to achieve the
+maximum performance. This document will highlight some of the settings and their respective
+benchmark numbers. For the following benchmarks the c-class core has been configured using the
+default.yaml available in the ``samples/`` folder.
 
-.. code-block:: bash
+.. note:: Make sure you are using gcc 9.2.0 or above to replicate the following results.
 
-  riscv64-unknown-elf-gcc -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -w -march=$(ISA)
+Benchmarking Dhrystone
+======================
 
-Where the ISA variable depends on the config as described below for each case.
+The following numbers have been obtained via simulation where the number of ITERATIONS
+were fixed to 5000
 
-Without Compressed support
---------------------------
+Flags used for compilation::
 
-Dhrystone compiled with ``-march=rv64im``.
+  -mcmodel=medany -static -std=gnu99 -O2 -ffast-math \
+  -fno-common -fno-builtin-printf -march=rv64$(march) -mabi=lp64d \
+  -w -static -nostartfiles -lgcc
 
-Config1: GShare (Fully associative)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The DMIPs for this config is : **1.72 DMIPs/MHz**
+When ``$march`` is ``rv64imac`` the DMIPs/MHz is **1.68**::
 
-.. code-block:: yaml
-
-  ISA: RV64IM
-  branch_predictor:
-    instantiate: True
-    predictor: gshare
-    on_reset: enable
-    btb_depth: 32
-    bht_depth: 256
-    history_len: 8
-    extra_hist: 3
-    ras_depth: 8
-
-Config2: GShare (Direct Mapped)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The DMIPs for this config is : **1.72 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IM
-  branch_predictor:
-    instantiate: True
-    predictor: gshare
-    on_reset: enable
-    btb_depth: 256
-    bht_depth: 64
-    history_len: 8
-    extra_hist: 3
-    ras_depth: 8
-
-Config3: Bimodal 
-^^^^^^^^^^^^^^^^
-The DMIPs for this config is : **1.70 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IM
-  branch_predictor:
-    instantiate: True
-    predictor: bimodal
-    on_reset: enable
-    btb_depth: 512
-    bht_depth: 0
-    history_len: 8
-    extra_hist: 3
-    ras_depth: 8
-
-with ``btb_depth: 256``, DMIPs = **1.66 DMIPs/MHz** with rest of the config being the same.
-
-With Compressed Support
------------------------
-
-Config4: GShare (Fully associative)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Dhrystone compiled with ``march = rv64imc`` and run on C-class with the following config will give a dmips of: **1.70 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IMC
-  branch_predictor:
-    instantiate: True
-    predictor: gshare
-    on_reset: enable
-    btb_depth: 32
-    bht_depth: 128
-    history_len: 7
-    extra_hist: 3
-    ras_depth: 8
-
-Dhrystone compiled with ``march = rv64im`` and run on C-class with the following config will give a dmips of: **1.72 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IMC
-  branch_predictor:
-    instantiate: True
-    predictor: gshare
-    on_reset: enable
-    btb_depth: 32
-    bht_depth: 256
-    history_len: 7
-    extra_hist: 3
-    ras_depth: 8
-
-Config5: GShare (Direct-Mapped)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Dhrystone compiled with ``march = rv64imc`` and run on C-class with the following config will give a dmips of: **1.70 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IMC
-  branch_predictor:
-    instantiate: True
-    predictor: gshare
-    on_reset: enable
-    btb_depth: 512
-    bht_depth: 128
-    history_len: 7
-    extra_hist: 3
-    ras_depth: 8
-
-Dhrystone compiled with ``march = rv64im`` and run on C-class with the following config will give a dmips of: **1.70 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IMC
-  branch_predictor:
-    instantiate: True
-    predictor: gshare
-    on_reset: enable
-    btb_depth: 512
-    bht_depth: 64
-    history_len: 7
-    extra_hist: 3
-    ras_depth: 8
-
-Config6: Bimodal
-^^^^^^^^^^^^^^^^
-
-Dhrystone compiled with ``march = rv64imc`` and run on C-class with the following config will give a dmips of: **1.67 DMIPs/MHz**
-
-.. code-block:: yaml
-
-  ISA: RV64IMC
-  branch_predictor:
-    instantiate: True
-    predictor: bimodal
-    on_reset: enable
-    btb_depth: 512
-    bht_depth: 0
-    history_len: 0
-    extra_hist: 0
-    ras_depth: 8
-
-Dhrystone compiled with ``march = rv64im`` and run on C-class with the above config will give a dmips of: **1.66 DMIPs/MHz**
+  Microseconds for one run through Dhrystone:     10.0
+  Dhrystones per Second:                       94652.0
 
 
-Why Compressed reduces performance on C-Class?
-----------------------------------------------
+When ``$march`` is ``rv64ima``  the DMIPs/MHz is **1.72**::
 
-If you have observed the numbers above, it is evident that for the same configuration of the branch-predictor compressed provides a slight reduction in the performance of DMIPs. 
-This is because how the fetch-stage (stage1) has been designed. 
+  Microseconds for one run through Dhrystone:     10.0
+  Dhrystones per Second:                       96216.0
 
-The fetch stage always expects the I$ to respond with a 32-bit word which is 4-byte aligned. Since it is possible that the 32-bit word can hold upto 2 16-bit compressed instructions the predictor also always presents 2 predictions one for `pc` and one for `pc+2`. 
+Benchmarking CoreMarks
+======================
+
+The following numbers have been obtained via simulation where the number of ITERATIONS
+were fixed at 100
+
+Flags used for compilation are available in the logs below: 
+
+When ``$march`` is ``rv64imac`` the CoreMarks/MHz is **2.84**::
+
+  2K performance run parameters for coremark.
+  CoreMark Size    : 666
+  Total ticks      : 35205197
+  Total time (secs): 35
+  Iterations/Sec   : 2
+  Iterations       : 100
+  Compiler version : riscv64-unknown-elf-9.2.0
+  Compiler flags   : -mcmodel=medany -DCUSTOM -DPERFORMANCE_RUN=1 -DMAIN_HAS_NOARGC=1 \
+                     -DHAS_STDIO -DHAS_PRINTF -DHAS_TIME_H -DUSE_CLOCK -DHAS_FLOAT=0 \
+                     -DITERATIONS=10 -O3 -fno-common -funroll-loops -finline-functions \
+                     -fselective-scheduling -falign-functions=16 -falign-jumps=4 \
+                     -falign-loops=4 -finline-limit=1000 -nostartfiles -nostdlib -ffast-math \
+                     -fno-builtin-printf -march=rv64imac -mexplicit-relocs
+  Memory location  : STACK
+  seedcrc          : 0xe9f5
+  [0]crclist       : 0xe714
+  [0]crcmatrix     : 0x1fd7
+  [0]crcstate      : 0x8e3a
+  [0]crcfinal      : 0x988c
+  Correct operation validated. See README.md for run and reporting rules.
+
+
+When ``$march`` is ``rv64ima`` the CoreMarks/MHz is **2.897**::
+
+  2K performance run parameters for coremark.
+  CoreMark Size    : 666
+  Total ticks      : 34516277
+  Total time (secs): 34
+  Iterations/Sec   : 2
+  Iterations       : 100
+  Compiler version : riscv64-unknown-elf-9.2.0
+  Compiler flags   : -mcmodel=medany -DCUSTOM -DPERFORMANCE_RUN=1 -DMAIN_HAS_NOARGC=1 \
+                     -DHAS_STDIO -DHAS_PRINTF -DHAS_TIME_H -DUSE_CLOCK -DHAS_FLOAT=0 \
+                     -DITERATIONS=100 -O3 -fno-common -funroll-loops -finline-functions \
+                     -fselective-scheduling -falign-functions=16 -falign-jumps=4 \
+                     -falign-loops=4 -finline-limit=1000 -nostartfiles -nostdlib -ffast-math \
+                     -fno-builtin-printf -march=rv64ima -mexplicit-relocs
+  Memory location  : STACK
+  seedcrc          : 0xe9f5
+  [0]crclist       : 0xe714
+  [0]crcmatrix     : 0x1fd7
+  [0]crcstate      : 0x8e3a
+  [0]crcfinal      : 0x988c
+  Correct operation validated. See README.md for run and reporting rules.
+
+Why Compressed Binaries perform bad on C-class?
+===============================================
+
+If you have observed the numbers above, it is evident that for the same configuration of the branch-predictor compressed provides a slight reduction in the performance of DMIPs.
+This is because how the fetch-stage (stage1) has been designed.
+
+The fetch stage always expects the I$ to respond with a 32-bit word which is 4-byte aligned. Since it is possible that the 32-bit word can hold upto 2 16-bit compressed instructions the predictor also always presents 2 predictions one for `pc` and one for `pc+2`.
 While analysing the 32-bit word from the I$ the following scenarios can occur:
 
 * **Case-1**: entire word is a 32-bit instruction. In this case the entire word and the prediction for `pc` is sent to the decode stage.
@@ -191,7 +117,7 @@ Now that we understand how the fetch-stage works, assume that all the dhrystone 
   800010d8: 0xf97ff0ef            jal ra,8000106e
   ...
 
-Now each time the ``jal`` instruction is executed the fetch-stage enters into case-4 where the upper 16-bits of the 32-bit word at ``8000106c`` is the lower part of a 32-bit instruction starting at ``0x8000106e`` and thus lead to a single-cycle stall in sending the ``auipc`` instruction into the decode stage. 
+Now each time the ``jal`` instruction is executed the fetch-stage enters into case-4 where the upper 16-bits of the 32-bit word at ``8000106c`` is the lower part of a 32-bit instruction starting at ``0x8000106e`` and thus lead to a single-cycle stall in sending the ``auipc`` instruction into the decode stage.
 
 Since in dhrystone the above kind of sequence occurs for 3 scenarios in each iteration, and thus there is always a single-cycle delay for each scenario - hence the reduced performance for compressed support.
 

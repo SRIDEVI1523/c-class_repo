@@ -76,7 +76,7 @@ package stage0;
 	  method Action ma_train_bpu (Training_data td);
   `ifdef gshare
     /*doc : method: This method is fired when there is a conditional misprediction */
-    method Action ma_mispredict (Tuple2#(Bool, Bit#(TAdd#(`extrahist, `histlen))) g);
+    method Action ma_mispredict (Tuple2#(Bool, Bit#(`histlen)) g);
   `endif
     /*doc : method: This method captures if the bpu is enabled through csr or not*/
     method Action ma_bpu_enable (Bool e);

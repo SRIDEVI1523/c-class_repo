@@ -65,11 +65,21 @@ package gshare_fa;
   This has proven to be a better hash function, not so costly. It is completely empirical and better
   hash functions could exist and can replace this function with that to evaluate what works best.
   */
-  function Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))) fn_hash (
-                                      Bit#(TAdd#(`extrahist, `histlen)) history, Bit#(`vaddr) pc);
+  /*function Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))) fn_hash (
+                                      Bit#(`histlen) history, Bit#(`vaddr) pc);
     return truncate(pc >> `ignore) ^ truncate(pc >> (`ignore +
                                                      valueOf(TLog#(TDiv#(`bhtdepth,`bhtcols)))))
                                    ^ truncateLSB(history);
+  endfunction*/
+  function Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))) fn_hash (
+                                      Bit#(`histlen) history, Bit#(`vaddr) pc);
+    
+    Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))) pc_hash = 
+            truncate(pc >> `ignore) 
+          ^ zeroExtend((pc >> (`ignore + valueOf(TLog#(TDiv#(`bhtdepth,`bhtcols)))))[1:0]);
+    Bit#(`histbits) _h = truncateLSB(history);
+    Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))) hist_hash = zeroExtend(_h << (valueOf(TLog#(`bhtdepth)) - `histbits));
+    return pc_hash ^ hist_hash;
   endfunction
 
   interface Ifc_bpu;
@@ -85,7 +95,7 @@ package gshare_fa;
     The second field contains the GHR value after predicting the same instruction. In case
     of a conditional branch the LSB bit of this GHR is negated and this value is restored in the
     rg_ghr register. Otherwise, the GHR directly written to the rg_ghr register. */
-    method Action ma_mispredict (Tuple2#(Bool, Bit#(TAdd#(`extrahist, `histlen))) g);
+    method Action ma_mispredict (Tuple2#(Bool, Bit#(`histlen)) g);
 
     /*doc : method : This method captures if the bpu is enabled through csr or not*/
     method Action ma_bpu_enable (Bool e);
@@ -137,7 +147,7 @@ package gshare_fa;
     Alternate to that is to implement this register as a CReg where the ma_mispredict value shadows
     the value updated by the mav_prediction_response method. This remove the above critical path.
     */
-    Reg#(Bit#(TAdd#(`extrahist, `histlen))) rg_ghr[2] <- mkCReg(2, 0);
+    Reg#(Bit#(`histlen)) rg_ghr[2] <- mkCReg(2, 0);
 
     /*doc : wire : This wire indicates if the predictor is enabled or disabled by the csr config*/
     Wire#(Bool) wr_bpu_enable <- mkWire();
@@ -220,7 +230,7 @@ package gshare_fa;
       Bit#(`statesize) prediction_ = 1;
       Bit#(`vaddr) target_ = r.pc;
       Bool hit = False;
-      Bit#(TAdd#(`extrahist, `histlen)) lv_ghr = rg_ghr[0];
+      Bit#(`histlen) lv_ghr = rg_ghr[0];
       Bool hi = False;
     `ifdef compressed
       Bool instr16 = False;
@@ -322,7 +332,7 @@ package gshare_fa;
     */
     method Action ma_train_bpu (Training_data d) if(wr_bpu_enable
                                                           `ifdef ifence && !rg_initialize `endif );
-      `logLevel( bpu, 0, $format("[%2d]BPU : Received Training: ",hartid,fshow(d)))
+      `logLevel( bpu, 4, $format("[%2d]BPU : Received Training: ",hartid,fshow(d)))
 
       function Bool fn_tag_match (BTBTag a);
         return  (a.tag == truncateLSB(d.pc) && a.valid);
@@ -333,23 +343,23 @@ package gshare_fa;
       if(hit_index_ matches tagged Valid .h) begin
         v_reg_btb_entry[h] <= BTBEntry{ target : d.target, ci : d.ci
                             `ifdef compressed ,instr16: d.instr16, hi:unpack(d.pc[1]) `endif };
-        `logLevel( bpu, 1, $format("[%2d]BPU : Training existing Entry index: %d",hartid,h))
+        `logLevel( bpu, 4, $format("[%2d]BPU : Training existing Entry index: %d",hartid,h))
       end
       else begin
-        `logLevel( bpu, 1, $format("[%2d]BPU : Allocating new index: %d",hartid,rg_allocate))
+        `logLevel( bpu, 4, $format("[%2d]BPU : Allocating new index: %d",hartid,rg_allocate))
         v_reg_btb_entry[rg_allocate] <= BTBEntry{ target : d.target, ci : d.ci
                             `ifdef compressed ,instr16: d.instr16, hi:unpack(d.pc[1]) `endif };
         v_reg_btb_tag[rg_allocate] <= BTBTag{tag: truncateLSB(d.pc), valid: True};
         rg_allocate <= rg_allocate + 1;
         if(v_reg_btb_tag[rg_allocate].valid)
-          `logLevel( bpu, 2, $format("[%2d]BPU : Conflict Detected",hartid))
+          `logLevel( bpu, 4, $format("[%2d]BPU : Conflict Detected",hartid))
       end
 
       // we use the ghr version before the prediction to train the BHT
       let bht_index_ = fn_hash(d.history<<1, d.pc);
       if(d.ci == Branch && d.btbhit) begin
         rg_bht_arr[d.pc[1]][bht_index_] <= d.state;
-        `logLevel( bpu, 1, $format("[%2d]BPU : Upd BHT entry: %d with state: %d",hartid,
+        `logLevel( bpu, 4, $format("[%2d]BPU : Upd BHT entry: %d with state: %d",hartid,
                                                                               bht_index_, d.state))
       end
     endmethod
@@ -358,12 +368,12 @@ package gshare_fa;
     the misprediction was due to a conditional branch then the ghr is fixed by flipping the lsb
     and then writing it to the rg_ghr.
     */
-    method Action ma_mispredict (Tuple2#(Bool, Bit#(TAdd#(`extrahist, `histlen))) g)
+    method Action ma_mispredict (Tuple2#(Bool, Bit#(`histlen)) g)
                                                          `ifdef ifence if(!rg_initialize) `endif ;
       let {btbhit, ghr} = g;
       if(btbhit)
-        ghr[`extrahist+`histlen-1] = ~ghr[`extrahist+`histlen-1];
-      `logLevel( bpu, 0, $format("[%2d]BPU : Misprediction fired. Restoring ghr:%h",hartid,
+        ghr[`histlen-1] = ~ghr[`histlen-1];
+      `logLevel( bpu, 4, $format("[%2d]BPU : Misprediction fired. Restoring ghr:%h",hartid,
                                                                                               ghr))
       rg_ghr[1] <= ghr;
     endmethod
