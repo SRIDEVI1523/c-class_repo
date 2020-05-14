@@ -132,10 +132,10 @@ To reset the SoC via the debugger you can execute the following within the gdb s
 
 .. note:: The above will not reset memories like caches, brams, etc
 
-Dhrystone on Chromite
+Dhrystone
 ---------------------
 
-The max DMIPS of the Chromite core is **1.72DMIPs/MHz.**
+The max DMIPS of the core is **1.72DMIPs/MHz.**
 
 .. code:: bash
 
@@ -144,8 +144,7 @@ The max DMIPS of the Chromite core is **1.72DMIPs/MHz.**
   $ make dhrystone ITERATIONS=100000
 
 the ``output`` directory will contain a code.mem file which needs to be copied
-to the ``bin`` folder within the chromite folder and execute the cclass
-verilated binary:
+to the ``bin`` and execute the cclass verilated binary:
 
 .. code:: bash
 
