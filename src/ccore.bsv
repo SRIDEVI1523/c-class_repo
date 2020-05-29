@@ -98,8 +98,10 @@ package ccore;
     let csr_response = riscv.mv_resp_to_core;
   `endif
 
+  `ifdef pmp
 	  let lv_pmp_cfg = riscv.mv_pmp_cfg;
 	  let lv_pmp_adr = riscv.mv_pmp_addr;
+  `endif
 
 	  Ifc_imem imem <- mkimem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif );
 	  Ifc_dmem dmem <- mkdmem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif );
