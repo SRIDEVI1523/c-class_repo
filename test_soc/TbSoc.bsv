@@ -50,12 +50,10 @@ package TbSoc;
 
     Reg#(Bit#(5)) rg_cnt <-mkReg(0);
 
-    `ifdef simulate
-      rule display_eol;
-	      let timeval <- $time;
-        `logLevel( tb, 0, $format("\n[%10d]", timeval))
-      endrule
-    `endif
+    rule display_eol;
+	    let timeval <- $time;
+      `logLevel( tb, 0, $format("\n[%10d]", timeval))
+    endrule
 
   `ifdef rtldump
  	  let dump <- mkReg(InvalidFile) ;
