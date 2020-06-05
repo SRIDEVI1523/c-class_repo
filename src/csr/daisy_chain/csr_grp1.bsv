@@ -630,10 +630,6 @@ package csr_grp1;
   `endif
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
-	rule display_stuff;
-	  `logLevel( csr, 0, $format("mip:%h mie:%h lv_mi_mask:%h",rg_csr_mip, rg_csr_mie, lv_mi_mask))
-	endrule
-
 		//method definitions
 		//performing csr write
 		method Action ma_core_req(CSRReq req);
