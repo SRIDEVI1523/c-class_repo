@@ -115,7 +115,9 @@ def capture_compile_cmd(foo):
     m_divstages = foo['m_extension']['div_stages']
     suppress = ''
 
-    macros = 'Addr_space=25'
+    test_memory_size = foo['bsc_compile_options']['test_memory_size']
+    test_memory_size = math.log2(test_memory_size)
+    macros = 'Addr_space='+str(int(test_memory_size))
     if "all" in foo['bsc_compile_options']['suppress_warnings']:
         suppress += ' -suppress-warnings\
  G0010:T0054:G0020:G0024:G0023:G0096:G0036:G0117:G0015'
@@ -364,8 +366,6 @@ def validate_specs(inp_spec, logging=False):
     schema_yaml = utils.load_yaml(schema)
     
     validator = Validator(schema_yaml)
-    validator.allow_unknown = False
-    validator.purge_readonly = True
     normalized = validator.normalized(inp_yaml, schema_yaml)
     
     # Perform Validation
