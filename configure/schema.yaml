@@ -2,11 +2,12 @@
 ###
 #
 #ISA
-#---
-#
 #  **Description**: Takes input a string representing the ISA supported by the implementation. All extension names
 #  (other than Zext) should be mentioned in upper-case. Z extensions should begin with an upper-case
 #  'Z' followed by lower-case extension name (without Camel casing)
+#
+#  .. note:: Zicsr is enabled by default and cannot be switched off. Zifencei is controlled based on
+#    whether the caches are enabled or not
 #
 #  **Examples**:
 #
@@ -22,8 +23,6 @@ ISA:
 
 ###
 #iepoch_size
-#-----------
-#
 # **Description**: integer value indicating the size of the epochs for the
 # instruction memory subsystem. Allowed value is 2 only
 #
@@ -39,8 +38,6 @@ iepoch_size:
 
 ###
 #depoch_size
-#-----------
-#
 # **Description**: integer value indicating the size of the epochs for the
 # data memory subsystem. Allowed value is 1 only
 #
@@ -56,8 +53,6 @@ depoch_size:
 
 ###
 #dtvec_base
-#----------
-#
 #  **Description**: An integer address indicating where the self-loop for the
 #  debug module sits
 #
@@ -74,8 +69,6 @@ dtvec_base:
 
 ###
 #s_extension
-#-----------
-#
 #  **Description**: Describes various supervisor and MMU related parameters.
 #  These parameters only take effect when "S" is present in the ISA field.
 #
@@ -119,8 +112,6 @@ s_extension:
 #.. _schema_pmp:
 #
 #pmp
-#---
-#
 #  **Description**: Defines the pmp configuration
 #
 #    - ``enable``: boolean value indicating if pmp support should be enabled.
@@ -157,8 +148,6 @@ pmp:
 
 ###
 #m_extension
-#------------
-#
 #  **Description**: Describes various M-extension related parameters. These
 #  parameters take effect only is "M" is present in the ISA field.
 #
@@ -189,8 +178,6 @@ m_extension:
 
 ###
 #branch_predictor
-#-----------------
-#
 #  **Description**: Describes various branch predictor related parameters. 
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
@@ -253,8 +240,6 @@ branch_predictor:
 
 ###
 #icache_configuration
-#---------------------
-#
 #  **Description**: Describes the various instruction cache related features.
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
@@ -333,8 +318,6 @@ icache_configuration:
 
 ###
 #dcache_configuration
-#---------------------
-#
 #  **Description**: Describes the various instruction cache related features.
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
@@ -427,8 +410,6 @@ dcache_configuration:
 
 ###
 #reset_pc
-#---------
-#
 #  **Description**: Integer value indicating the reset value of program counter
 #
 #  **Example**:
@@ -443,8 +424,6 @@ reset_pc:
 
 ###
 #physical_addr_size
-#-------------------
-#
 #  **Description**: Integer value indicating the number of physical address bits
 #
 #  **Examples**:
@@ -459,8 +438,6 @@ physical_addr_size:
 
 ###
 #bus_protocol
-#-------------
-#
 #  **Description**: bus protocol for the master interfaces of the core. Fixed to
 #  "AXI4"
 #
@@ -477,8 +454,6 @@ bus_protocol:
 
 ###
 #fpu_trap
-#---------
-#
 #  **Description**: Boolean value indicating if the core should trap on floating
 #  point exception and integer divide-by-zero conditions.
 #
@@ -494,8 +469,6 @@ fpu_trap:
 
 ###
 #debugger_support
-#-----------------
-#
 #  **Description**: A boolean field indicating if the core should be implemented
 #  with debugger support
 #
@@ -511,8 +484,6 @@ debugger_support:
 
 ###
 #no_of_triggers
-#---------------
-#
 #  **Description**: An integer field indicating the number of triggers to be
 #  implemented
 #
@@ -528,8 +499,6 @@ no_of_triggers:
 
 ###
 #csr_configuration
-#------------------
-#
 #  **Description**: Captures various parameters for the csr implementation
 #
 #    - ``structure``: should be fixed to "Daisy"
@@ -584,8 +553,6 @@ csr_configuration:
 
 ###
 #verilator_configuration
-#-----------------------
-#
 #  **Description**: describes the various configurations for verilator compilation.
 #
 #    - ``coverage``: indicates the type of coverage that the user would like to
@@ -619,6 +586,7 @@ verilator_configuration:
     coverage:
       type: string
       allowed: ["none", "line", "toggle", "all"]
+      default: "none"
     trace:
       type: boolean
     threads:
@@ -641,10 +609,10 @@ verilator_configuration:
 
 ###
 #bsc_compile_options
-#-------------------
-#
 #  **Description**: Describes the various bluespec compile options
 #
+#    - ``test_memory_size``: size of the BRAM memory in the test-SoC in bytes.
+#       Default is 32MB
 #    - ``assertions``: boolean value indicating if assertions used in the design
 #      should be compiled or not
 #    - ``trace_dump``: boolean value indicating if the logic to generate a simple
@@ -679,6 +647,9 @@ verilator_configuration:
 bsc_compile_options:
   type: dict
   schema:
+    test_memory_size:
+      type: integer
+      default: 33554432
     assertions:
       type: boolean
     trace_dump:
@@ -705,6 +676,7 @@ bsc_compile_options:
     top_dir:
       type: string
   default:
+    test_memory_size: 33554432
     assertions: True
     trace_dump: True
     suppress_warnings: "none"

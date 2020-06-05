@@ -6,7 +6,7 @@ Author: Neel Gala
 Email id: neelgala@gmail.com
 */
 /*doc:overview:
-This module imlpements the pc-gen functionality. It incorporates the branch predictor as
+This module implements the pc-gen functionality. It incorporates the branch predictor as
 well. Based on the outputs of the branch predictor (if enabled), pc+4 and any flushes in the same
 cycle, this module decides what the next pc to the cache and stage1 should be.
 
@@ -15,22 +15,22 @@ On Reset
 Once reset is de-asserted, the rg_pc register is assigned the value of the resetpc input. All other
 functionality only takes action after this initialization done.
 
-Handling Flush/Re-directtion
+Handling Flush/Re-direction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A flush signal is received in this module under one of the following conditions:
 
-1. a fence instruction has reached the write-back stage (if icache or bpu are implemented).
-2. a sfence instruction has reached the write-back stage (if supervisor is present)
-3. a misprediction occurred in the execute-stage
-4. a trap or csr operation has reached the write-back stage.
+1. A fence instruction has reached the write-back stage (if icache or bpu are implemented).
+2. A sfence instruction has reached the write-back stage (if supervisor is present)
+3. A misprediction occurred in the execute-stage
+4. A trap or csr operation has reached the write-back stage.
 
 Under any of the above conditions, the register rg_pc is set to the new pc that needs to be fetched.
 
 If a flush occurs due to a fence or sfence, then in the subsequent cycle the instruction memory
-subsytem receives the fence/sfence operation while the branch predictor is not accessed. In the next
+subsystem receives the fence/sfence operation while the branch predictor is not accessed. In the next
 cycle, the new pc with fence/sfence disabled is then sent to both the branch predictor and the
-instruction memory subsytem.
+instruction memory subsystem.
 
 Branch Prediction
 ^^^^^^^^^^^^^^^^^

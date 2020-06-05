@@ -20,6 +20,7 @@ package csr_grp1;
 	//project imports and includes
 	`include "csrgrp.defines"
   `include "ccore_params.defines"
+  `include "Logger.bsv"
 	import ccore_types :: * ;
 
 	interface Ifc_csr_grp1;
@@ -294,7 +295,7 @@ package csr_grp1;
 		Bit#(1) rg_upie = 0;
 	`endif
 		(*doc = "reg : Machine Interrupt Enable"*)
-		Reg#(Bit#(1)) rg_mie	<- mkReg(`ifdef openocd 1 `else 0 `endif ); // TODO figure out debug on reset.
+		Reg#(Bit#(1)) rg_mie	<- mkReg(0); // TODO figure out debug on reset.
     Bit#(1) hie = 0;
 
   `ifdef supervisor

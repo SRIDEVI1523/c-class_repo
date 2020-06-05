@@ -4,6 +4,15 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.9.6] - 2020-06-05
+--------------------
+
+- put pmp related logic under `ifdef pmp` in ccore.bsv
+- make the Addr_space configurable through YAML
+- update schema_file comments for better readibility
+- reset value of mstatus.mie is 0 even if openocd is enabled.
+- minimal comments updated in stage0
+
 [1.9.5] - 2020-05-13
 --------------------
 
