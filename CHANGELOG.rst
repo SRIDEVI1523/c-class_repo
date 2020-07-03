@@ -4,6 +4,11 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.9.7] - 2020-07-03
+--------------------
+
+- license clean-ups
+
 [1.9.6] - 2020-06-05
 --------------------
 
