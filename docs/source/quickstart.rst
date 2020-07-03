@@ -139,9 +139,6 @@ verification. This should generate a log something similar to:
   [INFO]    :            Available under BSD License
   
   
-  [INFO]    : ****** Repo Manager 1.1.0 *******
-  [INFO]    : Copyright (c) 2020, InCore Semiconductors Pvt. Ltd.
-  [INFO]    : All Rights Reserved.
   [INFO]    : [update] Cloning caches_mmu ...
                 ...
                 ...

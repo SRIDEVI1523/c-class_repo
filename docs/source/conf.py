@@ -41,7 +41,7 @@ mermaid_pdfcrop = 'pdfcrop'
 # -- Project information -----------------------------------------------------
 
 project = u'C-Class Core Generator'
-copyright = 'IIT Madras, InCore Semiconductors'
+copyright = 'IIT Madras'
 author = ''
 
 version = str(get_version())
