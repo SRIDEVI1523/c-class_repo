@@ -1,6 +1,5 @@
-// see LICENSE.incore for more details on licensing terms
 /*
-Author: Neel Gala, neelgala@incoresemi.com
+Author: Neel Gala, neelgala@gmail.com
 Created on: Wednesday 29 April 2020 10:09:32 AM IST
 
 */
