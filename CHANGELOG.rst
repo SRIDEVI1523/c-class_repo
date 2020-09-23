@@ -4,6 +4,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.9.8] - 2020-09-23
+--------------------
+
+- removed bram-2-bram paths from caches
+- fixed rg_fs implementation for mstatus csr.
+
 [1.9.7] - 2020-07-03
 --------------------
 

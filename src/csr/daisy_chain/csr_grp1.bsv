@@ -39,12 +39,13 @@ package csr_grp1;
     // (*doc = method: sideband from other group to collect misa register"*)
     method Action ma_csr_misa(Bit#(XLEN) m); //tested
 
-    (*always_ready, always_enabled*)
-    //(*doc = "method: sideband connection to grp2 to collect frm value"*)
-    method Action ma_frm(Bit#(3) frm_val);
-
   `ifdef perfmonitors
     method Action ma_counter_interrupts (Bit#(29) i);
+  `endif
+  
+  `ifdef spfpu
+  	///*doc = "method : updates rg_fflags and FS register on request from core"*/
+    method Action ma_update_fflags(Bit#(5) flags);
   `endif
 
 	`ifdef debug
@@ -173,6 +174,9 @@ package csr_grp1;
 	(*synthesize*)
 	(*mutually_exclusive="mav_upd_on_ret, ma_core_req"*)
 	(*mutually_exclusive="mav_upd_on_trap, ma_core_req"*)
+  `ifdef spfpu
+    (*conflict_free="ma_update_fflags, ma_core_req"*)
+  `endif
 	module mk_csr_grp1 (Ifc_csr_grp1);
 
     // common registers
@@ -195,10 +199,6 @@ package csr_grp1;
     Bit#(1) lv_misa_u = wr_csr_misa[20];
     Bit#(1) lv_misa_n = wr_csr_misa[13];
     Bit#(1) lv_misa_c = wr_csr_misa[2];
-
- 		(* doc = "wire : to hold the current frm value from the group-2, \
- 		                 used in method mv_csrs_to_decode" *)
- 		Wire#(Bit#(3)) wr_frm <- mkWire();
 
  	`ifdef debug
  		(* doc = "wire : to hold the current csr_dcsr value from group-3, \
@@ -519,6 +519,14 @@ package csr_grp1;
 
 	 	////////////////////////////////////////////////////////////////////////////////////////////////
 	 	/////////////////////////////////////user type registers////////////////////////////////////////
+
+		//FFLAGS
+		/*doc = "reg : register to hold floating point accrued exceptions"*/
+		Reg#(Bit#(5)) rg_fflags <- mkReg(0);
+
+		//FRM
+		/*doc = "reg : register to indicate the rounding mode"*/
+		Reg#(Bit#(3)) rg_frm <- mkReg(0);
 	`ifdef usertraps
 
 		//UTVEC
@@ -637,6 +645,45 @@ package csr_grp1;
 			Bit#(2) op = req.funct3;
 
  			case (req.csr_address)
+				
+				`FFLAGS : begin
+					//read previous value
+ 					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend(rg_fflags)};
+ 					Bit#(XLEN) readdata = zeroExtend(rg_fflags);
+ 					//form the new value to be written and write
+ 					let word <- csr_op.func(req.writedata,readdata,op);
+ 					rg_fflags <= truncate(word);
+ 					if (rg_fflags != truncate(word)) begin
+ 						rg_fs <= 2'b11;
+ 					end
+				end
+
+				`FRM : begin
+					//read previous value
+ 					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend(rg_frm)};
+ 					Bit#(XLEN) readdata = zeroExtend(rg_frm);
+ 					//form the new value to be written and write
+ 					let word <- csr_op.func(req.writedata,readdata,op);
+ 					rg_frm <= truncate(word);
+ 					if(rg_frm != truncate(word)) begin
+ 						rg_fs <= 2'b11;
+ 					end
+				end
+
+				`FCSR : begin
+					//read previous value
+ 					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend({rg_frm, rg_fflags})};
+ 					Bit#(XLEN) readdata = zeroExtend({rg_frm, rg_fflags});
+ 					//form the new value to be written and write
+ 					let word <- csr_op.func(req.writedata,readdata,op);
+
+ 					rg_frm <= word[7 : 5];
+ 					rg_fflags <= truncate(word);
+          if({rg_frm, rg_fflags}!=truncate(word)) begin
+            rg_fs <= 2'b11;
+					end
+ 				end
+
 
  				//MACHINE TYPE CSRS
 				`MSTATUS : begin
@@ -1066,9 +1113,15 @@ package csr_grp1;
       wr_csr_misa <= m;
     endmethod
 
-		method Action ma_frm(Bit#(3) frm_val);
-			wr_frm <= frm_val;
-		endmethod
+    `ifdef spfpu
+      method Action ma_update_fflags(Bit#(5) flags);
+        if((flags|rg_fflags) != rg_fflags)begin
+          rg_fflags <= flags|rg_fflags;
+          rg_fs <= 'b11;
+        end
+      endmethod
+    `endif
+
 
 	`ifdef debug
 		method Action ma_csr_dcsr(Bit#(32) dcsr_val);
@@ -1135,7 +1188,7 @@ package csr_grp1;
         csr_mip : truncate(rg_csr_mip & lv_mi_mask),
         csr_mie : truncate(rg_csr_mie & lv_mi_mask),
         csr_misa : truncate(wr_csr_misa),
-        frm : wr_frm, //sideband connection from grp-2
+        frm : rg_frm, //sideband connection from grp-2
       `ifdef RV64
         csr_mstatus:{rg_sd, 27'd0, sxl, uxl, 9'd0, rg_tsr, rg_tw, rg_tvm, rg_mxr, rg_sum, rg_mprv,
                      xs, rg_fs, rg_mpp, hpp, rg_spp, rg_mpie, hpie, rg_spie, rg_upie, rg_mie, hie,

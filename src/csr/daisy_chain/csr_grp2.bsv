@@ -45,18 +45,7 @@ package csr_grp2;
     ///*doc = "method: sideband connection to grp1 to send misa value from here"*/
     method Bit#(XLEN) mv_csr_misa;
 
-    (*always_ready, always_enabled*)
-    ///*doc = "method: sideband connection to send frm from here to grp1"*/
-    method Bit#(3) mv_frm;
-
-    ///*doc = "method : to update 'fs' 2bit-register in grp1, a sideband connection"*/
-   	method Bit#(2) mv_update_fs; //TODO
-
     //sideband connections from core
-  `ifdef spfpu
-  	///*doc = "method : updates rg_fflags and FS register on request from core"*/
-    method Action ma_update_fflags(Bit#(5) flags);
-  `endif
   	///*doc = "method : returns the last 3-bits of rg_customcontrol"*/
   	method Bit#(3) mv_cacheenable;
 
@@ -96,9 +85,6 @@ package csr_grp2;
   endfunction
 
   (*synthesize*)
-`ifdef spfpu
-  (*conflict_free="ma_update_fflags, ma_core_req"*)
-`endif
 	/*doc = "module : implementing read and write methods for group - 2 csrs and related side band \
 	         access"*/
   module mk_csr_grp2(Ifc_csr_grp2);
@@ -236,17 +222,6 @@ package csr_grp2;
 		/*doc = "reg : User Scratch register, available for usage in u-mode only" */
 		Reg#(Bit#(XLEN)) rg_uscratch <- mkReg(0);
 	`endif
-
-		//FFLAGS
-		/*doc = "reg : register to hold floating point accrued exceptions"*/
-		Reg#(Bit#(5)) rg_fflags <- mkReg(0);
-
-		//FRM
-		/*doc = "reg : register to indicate the rounding mode"*/
-		Reg#(Bit#(3)) rg_frm <- mkReg(0);
-
-		/*doc = "reg: 'fs' 2-bit register in grp1 is to be updated via method 'ma_update_fs'"*/
-		Reg#(Bit#(2)) rg_fs <- mkReg(0);
 
 	 	////////////////////////////////////////////////////////////////////////////////////////////////
 	 	///////////////////////////// None Standard User RW CSRs /////////////////////////////////
@@ -715,44 +690,6 @@ package csr_grp2;
 				end
 			`endif
 
-				`FFLAGS : begin
-					//read previous value
- 					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend(rg_fflags)};
- 					Bit#(XLEN) readdata = zeroExtend(rg_fflags);
- 					//form the new value to be written and write
- 					let word <- csr_op.func(req.writedata,readdata,op);
- 					rg_fflags <= truncate(word);
- 					if (rg_fflags != truncate(word)) begin
- 						rg_fs <= 2'b11;
- 					end
-				end
-
-				`FRM : begin
-					//read previous value
- 					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend(rg_frm)};
- 					Bit#(XLEN) readdata = zeroExtend(rg_frm);
- 					//form the new value to be written and write
- 					let word <- csr_op.func(req.writedata,readdata,op);
- 					rg_frm <= truncate(word);
- 					if(rg_frm != truncate(word)) begin
- 						rg_fs <= 2'b11;
- 					end
-				end
-
-				`FCSR : begin
-					//read previous value
- 					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend({rg_frm, rg_fflags})};
- 					Bit#(XLEN) readdata = zeroExtend({rg_frm, rg_fflags});
- 					//form the new value to be written and write
- 					let word <- csr_op.func(req.writedata,readdata,op);
-
- 					rg_frm <= word[7 : 5];
- 					rg_fflags <= truncate(word);
-          if({rg_frm, rg_fflags}!=truncate(word)) begin
-            rg_fs <= 2'b11;
-					end
- 				end
-
  				`CUSTOMCNTRL : begin
  				 	//read previous value
  					rg_resp_to_core <= CSRResponse{ hit : True, data : zeroExtend(rg_customcontrol)};
@@ -777,10 +714,6 @@ package csr_grp2;
       return ff_fwd_request.first();
     endmethod
 
-    method Bit#(2) mv_update_fs;
-    	Bit#(2) fs_val = rg_fs;
-    	return fs_val;
-    endmethod
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Inter group sideband connections
     method Bit#(XLEN) mv_csr_misa;
@@ -798,22 +731,8 @@ package csr_grp2;
 
     	return misa_val;
     endmethod
-
-    method Bit#(3) mv_frm;
-    	Bit#(3) frm_val = rg_frm;
-    	return frm_val;
-    endmethod
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //sideband connecitons from core
-    `ifdef spfpu
-      method Action ma_update_fflags(Bit#(5) flags);
-        if((flags|rg_fflags) != rg_fflags)begin
-          rg_fflags <= flags|rg_fflags;
-          rg_fs <= 'b11;
-        end
-      endmethod
-    `endif
-
      method mv_cacheenable = truncate(rg_customcontrol);
 
   `ifdef arith_trap

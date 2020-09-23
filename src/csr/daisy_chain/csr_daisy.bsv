@@ -320,7 +320,6 @@ package csr_daisy;
     //         register and ma_(reg) in the group requiring the register value"*)
   	//grp2 to grp1 sideband connections
   	mkConnection(mk_grp2.mv_csr_misa, mk_grp1.ma_csr_misa);
-  	mkConnection(mk_grp2.mv_frm, mk_grp1.ma_frm);
   `ifdef debug
   	//grp3 to grp1 sideband connections
   	let x1 <- mkConnection(mk_grp3.mv_csr_dcsr, mk_grp1.ma_csr_dcsr);
@@ -404,7 +403,7 @@ package csr_daisy;
 		//-----------------------------------------------------
 		//sideband connections from grp-2 to core--------------
   `ifdef spfpu
-    method ma_update_fflags = mk_grp2.ma_update_fflags;
+    method ma_update_fflags = mk_grp1.ma_update_fflags;
   `endif
 
   	method mv_cacheenable = mk_grp2.mv_cacheenable;
