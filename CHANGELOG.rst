@@ -8,6 +8,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 --------------------
 
 - Added c64, c32 design config yamls
+- Removed obsolete csrs for MTIME and MTIMEH
 
 [1.9.8] - 2020-09-23
 --------------------
