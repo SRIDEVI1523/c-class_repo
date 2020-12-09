@@ -1,14 +1,19 @@
 ISA: RV64IM
 #dtvec_base: 256
+iepoch_size: 2
 m_extension:
   mul_stages : 1
   div_stages : 32
+pmp:
+  enable: false  
+  entries: 2
+  granularity: 8
 icache_configuration:
   instantiate: true
   on_reset: enable
   sets: 64
-  word_size: 8
-  block_size: 8
+  word_size: 4
+  block_size: 16
   ways: 4
   replacement: RANDOM
   fb_size: 4
