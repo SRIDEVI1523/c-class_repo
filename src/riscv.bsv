@@ -163,17 +163,17 @@ package riscv;
     let {flush_from_exe, flushpc_from_exe}=stage3.flush_from_exe;
     let {flush_from_wb, flushpc_from_wb, fenceI `ifdef supervisor, sfence `endif }=stage5.flush;
 
-`ifdef perfmonitors
+//`ifdef perfmonitors
     /*doc:wire: */
-  `ifdef icache
-    Wire#(Bit#(5)) wr_icache_counters <- mkDWire(0);
-  `endif
-  `ifdef dcache
-    Wire#(Bit#(13)) wr_dcache_counters <- mkDWire(0);
-  `endif
-  `ifdef supervisor
+  //`ifdef icache
+   // Wire#(Bit#(5)) wr_icache_counters <- mkDWire(0);
+ // `endif
+//  `ifdef dcache
+ //   Wire#(Bit#(13)) wr_dcache_counters <- mkDWire(0);
+ // `endif
+ // `ifdef supervisor
     /*doc:wire: */
-    Wire#(Bit#(1)) wr_dtlb_counters <- mkDWire(0);
+   /* Wire#(Bit#(1)) wr_dtlb_counters <- mkDWire(0);
     Wire#(Bit#(1)) wr_itlb_counters <- mkDWire(0);
   `endif
     Bit#(1) lv_count_misprediction          = pack(flush_from_exe && !flush_from_wb);
@@ -232,7 +232,7 @@ package riscv;
       stage5.ma_events_grp7(lv_total_count);
     `endif
     endrule
-`endif
+`endif*/
 
     mkConnection(stage0.tx_to_stage1, pipe0);
     mkConnection(pipe0, stage1.rx_from_stage0);
@@ -332,9 +332,9 @@ package riscv;
       stage2.ma_resume_wfi(stage5.mv_resume_wfi);
       stage1.csr_misa_c(stage5.mv_csr_misa_c);
       stage3.csr_misa_c(stage5.mv_csr_misa_c);
-    `ifdef bpu
+  /*  `ifdef bpu
       stage0.ma_bpu_enable(unpack(stage5.mv_cacheenable[2]));
-    `endif
+    `endif*/
     endrule
     rule clear_stall_in_decode_stage(flush_from_exe || flush_from_wb);
       stage2.clear_stall(True);
@@ -450,7 +450,7 @@ package riscv;
   	method ma_set_ueip = stage5.ma_set_ueip;
   `endif
     method mv_csr_mstatus = stage5.mv_csr_mstatus;
-    method mv_cacheenable = stage5.mv_cacheenable;
+   // method mv_cacheenable = stage5.mv_cacheenable;
     method mv_curr_priv = stage5.mv_curr_priv;
 		`ifdef supervisor
 			method mv_csr_satp = stage5.mv_csr_satp;

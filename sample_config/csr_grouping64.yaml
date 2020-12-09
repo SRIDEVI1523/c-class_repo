@@ -1,0 +1,23 @@
+grp1:
+    - MISA
+    - MSCRATCH
+    - MVENDORID
+    - MSTATUS
+    - MIE
+    - MIP
+    - MTVEC
+    - MEPC
+    - MCAUSE
+    - MTVAL
+    - MCYCLE
+    - MINSTRET
+    - MHARTID
+    - MARCHID
+    - MIMPID
+    - FRM
+    - FFLAGS
+    - FCSR
+    - TIME
+    - CYCLE
+    - MCOUNTINHIBIT
+    - INSTRET

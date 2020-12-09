@@ -19,6 +19,8 @@ bsv_path_file = open('bsvpath','r').read().splitlines()
 def check_prerequisites():
     utils.which('bsc')
     utils.which('bluetcl')
+    utils.which('csrbox')
+    utils.which('riscv-config')
 
 def handle_dependencies(verbose,clean,update,patch):
     repoman(dependency_yaml,clean,update,patch,False,'./')
@@ -253,38 +255,38 @@ def capture_compile_cmd(foo):
     if foo['fpu_trap']:
         macros += ' arith_trap'
 
-    if foo['debugger_support']:
-        macros += ' debug'
+#    if foo['debugger_support']:
+#        macros += ' debug'
 
 #    macros += ' csr_low_latency'
-    total_counters = foo['csr_configuration']['counters_in_grp4'] +\
-        foo['csr_configuration']['counters_in_grp5'] +\
-        foo['csr_configuration']['counters_in_grp6'] +\
-        foo['csr_configuration']['counters_in_grp7']
-    if total_counters > 0:
-        macros += ' perfmonitors'
-    if foo['csr_configuration']['counters_in_grp4'] >0 :
-        macros += ' csr_grp4'
-        if foo['csr_configuration']['counters_in_grp5'] >0 :
-            macros += ' csr_grp5'
-            if foo['csr_configuration']['counters_in_grp6'] >0 :
-                macros += ' csr_grp6'
-                if foo['csr_configuration']['counters_in_grp7'] >0 :
-                    macros += ' csr_grp7'
-    macros += ' counters_grp4='+\
-            str(foo['csr_configuration']['counters_in_grp4'])+\
-            ' counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
-            ' counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
-            ' counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
-    macros += ' counters_size='+\
-            str(foo['csr_configuration']['counters_in_grp4']+\
-            foo['csr_configuration']['counters_in_grp5']+\
-            foo['csr_configuration']['counters_in_grp6']+\
-            foo['csr_configuration']['counters_in_grp7'])
+ #   total_counters = foo['csr_configuration']['counters_in_grp4'] +\
+ #       foo['csr_configuration']['counters_in_grp5'] +\
+#        foo['csr_configuration']['counters_in_grp6'] +\
+#        foo['csr_configuration']['counters_in_grp7']
+#    if total_counters > 0:
+#        macros += ' perfmonitors'
+#    if foo['csr_configuration']['counters_in_grp4'] >0 :
+#        macros += ' csr_grp4'
+#        if foo['csr_configuration']['counters_in_grp5'] >0 :
+#            macros += ' csr_grp5'
+    #        if foo['csr_configuration']['counters_in_grp6'] >0 :
+   #             macros += ' csr_grp6'
+  #              if foo['csr_configuration']['counters_in_grp7'] >0 :
+  #                  macros += ' csr_grp7'
+ #   macros += ' counters_grp4='+\
+#            str(foo['csr_configuration']['counters_in_grp4'])+\
+#            ' counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
+#            ' counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
+#            ' counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
+#    macros += ' counters_size='+\
+#            str(foo['csr_configuration']['counters_in_grp4']+\
+#            foo['csr_configuration']['counters_in_grp5']+\
+#            foo['csr_configuration']['counters_in_grp6']+\
+#            foo['csr_configuration']['counters_in_grp7'])
 
-    if foo['no_of_triggers'] > 0:
-        macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
-        macros += ' mcontext=0  scontext=0'
+#    if foo['no_of_triggers'] > 0:
+#        macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
+#        macros += ' mcontext=0  scontext=0'
         
 
     bsc_cmd = bsc_cmd.format(foo['bsc_compile_options']['verilog_dir'],
@@ -351,37 +353,74 @@ def generate_makefile(foo, logging=False):
     if logging:
         logger.info('Dependency Graph Created')
     
-def validate_specs(inp_spec, logging=False):
-   
+def validate_specs(core_spec, isa_spec, logging=False):
+
     schema = 'configure/schema.yaml'
     # Load input YAML file
     if logging:
-        logger.info('Loading input file: ' + str(inp_spec))
-    inp_yaml = utils.load_yaml(inp_spec)
+        logger.info('Loading core file: ' + str(core_spec))
+    inp_yaml = utils.load_yaml(core_spec)
+    if logging:
+        logger.info('Loading isa file: ' + str(isa_spec))
+    isa_yaml = utils.load_yaml(isa_spec)
+    
+    isa_string = isa_yaml['hart0']['ISA']
+    if 64 in isa_yaml['hart0']['supported_xlen']:
+        xlen = 64
+        mabi = 'lp64'
+        march = 'rv64i'
+    else:
+        xlen = 32
+        mabi = 'ilp32'
+        march = 'rv32i'
 
+    if 'M' in isa_string:
+        march += 'm'
+    if 'C' in isa_string:
+        march += 'c'
+    if 'F' in isa_string:
+        march += 'F'
+    if 'D' in isa_string:
+        march += 'D'
+
+
+    inp_yaml['ISA'] = isa_yaml['hart0']['ISA']
     # instantiate validator
     if logging:
         logger.info('Load Schema ' + str(schema))
     schema_yaml = utils.load_yaml(schema)
-    
+
     validator = Validator(schema_yaml)
     normalized = validator.normalized(inp_yaml, schema_yaml)
-    
+
     # Perform Validation
     if logging:
         logger.info('Initiating Validation')
     valid = validator.validate(normalized)
-    
+
     # Print out errors
     if valid:
         if logging:
             logger.info('No Syntax errors in Input Yaml.')
     else:
         error_list = validator.errors
-        raise ValidationError("Error in " + inp_spec + ".", error_list)
+        raise ValidationError("Error in " + core_spec + ".", error_list)
     specific_checks(normalized)
     capture_compile_cmd(normalized)
     generate_makefile(normalized, logging)
+
+    logger.info('Configuring Boot-Code')
+    ofile = open('boot/Makefile.inc','w')
+    ofile.write('XLEN='+str(xlen))
+    ofile.close()
+
+    logger.info('Configuring the Benchmarks')
+    ofile = open('benchmarks/Makefile.inc','w')
+    ofile.write('xlen=' + str(xlen) + '\n')
+    ofile.write('march=' + march + '\n')
+    ofile.write('mabi=' + mabi + '\n')
+    ofile.close()
+
     cwd = os.getcwd()
     if logging:
         logger.info('Cleaning previously built code')

@@ -5,6 +5,8 @@ import sys
 
 import configure.configure as configure
 import configure.utils as utils
+import riscv_config.checker as riscv_config
+import csrbox.csr_gen as csr_gen
 
 def main():
     '''
@@ -38,11 +40,27 @@ def main():
         logger.info('Checking pre-requisites')
     configure.check_prerequisites()
     configure.handle_dependencies(args.verbose, args.clean,update_dep,patch)
+    work_dir= 'build'
     if args.ispec is None:
-        logger.info('No Input YAML provided')
+        logger.error('No ISA YAML provided')
+        sys.exit(0)
+    else:
+        logger.info('Validating ISA YAML: ' + str(args.ispec))               
+        os.makedirs(work_dir, exist_ok= True)
+        isa_file = riscv_config.check_isa_specs(os.path.abspath(args.ispec), work_dir, False)
+        logger.info('Starting CSR generation using CSR-BOX')
+        
+        bsv_dir = 'csrbox/'
+                      
+        os.makedirs(bsv_dir, exist_ok= True)
+        csr_gen.csr_gen(isa_file, args.gspec, bsv_dir, logging=True)
+
+    if args.cspec is None:
+        logger.info('No CORE YAML provided')
         sys.exit(0)
     elif args.clean is None:
-        configure.validate_specs(os.path.abspath(args.ispec), True)
+        configure.validate_specs(os.path.abspath(args.cspec),
+                                 os.path.abspath(args.ispec), True)
 
 if __name__ == "__main__":
     exit(main())

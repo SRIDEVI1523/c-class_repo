@@ -14,6 +14,8 @@ package ccore;
 	import Semi_FIFOF:: *;
 	import AXI4_Types:: *;
 	import AXI4_Fabric:: *;
+	
+	import Vector :: *;
   import riscv:: * ;
   import ccore_types:: * ;
   import FIFOF::*;
@@ -98,7 +100,7 @@ package ccore;
     let csr_response = riscv.mv_resp_to_core;
   `endif
 
-  `ifdef pmp
+ `ifdef pmp
 	  let lv_pmp_cfg = riscv.mv_pmp_cfg;
 	  let lv_pmp_adr = riscv.mv_pmp_addr;
   `endif
@@ -111,6 +113,7 @@ package ccore;
 	  mkConnection(dmem.mv_storebuffer_empty, riscv.storebuffer_empty);
 	  mkConnection(dmem.mv_cache_available, riscv.cache_is_available);
 	  mkConnection(dmem.mv_cacheable_store, riscv.store_is_cached);
+
     let core_req <- mkConnection(dmem.put_core_req, riscv.memory_request);
 	  mkConnection(dmem.get_core_resp, riscv.memory_response); // dmem integration
 	`ifdef dcache

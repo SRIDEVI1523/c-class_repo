@@ -20,6 +20,8 @@ package decoder;
   // pacakge imports from project
   import ccore_types::*;
   import BUtils::*;
+  
+  import csr_types :: *;
   `include "ccore_params.defines"
   (*noinline*)
   function Bool address_valid(Bit#(12) addr, Bit#(26) misa);

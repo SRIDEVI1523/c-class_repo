@@ -1,0 +1,361 @@
+﻿hart_ids: [0]
+hart0: &hart0
+  ISA: RV32IMUZicsr_Zifencei
+  User_Spec_Version: '2.3'
+  supported_xlen: [32]
+  misa:
+   reset-val: 0x40001100
+   rv32:
+     accessible: true
+     mxl:
+       implemented: true
+       type:
+           warl:
+              dependency_fields: []
+              legal:
+                - mxl[1:0] in [0x1]
+              wr_illegal:
+                - Unchanged
+     extensions:
+       implemented: true
+       type:
+           warl:
+              dependency_fields: []
+              legal:
+                - extensions[25:0] bitmask [0x0001100, 0x0000000]
+              wr_illegal:
+                - Unchanged
+  mvendorid:
+   reset-val: 0x0
+   rv32:
+     accessible: true
+     type:
+       ro_constant: 0x0
+   rv64:
+     accessible: false
+  mtvec:
+   reset-val: 0x00000000
+   rv32:
+     accessible: true
+     base:
+       implemented: true
+       type:                            
+         warl:
+           dependency_fields: []
+           legal:
+             - base[29:0] in [0x00000000:0x3FFFFFFF]
+           wr_illegal:
+             - "Unchanged"
+     mode:
+       implemented: true
+       type:                            
+         warl:
+           dependency_fields: []
+           legal:
+             - "mode[1:0] in [0x0,0x1]"
+           wr_illegal:
+             - "Unchanged"
+  mstatus:
+   reset-val: 0x0
+   rv32:
+     accessible: true
+     uie:
+      implemented: false
+     sie:
+      implemented: false
+     mie:
+      implemented: true
+     upie:
+      implemented: false
+     spie:
+      implemented: false
+     mpie:
+      implemented: true
+     spp:
+      implemented: false
+     mpp:
+      implemented: true
+      type:
+        warl:
+          dependency_fields: []
+          legal:
+            - mpp[1:0] in [0x0, 0x3]
+          wr_illegal:
+            - Unchanged
+     fs:
+      implemented: false
+      type:
+        warl:
+          dependency_fields: []
+          legal:
+            - fs[1:0] in [0x0:0x3]
+          wr_illegal:
+            - Unchanged
+     xs:
+      implemented: false
+     mprv:
+      implemented: true
+      type:
+        warl:
+          dependency_fields: []
+          legal:
+            - mprv[0:0] in [0x0:0x1]
+          wr_illegal:
+            - Unchanged
+     sum:
+      implemented: false
+     mxr:
+      implemented: false
+     tvm:
+      implemented: false
+     tw:
+      implemented: false
+     tsr:
+      implemented: false
+     sd:
+      implemented: true
+      type:
+        ro_variable: true
+   rv64:
+     accessible: false
+
+  mip:
+   reset-val: 0
+   rv32:
+     accessible: true
+     usip:
+      implemented: false
+     ssip:
+      implemented: false
+     msip:
+      implemented: true
+      type:
+        ro_variable: true
+     utip:
+      implemented: false
+     stip:
+      implemented: false
+     mtip:
+      implemented: true
+      type:
+        ro_variable: true
+     ueip:
+      implemented: false
+     seip:
+      implemented: false
+     meip:
+      implemented: true
+      type:
+        ro_variable: true
+   rv64:
+     accessible: false
+  mie:
+   reset-val: 0
+   rv32:
+     accessible: true
+     usie:
+      implemented: false
+     ssie:
+      implemented: false
+     msie:
+      implemented: true
+     utie:
+      implemented: false
+     stie:
+      implemented: false
+     mtie:
+      implemented: true
+     ueie:
+      implemented: false
+     seie:
+      implemented: false
+     meie:
+      implemented: true
+   rv64:
+     accessible: false
+  mepc:
+   reset-val: 0x0
+   rv32:
+     accessible: true
+     type:
+         warl:
+             dependency_fields: []
+             legal:
+               - mepc[31:0] bitmask [0xFFFFFFFC, 0x00000000]
+             wr_illegal:
+               - Unchanged
+   rv64:
+     accessible: false
+  mtval:
+   reset-val: 0x0
+   rv32:
+     accessible: true
+     type:
+         warl:
+             dependency_fields: []
+             legal:
+               - mtval[31:0] in [0x00000000:0xFFFFFFFF]
+             wr_illegal:
+               - Unchanged
+   rv64:
+     accessible: false 
+  mcause:
+   reset-val: 0
+   rv32:
+     accessible: true
+     interrupt:
+         implemented: true
+         type:
+             wlrl:
+               - 0:1
+     exception_code:
+         implemented: true
+         type:
+             wlrl:
+               - 0:15
+   rv64:
+     accessible: false
+  marchid:
+   rv32:
+     accessible: true
+     type:
+       ro_constant: 0x0
+   rv64:
+     accessible: false
+   reset-val: 0x0
+  mhartid:
+    rv32:
+      accessible: true
+      type:
+        ro_constant: 0x0
+    rv64:
+      accessible: false
+    reset-val: 0x00
+  mscratch:
+    rv32:
+      accessible: true
+      type:
+         warl:
+            dependency_fields: []
+            legal:
+              - mscratch[31:0] in [0x00000000:0xFFFFFFFF]
+            wr_illegal:
+              - Unchanged
+    rv64:
+      accessible: false
+    reset-val: 0x0
+  mimpid:
+    rv32:
+      accessible: true
+      type:
+        ro_constant: 0x0
+    rv64:
+      accessible: false
+    reset-val: 0
+  mcycle:
+        rv32:
+            accessible: true
+            type: 
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - mcycle[31:0] in [0x00000000:0xFFFFFFFF]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0
+  minstret:
+        rv32:
+            accessible: true
+            type: 
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - minstret[31:0] in [0x00000000:0xFFFFFFFF]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0
+  mcycleh:
+        rv32:
+            accessible: true
+            type: 
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - mcycleh[31:0] in [0x00000000:0xFFFFFFFF]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0
+  minstreth:
+        rv32:
+            accessible: true
+            type: 
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - minstreth[31:0] in [0x00000000:0xFFFFFFFF]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0 
+  fflags:
+        rv32:
+            accessible: true
+            type:
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - fflags[4:0] in [0x00:0x1F]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0
+  frm:
+        rv32:
+            accessible: true
+            type:
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - frm[2:0] in [0x0:0x7]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0
+  fcsr:
+        rv32:
+            accessible: true
+            type:
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - fcsr[7:0] in [0x00:0xFF]
+                    wr_illegal:
+                      - Unchanged
+        rv64:
+            accessible: false
+        reset-val: 0
+  time:
+        rv32:
+            accessible: true
+            type:
+                ro_variable: true
+        rv64:
+            accessible: false
+        reset-val: 0
+  timeh:
+        rv32:
+            accessible: true
+            type:
+                ro_variable: true
+        rv64:
+            accessible: false
+        reset-val: 0

@@ -9,7 +9,8 @@ Details:
 */
 package ccore_types;
   `include "ccore_params.defines"
-
+  
+  import csr_types :: *;
   `ifdef RV64
   	typedef 64 XLEN;
   `else
@@ -54,8 +55,8 @@ package ccore_types;
   typedef enum {FRF = 1, IRF = 0} RFType deriving(Bits, Eq, FShow);
 //  typedef enum {SYSTEM_INSTR, REGULAR, TRAP} Commit_type deriving(Eq, Bits, FShow);
 //  typedef enum {MEMORY, SYSTEM_INSTR, REGULAR, TRAP} PreCommit_type deriving(Eq, Bits, FShow);
-  typedef enum {Machine = 3 `ifdef supervisor , Supervisor = 1 `endif , User = 0} Privilege_mode
-                                                                          deriving(Eq, Bits, FShow);
+ // typedef enum {Machine = 3 `ifdef supervisor , Supervisor = 1 `endif , User = 0} Privilege_mode
+  //                                                                        deriving(Eq, Bits, FShow);
   // -------------------------------------------------------------------------------------
 
   // ------- The following typdefs are used to define the output from the decode stage -----
@@ -511,7 +512,7 @@ package ccore_types;
   `endif
   } PredictionRequest deriving(Bits, Eq, FShow);
   // --------------------------------------------------------------------------------------------//
-	typedef struct {
+	/*typedef struct {
   	Bit#(12) csr_address;
   	Bit#(XLEN) writedata;
     Bit#(2) funct3;
@@ -520,7 +521,7 @@ package ccore_types;
   typedef struct{
     Bool hit;
     Bit#(XLEN)  data;
-  } CSRResponse deriving(Bits, Eq, FShow);
+  } CSRResponse deriving(Bits, Eq, FShow);*/
 	//-----------------------------------------------------------------------------------------
 
 `ifdef perfmonitors

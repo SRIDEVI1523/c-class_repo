@@ -87,8 +87,18 @@ def config_cmdline_args():
     parser.add_argument('-ispec','--ispec',
                         type=str,
                         metavar='YAML',
-                        default='sample_config/default.yaml',
-                        help='The YAML which contains the specs.')
+                        default='sample_config/rv64i_isa.yaml',
+                        help='The YAML which contains the ISA specs.')
+    parser.add_argument('-cspec','--cspec',
+                        type=str,
+                        metavar='YAML',
+                        default='sample_config/core64.yaml',
+                        help='The YAML which contains the CORE specs.')
+    parser.add_argument('-gspec','--gspec',
+                        type=str,
+                        metavar='YAML',
+                        default='sample_config/csr_grouping64.yaml',
+                        help='The YAML which contains the CSR Grouping specs.')
     parser.add_argument('--verbose',
                         action='store',
                         default='info',

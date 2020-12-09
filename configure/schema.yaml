@@ -34,7 +34,7 @@ ISA:
 iepoch_size:
   type: integer
   allowed: [2]
-
+  default: 2
 ###
 #depoch_size
 # **Description**: integer value indicating the size of the epochs for the
@@ -49,6 +49,7 @@ iepoch_size:
 depoch_size:
   type: integer
   allowed: [1]
+  default: 1
 
 ###
 #dtvec_base
@@ -141,7 +142,7 @@ pmp:
       type: integer
       min: 4
   default:
-    boolean: true
+    enable: false
     entries: 2
     granularity: 8
 
@@ -277,6 +278,7 @@ branch_predictor:
 #      ecc_enable: false
 #      one_hot_select: false
 
+
 icache_configuration:
   type: dict
   schema:
@@ -289,7 +291,6 @@ icache_configuration:
       type: integer
     word_size:
       type: integer
-      allowed: [4]
     block_size:
       type: integer
     ways:
@@ -298,7 +299,7 @@ icache_configuration:
       type: integer
     replacement:
       type: string
-      allowed: ["PLRU", "RR", "Random"]
+      allowed: ["PLRU", "RR", "RANDOM"]
     ecc_enable:
       type: boolean
     one_hot_select:
@@ -314,6 +315,7 @@ icache_configuration:
     replacement: "PLRU"
     ecc_enable: false
     one_hot_select: false
+
 
 ###
 #dcache_configuration
@@ -521,34 +523,34 @@ no_of_triggers:
 #      counters_in_grp6: 7
 #      counters_in_grp7: 8
 
-csr_configuration:
-  type: dict
-  schema:
-    structure:
-      type: string
-      allowed: ["daisy"]
-    counters_in_grp4:
-      type: integer
-      max: 7
-      min: 0
-    counters_in_grp5:
-      type: integer
-      max: 7
-      min: 0
-    counters_in_grp6:
-      type: integer
-      max: 7
-      min: 0
-    counters_in_grp7:
-      type: integer
-      max: 8
-      min: 0
-  default:
-    structure : "daisy"
-    counters_in_grp4: 7
-    counters_in_grp5: 7
-    counters_in_grp6: 7
-    counters_in_grp7: 8
+  #csr_configuration:
+  #  type: dict
+  #  schema:
+  #    structure:
+  #      type: string
+  #      allowed: ["daisy"]
+  #    counters_in_grp4:
+  #      type: integer
+  #      max: 7
+  #      min: 0
+  #    counters_in_grp5:
+  #      type: integer
+  #      max: 7
+  #      min: 0
+  #    counters_in_grp6:
+  #      type: integer
+  #      max: 7
+  #      min: 0
+  #    counters_in_grp7:
+  #      type: integer
+  #      max: 8
+  #      min: 0
+  #  default:
+  #    structure : "daisy"
+  #    counters_in_grp4: 7
+  #    counters_in_grp5: 7
+  #    counters_in_grp6: 7
+  #    counters_in_grp7: 8
 
 ###
 #verilator_configuration

@@ -1,4 +1,4 @@
-ISA: RV32IM
+ISA: RV64IM
 #dtvec_base: 256
 m_extension:
   mul_stages : 1
@@ -6,31 +6,32 @@ m_extension:
 icache_configuration:
   instantiate: true
   on_reset: enable
-  sets: 128
-  word_size: 4
-  block_size: 1
-  ways: 1
+  sets: 64
+  word_size: 8
+  block_size: 8
+  ways: 4
   replacement: RANDOM
-  pre_decoded: False
+  fb_size: 4
+  ecc_enable: false
+  one_hot_select: false
 dcache_configuration:
   instantiate: true
   on_reset: enable
   sets: 64
-  word_size: 4
-  block_size: 16
+  word_size: 8
+  block_size: 8
   ways: 4
+  fb_size: 8
+  sb_size: 2
   replacement: RR
+  ecc_enable: false
+  one_hot_select: false
+  rwports: 1
 reset_pc: 4096
 physical_addr_size: 32
 bus_protocol: AXI4
 #debugger_support: false
 #no_of_triggers: 0
-#csr_configuration:
-#  structure: daisy
-#  counters_in_grp4: 7
-#  counters_in_grp5: 7
-#  counters_in_grp6: 7
-#  counters_in_grp7: 8
 bsc_compile_options:
   test_memory_size: 33554432
   assertions: true
