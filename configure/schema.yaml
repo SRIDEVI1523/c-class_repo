@@ -125,7 +125,7 @@ s_extension:
 #  .. code-block:: yaml
 #
 #    pmp:
-#      enable: true
+#      enable: false
 #      entries: 2
 #      granularity: 8
 
