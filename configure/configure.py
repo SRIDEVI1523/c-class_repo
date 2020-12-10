@@ -255,38 +255,38 @@ def capture_compile_cmd(foo):
     if foo['fpu_trap']:
         macros += ' arith_trap'
 
-#    if foo['debugger_support']:
-#        macros += ' debug'
+    if foo['debugger_support']:
+        macros += ' debug'
 
-#    macros += ' csr_low_latency'
- #   total_counters = foo['csr_configuration']['counters_in_grp4'] +\
- #       foo['csr_configuration']['counters_in_grp5'] +\
-#        foo['csr_configuration']['counters_in_grp6'] +\
-#        foo['csr_configuration']['counters_in_grp7']
-#    if total_counters > 0:
-#        macros += ' perfmonitors'
-#    if foo['csr_configuration']['counters_in_grp4'] >0 :
-#        macros += ' csr_grp4'
-#        if foo['csr_configuration']['counters_in_grp5'] >0 :
-#            macros += ' csr_grp5'
-    #        if foo['csr_configuration']['counters_in_grp6'] >0 :
-   #             macros += ' csr_grp6'
-  #              if foo['csr_configuration']['counters_in_grp7'] >0 :
-  #                  macros += ' csr_grp7'
- #   macros += ' counters_grp4='+\
-#            str(foo['csr_configuration']['counters_in_grp4'])+\
-#            ' counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
-#            ' counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
-#            ' counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
-#    macros += ' counters_size='+\
-#            str(foo['csr_configuration']['counters_in_grp4']+\
-#            foo['csr_configuration']['counters_in_grp5']+\
-#            foo['csr_configuration']['counters_in_grp6']+\
-#            foo['csr_configuration']['counters_in_grp7'])
+    macros += ' csr_low_latency'
+    total_counters = foo['csr_configuration']['counters_in_grp4'] +\
+       foo['csr_configuration']['counters_in_grp5'] +\
+        foo['csr_configuration']['counters_in_grp6'] +\
+        foo['csr_configuration']['counters_in_grp7']
+    if total_counters > 0:
+        macros += ' perfmonitors'
+    if foo['csr_configuration']['counters_in_grp4'] >0 :
+        macros += ' csr_grp4'
+    if foo['csr_configuration']['counters_in_grp5'] >0 :
+        macros += ' csr_grp5'
+    if foo['csr_configuration']['counters_in_grp6'] >0 :
+        macros += ' csr_grp6'
+    if foo['csr_configuration']['counters_in_grp7'] >0 :
+        macros += ' csr_grp7'
+    macros += ' counters_grp4='+\
+            str(foo['csr_configuration']['counters_in_grp4'])+\
+            ' counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
+            ' counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
+            ' counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
+    macros += ' counters_size='+\
+            str(foo['csr_configuration']['counters_in_grp4']+\
+            foo['csr_configuration']['counters_in_grp5']+\
+            foo['csr_configuration']['counters_in_grp6']+\
+            foo['csr_configuration']['counters_in_grp7'])
 
-#    if foo['no_of_triggers'] > 0:
-#        macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
-#        macros += ' mcontext=0  scontext=0'
+    if foo['no_of_triggers'] > 0:
+        macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
+        macros += ' mcontext=0  scontext=0'
         
 
     bsc_cmd = bsc_cmd.format(foo['bsc_compile_options']['verilog_dir'],
