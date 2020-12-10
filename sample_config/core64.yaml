@@ -35,8 +35,8 @@ dcache_configuration:
 reset_pc: 4096
 physical_addr_size: 32
 bus_protocol: AXI4
-#debugger_support: false
-#no_of_triggers: 0
+debugger_support: false
+no_of_triggers: 0
 bsc_compile_options:
   test_memory_size: 33554432
   assertions: true

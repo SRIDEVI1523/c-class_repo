@@ -523,34 +523,34 @@ no_of_triggers:
 #      counters_in_grp6: 7
 #      counters_in_grp7: 8
 
-  #csr_configuration:
-  #  type: dict
-  #  schema:
-  #    structure:
-  #      type: string
-  #      allowed: ["daisy"]
-  #    counters_in_grp4:
-  #      type: integer
-  #      max: 7
-  #      min: 0
-  #    counters_in_grp5:
-  #      type: integer
-  #      max: 7
-  #      min: 0
-  #    counters_in_grp6:
-  #      type: integer
-  #      max: 7
-  #      min: 0
-  #    counters_in_grp7:
-  #      type: integer
-  #      max: 8
-  #      min: 0
-  #  default:
-  #    structure : "daisy"
-  #    counters_in_grp4: 7
-  #    counters_in_grp5: 7
-  #    counters_in_grp6: 7
-  #    counters_in_grp7: 8
+csr_configuration:
+    type: dict
+    schema:
+      structure:
+        type: string
+        allowed: ["daisy"]      
+      counters_in_grp4:
+        type: integer
+        max: 7
+        min: 0
+      counters_in_grp5:
+        type: integer
+        max: 7
+        min: 0
+      counters_in_grp6:
+        type: integer
+        max: 7
+        min: 0
+      counters_in_grp7:
+        type: integer
+        max: 8
+        min: 0
+    default:
+      structure : "daisy"
+      counters_in_grp4: 0
+      counters_in_grp5: 0
+      counters_in_grp6: 0
+      counters_in_grp7: 0
 
 ###
 #verilator_configuration
