@@ -14,8 +14,6 @@ package ccore;
 	import Semi_FIFOF:: *;
 	import AXI4_Types:: *;
 	import AXI4_Fabric:: *;
-	
-	import Vector :: *;
   import riscv:: * ;
   import ccore_types:: * ;
   import FIFOF::*;
