@@ -4,6 +4,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.9.9] - 2020-11-03
+--------------------
+
+- Added c64, c32 design config yamls
+- Removed obsolete csrs for MTIME and MTIMEH
+
 [1.9.8] - 2020-09-23
 --------------------
 

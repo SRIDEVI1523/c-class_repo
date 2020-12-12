@@ -681,14 +681,6 @@ package csr_grp3;
  					rg_minstret <= word;
  				end
 
-				`MTIME : begin
-					//read previous value
- 					rg_resp_to_core <= CSRResponse{ hit : True, data : truncate(rg_clint_mtime)};
- 					Bit#(XLEN) readdata = truncate(rg_clint_mtime);
-
- 					//form the new value to be written and write
- 					//let word <- csr_op.func(req.writedata,readdata,op);
-				end
 			`ifdef perfmonitors
 				`MCOUNTEREN : begin
         	//read previous value
@@ -743,14 +735,6 @@ package csr_grp3;
 
  				end
 
- 				`MTIMEH : begin
-					//read previous value
- 					rg_resp_to_core <= CSRResponse{ hit : True, data : truncateLSB(rg_clint_mtime)};
- 					Bit#(XLEN) readdata = truncateLSB(rg_clint_mtime);
-
- 					//form the new value to be written and write
- 					//let word <- csr_op.func(req.writedata,readdata,op);
-				end
  			`endif
 
  			`ifdef triggers

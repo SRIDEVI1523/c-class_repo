@@ -78,7 +78,6 @@
 `define MCYCLE 12'hb00
 `define MCOUNTEREN 12'h306
 `define MCOUNTINHIBIT 12'h320
-`define MTIME	12'hB01	
 `define MINSTRET 12'hb02	
 `define MCYCLEH 12'hb80
 `define MINSTRETH 12'hb82	
