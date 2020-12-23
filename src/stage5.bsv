@@ -71,8 +71,8 @@ package stage5;
 		/*doc:method: This method indicates if the hart should resume from a WFI*/
 		method Bool mv_resume_wfi ();
   `ifdef pmp
-    method Vector#(`pmpsize, Bit#(8)) mv_pmp_cfg;
-    method Vector#(`pmpsize, Bit#(TSub#(`paddr, `pmp_grainbits) )) mv_pmp_addr;
+    method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg;
+    method Vector#(`pmpentries, Bit#(`paddr)) mv_pmp_addr;
   `endif
   `ifdef debug
     method Action ma_debug_access_csrs(AbstractRegOp cmd);
@@ -90,29 +90,7 @@ package stage5;
     method Vector#(`trigger_num, Bool) trigger_enable;
   `endif
   `ifdef perfmonitors
-    `ifdef csr_grp4
-    	//(*doc = "method : whenever event corresponding to the group-4 occur, the method is to be \
-   		//          called, so that corresponding counters are incremented"*)
-   		method Action ma_events_grp4(Bit#(SizeOf#(Events_grp4)) e);
-    `endif
-
-    `ifdef csr_grp5
-    	//(*doc = "method : whenever event corresponding to the group-5 occur, the method is to be \
-   		//          called, so that corresponding counters are incremented"*)
- 			method Action ma_events_grp5(Bit#(SizeOf#(Events_grp5)) e);
- 		`endif
-
- 		`ifdef csr_grp6
- 			//(*doc = "method : whenever event corresponding to the group-6 occur, the method is to be \
-   		//          called, so that corresponding counters are incremented"*)
- 			method Action ma_events_grp6(Bit#(SizeOf#(Events_grp6)) e);
- 		`endif
-
- 		`ifdef csr_grp7
- 			//(*doc = "method : whenever event corresponding to the group-7 occur, the method is to be \
-   		//          called, so that corresponding counters are incremented"*)
- 			method Action ma_events_grp7(Bit#(SizeOf#(Events_grp7)) e);
- 		`endif
+      method Action ma_events (Bit#(TLog#(`mhpm_eventcount)) e);
  		  /*doc:method: */
    		method Bit#(1) mv_count_exceptions;
    		method Bit#(1) mv_count_interrupts;
@@ -501,8 +479,8 @@ package stage5;
 			method mv_csr_satp=csr.mv_csr_satp;
 		`endif
   	method ma_set_meip = csr.ma_set_mip_meip;
-      `ifdef supervisor
-  	method ma_set_seip = csr.ma_set_seip;
+  `ifdef supervisor
+  	method ma_set_seip = csr.ma_set_mip_seip;
   `endif
   `ifdef usertraps
   	method ma_set_ueip = csr.ma_set_ueip;
@@ -524,8 +502,8 @@ package stage5;
     method mv_curr_priv = pack(csr.mv_prv);    
     method mv_csr_mstatus= csr.mv_csr_mstatus;
   `ifdef pmp
-    method mv_pmp_cfg=csr.mv_pmp_cfg;
-    method mv_pmp_addr=csr.mv_pmp_addr;
+    method mv_pmp_cfg = csr.mv_pmpcfg;
+    method mv_pmp_addr=csr.mv_pmpaddr;
   `endif
   `ifdef debug
     method ma_debug_access_csrs = csr.ma_debug_access_csrs;
@@ -547,24 +525,10 @@ package stage5;
     method trigger_enable = csr.trigger_enable;
   `endif
   `ifdef perfmonitors
-  	`ifdef csr_grp4
- 			method ma_events_grp4 = csr.ma_events_grp4;
- 		`endif
-
- 		`ifdef csr_grp5
- 			method ma_events_grp5 = csr.ma_events_grp5;
- 		`endif
-
- 		`ifdef csr_grp6
- 			method ma_events_grp6 = csr.ma_events_grp6;
- 		`endif
-
- 		`ifdef csr_grp7
- 			method ma_events_grp7 = csr.ma_events_grp7;
- 		`endif
-   		method mv_count_exceptions = wr_count_exceptions;
-   		method mv_count_interrupts = wr_count_interrupts;
-   		method mv_count_csrops = wr_count_csrops;
+    method ma_events = csr.ma_events;
+   	method mv_count_exceptions = wr_count_exceptions;
+   	method mv_count_interrupts = wr_count_interrupts;
+   	method mv_count_csrops = wr_count_csrops;
 	`endif
 	`ifdef dtim
 	  /*doc:method: */

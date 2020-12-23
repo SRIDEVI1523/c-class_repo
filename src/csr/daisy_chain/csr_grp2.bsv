@@ -58,9 +58,9 @@ package csr_grp2;
 
 	`ifdef pmp
 		//(*doc = "method : returns the vector of values stored in PMPCFG registers in grp-2"*)
-    method Vector#(`pmpsize, Bit#(8)) mv_pmp_cfg; //tested
+    method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg; //tested
     //(*doc = "method : returns the vector of values stored in PMPADDR registers in grp-2"*)
-    method Vector#(`pmpsize, Bit#(TSub#(`paddr, `pmp_grainbits ))) mv_pmp_addr; //tested
+    method Vector#(`pmpentries, Bit#(TSub#(`paddr, `pmp_grainbits ))) mv_pmp_addr; //tested
   `endif
 
   endinterface
@@ -176,14 +176,14 @@ package csr_grp2;
     `ifdef pmp
     	///*doc = " reg : Vector to hold all the PMPCFG - Physical Memory Protection ConFiGuration \
     	//          registers"*/
-      Vector#(`pmpsize, Reg#(Bit#(8))) v_pmp_cfg <- replicateM(mkReg(0));
+      Vector#(`pmpentries, Reg#(Bit#(8))) v_pmp_cfg <- replicateM(mkReg(0));
       ///*doc = " reg : Vector to hold all the PMPADDR - Physical Memory Protection ADDRess \
     	//          registers"*/
-      Vector#(`pmpsize, Reg#(Bit#(XLEN))) v_pmp_addr <- replicateM(mkReg(0));
+      Vector#(`pmpentries, Reg#(Bit#(XLEN))) v_pmp_addr <- replicateM(mkReg(0));
     `ifdef RV64
       Bit#(XLEN) lv_csr_pmpcfg0 = 0;
       Bit#(XLEN) lv_csr_pmpcfg2 = 0;
-      for(Integer i = 0;i<`pmpsize ;i = i+1)begin
+      for(Integer i = 0;i<`pmpentries ;i = i+1)begin
         if(i<8)
           lv_csr_pmpcfg0[i * 8+7 : i*8] = v_pmp_cfg[i];
         else
@@ -195,7 +195,7 @@ package csr_grp2;
       Bit#(XLEN) lv_csr_pmpcfg1 = 0;
       Bit#(XLEN) lv_csr_pmpcfg2 = 0;
       Bit#(XLEN) lv_csr_pmpcfg3 = 0;
-      for(Integer i = 0;i<`pmpsize ;i = i+1)begin
+      for(Integer i = 0;i<`pmpentries ;i = i+1)begin
         if(i<4)
           lv_csr_pmpcfg0[i * 8+7 : i*8] = v_pmp_cfg[i];
         else if(i<8)
@@ -337,7 +337,7 @@ package csr_grp2;
  					  if(_temp[i][1:0] != 'b10 && (`pmp_grainbits > 2 && _temp[i][4:3] != 2))
  					    _valid[i] = True;
  					end
- 					for (Integer i = 0; i<8 && i < `pmpsize ; i = i + 1) begin
+ 					for (Integer i = 0; i<8 && i < `pmpentries ; i = i + 1) begin
           	if(v_pmp_cfg[i][7] == 0 && _valid[i])
             	v_pmp_cfg[i] <= _temp[i];
  					end
@@ -353,7 +353,7 @@ package csr_grp2;
  					  if(_temp[i][1:0] != 'b10 && (`pmp_grainbits > 2 && _temp[i][4:3] != 2))
  					    _valid[i] = True;
  					end
- 					for (Integer i = 8; i<16 && i < `pmpsize ; i = i + 1) begin
+ 					for (Integer i = 8; i<16 && i < `pmpentries ; i = i + 1) begin
           	if(v_pmp_cfg[i][7] == 0 && _valid[i-8]) 
             	v_pmp_cfg[i] <= _temp[i-8];
  					end
@@ -372,7 +372,7 @@ package csr_grp2;
  					  if(_temp[i][1:0] != 'b10 && (`pmp_grainbits > 2 && _temp[i][4:3] != 2))
  					    _valid[i] = True;
  					end
- 					for (Integer i = 0; i<4 && i < `pmpsize ; i = i + 1) begin
+ 					for (Integer i = 0; i<4 && i < `pmpentries ; i = i + 1) begin
           	if(v_pmp_cfg[i][7] == 0 && _valid[i]) 
             	v_pmp_cfg[i] <= _temp[i];
  					end
@@ -388,7 +388,7 @@ package csr_grp2;
  					  if(_temp[i][1:0] != 'b10 && (`pmp_grainbits > 2 && _temp[i][4:3] != 2) )
  					    _valid[i] = True;
  					end
- 					for (Integer i = 4; i<8 && i < `pmpsize ; i = i + 1) begin
+ 					for (Integer i = 4; i<8 && i < `pmpentries ; i = i + 1) begin
           	if(v_pmp_cfg[i][7] == 0 && _valid[i-4]) 
             	v_pmp_cfg[i] <= _temp[i-4];
  					end
@@ -404,7 +404,7 @@ package csr_grp2;
  					  if(_temp[i][1:0] != 'b10 && (`pmp_grainbits > 2 && _temp[i][4:3] != 2) )
  					    _valid[i] = True;
  					end
- 					for (Integer i = 8; i<12 && i < `pmpsize ; i = i + 1) begin
+ 					for (Integer i = 8; i<12 && i < `pmpentries ; i = i + 1) begin
           	if(v_pmp_cfg[i][7] == 0 && _valid[i-8]) 
             	v_pmp_cfg[i] <= _temp[i-8];
  					end
@@ -420,7 +420,7 @@ package csr_grp2;
  					  if(_temp[i][1:0] != 'b10 && (`pmp_grainbits > 2 && _temp[i][4:3] != 2) )
  					    _valid[i] = True;
  					end
- 					for (Integer i = 12; i<16 && i < `pmpsize ; i = i + 1) begin
+ 					for (Integer i = 12; i<16 && i < `pmpentries ; i = i + 1) begin
           	if(v_pmp_cfg[i][7] == 0 && _valid[i-12]) 
             	v_pmp_cfg[i] <= _temp[i-12];
  					end
@@ -428,7 +428,7 @@ package csr_grp2;
 			`endif
 
 				`PMPADDR0 : begin
-					if (`pmpsize > 0) begin
+					if (`pmpentries > 0) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[0];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -443,7 +443,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR1 : begin
-					if(`pmpsize > 1) begin
+					if(`pmpentries > 1) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[1];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -458,7 +458,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR2 : begin
-					if(`pmpsize > 2) begin
+					if(`pmpentries > 2) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[2];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -473,7 +473,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR3 : begin
-					if(`pmpsize > 3) begin
+					if(`pmpentries > 3) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[3];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -488,7 +488,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR4 : begin
-					if(`pmpsize > 4) begin
+					if(`pmpentries > 4) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[4];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -503,7 +503,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR5 : begin
-					if(`pmpsize > 5) begin
+					if(`pmpentries > 5) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[5];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -518,7 +518,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR6 : begin
-					if(`pmpsize > 6) begin
+					if(`pmpentries > 6) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[6];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -533,7 +533,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR7 : begin
-					if(`pmpsize > 7) begin
+					if(`pmpentries > 7) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[7];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -548,7 +548,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR8 : begin
-					if(`pmpsize > 8) begin
+					if(`pmpentries > 8) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[8];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -563,7 +563,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR9 : begin
-					if(`pmpsize > 9) begin
+					if(`pmpentries > 9) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[9];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -578,7 +578,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR10 : begin
-					if(`pmpsize > 10) begin
+					if(`pmpentries > 10) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[10];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -593,7 +593,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR11 : begin
-					if(`pmpsize > 11) begin
+					if(`pmpentries > 11) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[11];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -608,7 +608,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR12 : begin
-					if(`pmpsize > 12) begin
+					if(`pmpentries > 12) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[12];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -623,7 +623,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR13 : begin
-					if(`pmpsize > 13) begin
+					if(`pmpentries > 13) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[13];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -638,7 +638,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR14 : begin
-					if(`pmpsize > 14) begin
+					if(`pmpentries > 14) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[14];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -653,7 +653,7 @@ package csr_grp2;
 				end
 
 				`PMPADDR15 : begin
-					if(`pmpsize > 15) begin
+					if(`pmpentries > 15) begin
 						//read previous value
  						Bit#(XLEN) readdata = v_pmp_addr[15];
  						rg_resp_to_core <= CSRResponse{ hit : True, data : readdata};
@@ -743,9 +743,9 @@ package csr_grp2;
 
 	`ifdef pmp
     method mv_pmp_cfg = readVReg(v_pmp_cfg);
-    method Vector#(`pmpsize, Bit#(TSub#(`paddr, `pmp_grainbits ))) mv_pmp_addr;
-      Vector#(`pmpsize, Bit#(TSub#(`paddr, `pmp_grainbits))) _t;
-      for (Integer i = 0; i<`pmpsize; i = i + 1) begin
+    method Vector#(`pmpentries, Bit#(TSub#(`paddr, `pmp_grainbits ))) mv_pmp_addr;
+      Vector#(`pmpentries, Bit#(TSub#(`paddr, `pmp_grainbits))) _t;
+      for (Integer i = 0; i<`pmpentries; i = i + 1) begin
         _t[i] = truncate(v_pmp_addr[i] >> (`pmp_grainbits -2 ));
       end
       return _t;

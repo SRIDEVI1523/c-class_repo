@@ -44,7 +44,7 @@ def main():
     if args.ispec is None:
         logger.error('No ISA YAML provided')
         sys.exit(0)
-    else:
+    elif not args.clean:
         logger.info('Validating ISA YAML: ' + str(args.ispec))               
         os.makedirs(work_dir, exist_ok= True)
         isa_file = riscv_config.check_isa_specs(os.path.abspath(args.ispec), work_dir, False)
@@ -53,7 +53,7 @@ def main():
         bsv_dir = 'csrbox/'
                       
         os.makedirs(bsv_dir, exist_ok= True)
-        csr_gen.csr_gen(isa_file, args.gspec, bsv_dir, logging=True)
+        csr_gen.csr_gen(isa_file, args.gspec, None,bsv_dir, logging=True)
 
     if args.cspec is None:
         logger.info('No CORE YAML provided')

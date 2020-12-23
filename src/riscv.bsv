@@ -71,8 +71,8 @@ package riscv;
 		method Bit#(XLEN) mv_csr_satp;
 	`endif
   `ifdef pmp
-    method Vector#(`pmpsize, Bit#(8)) mv_pmp_cfg;
-    method Vector#(`pmpsize, Bit#(TSub#(`paddr,`pmp_grainbits))) mv_pmp_addr;
+    method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg;
+    method Vector#(`pmpentries, Bit#(TSub#(`paddr,`pmp_grainbits))) mv_pmp_addr;
   `endif
 
   `ifdef debug
@@ -219,18 +219,7 @@ package riscv;
       lv_count_dcache_fb_releases		, lv_count_dcache_line_evictions		, lv_count_itlb_misses,
   lv_count_dtlb_misses});
     rule rl_connect_events;
-    `ifdef csr_grp4
-      stage5.ma_events_grp4(lv_total_count);
-    `endif
-    `ifdef csr_grp5
-      stage5.ma_events_grp5(lv_total_count);
-    `endif
-    `ifdef csr_grp6
-      stage5.ma_events_grp6(lv_total_count);
-    `endif
-    `ifdef csr_grp7
-      stage5.ma_events_grp7(lv_total_count);
-    `endif
+      stage5.ma_events(lv_total_count);
     endrule
 `endif
 

@@ -110,9 +110,9 @@ package csr_daisy;
 
 	`ifdef pmp
 		//(*doc = "method : returns the vector of values stored in PMPCFG registers in grp-2"*)
-    method Vector#(`pmpsize, Bit#(8)) mv_pmp_cfg; //tested
+    method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg; //tested
     //(*doc = "method : returns the vector of values stored in PMPADDR registers in grp-2"*)
-    method Vector#(`pmpsize, Bit#(TSub#(`paddr, `pmp_grainbits ))) mv_pmp_addr; //tested
+    method Vector#(`pmpentries, Bit#(TSub#(`paddr, `pmp_grainbits ))) mv_pmp_addr; //tested
   `endif
 
    //-----------------------------------------------------

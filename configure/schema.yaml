@@ -21,6 +21,18 @@ ISA:
   required: true
 
 ###
+#total_events
+# **Description**: Total number of events in the system
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   total_events: 28
+
+total_events: {type: integer, default: 0}
+
+###
 #iepoch_size
 # **Description**: integer value indicating the size of the epochs for the
 # instruction memory subsystem. Allowed value is 2 only
@@ -72,79 +84,27 @@ dtvec_base:
 #  **Description**: Describes various supervisor and MMU related parameters.
 #  These parameters only take effect when "S" is present in the ISA field.
 #
-#    - ``mode``: a string indicating the virtualisation mode to be implemented. Can
-#      be one of : sv32, sv39 or sv48. Please note for RV32 only sv32 is supported
-#      and for RV64 sv39 and sv48 are supported.
 #    - ``itlb_size``: integer indicating the size of entries in the Instruction TLB
 #    - ``dtlb_size``: integer indicating the size of entries in the Data TLB
-#    - ``asid_width``: integer indicating the size of the ASID field. For RV32 it can
-#      be maximum 9 and for RV64 is can be maximum 16
 #
 #  **Examples**:
 #
 #  .. code-block:: yaml
 #
 #    s_extension:
-#      mode: sv39
 #      itlb_size: 4
 #      dtlb_size: 4
-#      asid_width: 9
 
 s_extension:
   type: dict
   schema:
-    mode:
-      type: string
-      allowed: ['sv32', 'sv39', 'sv48']
     itlb_size:
       type: integer
     dtlb_size:
       type: integer
-    asid_width:
-      type: integer
   default:
-    mode: sv39
     itlb_size: 4
     dtlb_size: 4
-    asid_width: 9
-
-###
-#.. _schema_pmp:
-#
-#pmp
-#  **Description**: Defines the pmp configuration
-#
-#    - ``enable``: boolean value indicating if pmp support should be enabled.
-#    - ``entries``: number of pmp regions to be supported. Max value of 16.
-#      Minimum value of 1
-#    - ``granularity``: granularity of protection in terms of bytes. Minimum is
-#      8 bytes for a 64-bit core and 4 bytes for a 32-bit core
-#
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    pmp:
-#      enable: false
-#      entries: 2
-#      granularity: 8
-
-pmp:
-  type: dict
-  schema:
-    enable:
-      type: boolean
-    entries: 
-      type: integer
-      max: 16
-      min: 1
-    granularity:
-      type: integer
-      min: 4
-  default:
-    enable: false
-    entries: 2
-    granularity: 8
 
 ###
 #m_extension

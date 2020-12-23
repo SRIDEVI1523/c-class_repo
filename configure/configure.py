@@ -43,25 +43,26 @@ def specific_checks(foo):
             sys.exit(1)
 
     # check s_extension
-    s_mode = foo['s_extension']['mode']
-    s_itlbsize = foo['s_extension']['itlb_size']
-    s_dtlbsize = foo['s_extension']['dtlb_size']
-    s_asid_width = foo['s_extension']['asid_width']
-    if 'S' in foo['ISA']:
-        if xlen is 32 and s_mode != 'sv32' :
-            logger.error('Only sv32 supported in RV32')
-            sys.exit(1)
-        if xlen is 64 and s_mode not in ['sv48', 'sv39'] :
-            logger.error('Only sv39/sv48 supported in RV64')
-            sys.exit(1)
-        if xlen is 32 and s_asid_width > 9:
-            logger.error('in RV32 ASID cannot be greater than 9')
-            sys.exit(1)
-        if xlen is 64 and s_asid_width > 16:
-            logger.error('in RV32 ASID cannot be greater than 16')
-            sys.exit(1)
+#    s_mode = foo['s_extension']['mode']
+#    s_itlbsize = foo['s_extension']['itlb_size']
+#    s_dtlbsize = foo['s_extension']['dtlb_size']
+#    s_asid_width = foo['s_extension']['asid_width']
+#    if 'S' in foo['ISA']:
+#        if xlen is 32 and s_mode != 'sv32' :
+#            logger.error('Only sv32 supported in RV32')
+#            sys.exit(1)
+#        if xlen is 64 and s_mode not in ['sv48', 'sv39'] :
+#            logger.error('Only sv39/sv48 supported in RV64')
+#            sys.exit(1)
+#        if xlen is 32 and s_asid_width > 9:
+#            logger.error('in RV32 ASID cannot be greater than 9')
+#            sys.exit(1)
+#        if xlen is 64 and s_asid_width > 16:
+#            logger.error('in RV32 ASID cannot be greater than 16')
+#            sys.exit(1)
 
     # check m_extension
+
     m_mulstages = foo['m_extension']['mul_stages']
     m_divstages = foo['m_extension']['div_stages']
     if 'M' in foo['ISA']:
@@ -103,17 +104,16 @@ def specific_checks(foo):
             logger.error('D-Cache d_words should be ' + str(xlen/8))
             sys.exit(1)
 
-def capture_compile_cmd(foo):
+def capture_compile_cmd(foo, isa_node):
     global bsc_cmd
     global bsc_defines
 
     logger.info('Generating BSC compile options')
-    s_mode = foo['s_extension']['mode']
     s_itlbsize = foo['s_extension']['itlb_size']
     s_dtlbsize = foo['s_extension']['dtlb_size']
-    s_asid_width = foo['s_extension']['asid_width']
     m_mulstages = foo['m_extension']['mul_stages']
     m_divstages = foo['m_extension']['div_stages']
+    mhpm_eventcount = foo['total_events']
     suppress = ''
 
     test_memory_size = foo['bsc_compile_options']['test_memory_size']
@@ -140,7 +140,7 @@ def capture_compile_cmd(foo):
     macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
     macros += ' dbuswidth='+str(xlen)
     macros += ' resetpc='+str(foo['reset_pc'])
-    macros += ' paddr='+str(foo['physical_addr_size'])
+    macros += ' paddr='+str(isa_node['physical_addr_sz'])
     macros += ' vaddr='+str(xlen)
     macros += ' causesize=6'
     macros += ' CORE_'+str(foo['bus_protocol'])
@@ -152,6 +152,8 @@ def capture_compile_cmd(foo):
         macros += ' simulate'
     if foo['bsc_compile_options']['open_ocd']:
         macros += ' openocd'
+
+    macros += ' mhpm_eventcount=' + str(mhpm_eventcount)
     
     if 'A' in foo['ISA']:
         macros += ' atomic'
@@ -171,18 +173,8 @@ def capture_compile_cmd(foo):
         macros += ' usertraps'
     if 'S' in foo['ISA']:
         macros += ' supervisor'
-        macros += ' asidwidth='+str(s_asid_width)
         macros += ' itlbsize='+str(s_itlbsize)
         macros += ' dtlbsize='+str(s_dtlbsize)
-        macros += ' '+str(s_mode)
-    if foo['pmp']['enable']:
-        grainbits = int(math.log2(foo['pmp']['granularity']))
-        if xlen == 64 and grainbits < 3:
-            logger.error('PMP Granularity for a 64-bit core has to be minimum \
-8 bytes')
-            sys.exit(1)
-        macros += ' pmp pmpsize='+str(foo['pmp']['entries']) +\
-                ' pmp_grainbits='+str(grainbits)
     if foo['branch_predictor']['instantiate']:
         macros += ' bpu'
         macros += ' '+foo['branch_predictor']['predictor']
@@ -259,30 +251,24 @@ def capture_compile_cmd(foo):
         macros += ' debug'
 
     macros += ' csr_low_latency'
-    total_counters = foo['csr_configuration']['counters_in_grp4'] +\
-       foo['csr_configuration']['counters_in_grp5'] +\
-        foo['csr_configuration']['counters_in_grp6'] +\
-        foo['csr_configuration']['counters_in_grp7']
+    
+    total_counters = 0
+    pmp_entries = 0
+    for node in isa_node:
+        if 'mhpmcounter' in node:
+            if isa_node[node]['rv'+str(xlen)]['accessible']:
+                total_counters += 1
+        if 'pmpaddr' in node:
+            if isa_node[node]['rv'+str(xlen)]['accessible']:
+                pmp_entries += 1
+
     if total_counters > 0:
         macros += ' perfmonitors'
-    if foo['csr_configuration']['counters_in_grp4'] >0 :
-        macros += ' csr_grp4'
-    if foo['csr_configuration']['counters_in_grp5'] >0 :
-        macros += ' csr_grp5'
-    if foo['csr_configuration']['counters_in_grp6'] >0 :
-        macros += ' csr_grp6'
-    if foo['csr_configuration']['counters_in_grp7'] >0 :
-        macros += ' csr_grp7'
-    macros += ' counters_grp4='+\
-            str(foo['csr_configuration']['counters_in_grp4'])+\
-            ' counters_grp5='+str(foo['csr_configuration']['counters_in_grp5'])+\
-            ' counters_grp6='+str(foo['csr_configuration']['counters_in_grp6'])+\
-            ' counters_grp7='+str(foo['csr_configuration']['counters_in_grp7'])
-    macros += ' counters_size='+\
-            str(foo['csr_configuration']['counters_in_grp4']+\
-            foo['csr_configuration']['counters_in_grp5']+\
-            foo['csr_configuration']['counters_in_grp6']+\
-            foo['csr_configuration']['counters_in_grp7'])
+    if pmp_entries > 0:
+        macros += ' pmp'
+        macros += ' pmpentries='+str(pmp_entries)
+        macros += ' pmp_grainbits='+str(isa_node['pmp_granularity'])
+
 
     if foo['no_of_triggers'] > 0:
         macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
@@ -406,7 +392,7 @@ def validate_specs(core_spec, isa_spec, logging=False):
         error_list = validator.errors
         raise ValidationError("Error in " + core_spec + ".", error_list)
     specific_checks(normalized)
-    capture_compile_cmd(normalized)
+    capture_compile_cmd(normalized, isa_yaml['hart0'])
     generate_makefile(normalized, logging)
 
     logger.info('Configuring Boot-Code')
