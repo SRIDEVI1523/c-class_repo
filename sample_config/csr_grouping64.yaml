@@ -29,6 +29,8 @@ grp1:
     - MCOUNTINHIBIT
     - INSTRET
     - SATP
+    - MIDELEG
+    - MEDELEG
 grp2:
     - PMPCFG0
     - PMPADDR0

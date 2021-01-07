@@ -89,6 +89,16 @@ def config_cmdline_args():
                         metavar='YAML',
                         default='sample_config/rv64i_isa.yaml',
                         help='The YAML which contains the ISA specs.')
+    parser.add_argument('-customspec','--customspec',
+                        type=str,
+                        metavar='YAML',
+                        default='sample_config/rv64i_custom.yaml',
+                        help='The YAML which contains the Custom CSR specs.')
+    parser.add_argument('-customattr','--customattr',
+                        type=str,
+                        metavar='YAML',
+                        default=None,
+                        help='The YAML which contains the Custom CSRBOX Attributes specs.')
     parser.add_argument('-cspec','--cspec',
                         type=str,
                         metavar='YAML',

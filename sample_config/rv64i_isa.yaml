@@ -603,7 +603,7 @@ hart0:
             warl:
               dependency_fields: []
               legal:
-                - "asid[59:44] bitmask[0x00FF,0x0000]"
+                - "asid[15:0] in [0x0000:0x00FF]"
               wr_illegal:
                 - Unchanged
         mode:

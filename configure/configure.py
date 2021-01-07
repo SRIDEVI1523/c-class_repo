@@ -9,6 +9,7 @@ import logging
 import sys
 import math
 from repomanager.rpm import repoman
+from riscv_config.warl import warl_interpreter
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +110,36 @@ def capture_compile_cmd(foo, isa_node):
     global bsc_defines
 
     logger.info('Generating BSC compile options')
-    s_itlbsize = foo['s_extension']['itlb_size']
-    s_dtlbsize = foo['s_extension']['dtlb_size']
+    xlen = 64
+    if '32' in isa_node['ISA']:
+        xlen = 32
+
+    if 'S' in isa_node['ISA']:
+        s_itlbsize = foo['s_extension']['itlb_size']
+        s_dtlbsize = foo['s_extension']['dtlb_size']
+        satp_modewarl =\
+                (warl_interpreter(isa_node['satp']['rv'+str(xlen)]['mode']['type']['warl']))
+        if satp_modewarl.islegal(9,[]):
+            s_mode = 'sv48'
+        elif satp_modewarl.islegal(8,[]):
+            s_mode = 'sv39'
+        elif satp_modewarl.isa_node(1,[]):
+            s_mode = 'sv32'
+        else:
+            logger.error('Cannot deduce supervisor mode from satp.mode')
+            raise SystemExit
+
+        asidlen = 0
+        asid_mask = 0xFFFF
+        satp_asidwarl =\
+                (warl_interpreter(isa_node['satp']['rv'+str(xlen)]['asid']['type']['warl']))
+        while asid_mask != 0:
+            if satp_asidwarl.islegal(int(asid_mask),[]):
+                asidlen = int(math.log2(asid_mask+1))
+                break
+            else:
+                asid_mask = asid_mask >> 1
+
     m_mulstages = foo['m_extension']['mul_stages']
     m_divstages = foo['m_extension']['div_stages']
     mhpm_eventcount = foo['total_events']
@@ -132,10 +161,6 @@ def capture_compile_cmd(foo, isa_node):
         macros += ' ASSERT'
     if foo['bsc_compile_options']['trace_dump']:
         macros += ' rtldump'
-
-    xlen = 64
-    if '32' in foo['ISA']:
-        xlen = 32
 
     macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
     macros += ' dbuswidth='+str(xlen)
@@ -175,6 +200,8 @@ def capture_compile_cmd(foo, isa_node):
         macros += ' supervisor'
         macros += ' itlbsize='+str(s_itlbsize)
         macros += ' dtlbsize='+str(s_dtlbsize)
+        macros += ' asidwidth='+str(asidlen)
+        macros += ' ' + s_mode
     if foo['branch_predictor']['instantiate']:
         macros += ' bpu'
         macros += ' '+foo['branch_predictor']['predictor']

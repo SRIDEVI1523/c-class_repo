@@ -72,7 +72,4 @@ verification:
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
-benchmarks:
-  url: https://gitlab.com/shaktiproject/cores/benchmarks
-  checkout: master
 '''

@@ -7,6 +7,8 @@ import configure.configure as configure
 import configure.utils as utils
 import riscv_config.checker as riscv_config
 import csrbox.csr_gen as csr_gen
+from   csrbox.errors import ValidationError
+
 
 def main():
     '''
@@ -47,13 +49,30 @@ def main():
     elif not args.clean:
         logger.info('Validating ISA YAML: ' + str(args.ispec))               
         os.makedirs(work_dir, exist_ok= True)
-        isa_file = riscv_config.check_isa_specs(os.path.abspath(args.ispec), work_dir, False)
+        #isa_file = riscv_config.check_isa_specs(os.path.abspath(args.ispec), work_dir, False)
+        try:
+            isa_file = riscv_config.check_isa_specs(args.ispec, work_dir, True)
+        except ValidationError as msg:
+            logger.error(msg)
+            return 1
+
         logger.info('Starting CSR generation using CSR-BOX')
+
+        if args.customspec:
+            try:
+                custom_file = riscv_config.check_custom_specs(args.customspec,
+                        work_dir, True)
+            except ValidationError as msg:
+                logger.error(msg)
+                return 1
+        else:
+            custom_file = None
+
         
         bsv_dir = 'csrbox/'
                       
         os.makedirs(bsv_dir, exist_ok= True)
-        csr_gen.csr_gen(isa_file, args.gspec, None,bsv_dir, logging=True)
+        csr_gen.csr_gen(isa_file, args.gspec, custom_file, None, bsv_dir, logging=True)
 
     if args.cspec is None:
         logger.info('No CORE YAML provided')
