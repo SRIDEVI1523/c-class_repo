@@ -72,7 +72,7 @@ package riscv;
 	`endif
   `ifdef pmp
     method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg;
-    method Vector#(`pmpentries, Bit#(TSub#(`paddr,`pmp_grainbits))) mv_pmp_addr;
+    method Vector#(`pmpentries, Bit#(`paddr)) mv_pmp_addr;
   `endif
 
   `ifdef debug

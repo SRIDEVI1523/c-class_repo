@@ -90,7 +90,7 @@ package stage5;
     method Vector#(`trigger_num, Bool) trigger_enable;
   `endif
   `ifdef perfmonitors
-      method Action ma_events (Bit#(TLog#(`mhpm_eventcount)) e);
+      method Action ma_events (Bit#(`mhpm_eventcount) e);
  		  /*doc:method: */
    		method Bit#(1) mv_count_exceptions;
    		method Bit#(1) mv_count_interrupts;
@@ -461,7 +461,12 @@ package stage5;
       return wr_commit;
     endmethod
     method flush=wr_flush;
-    method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, csr_mip: truncate(csr.mv_csr_mip), csr_mie: truncate(csr.mv_csr_mie), csr_mstatus: truncate(csr.mv_csr_mstatus), csr_misa: truncate(csr.mv_csr_misa), frm: truncate(csr.mv_csr_frm)};
+    method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, csr_mip: truncate(csr.mv_csr_mip), 
+      csr_mie: truncate(csr.mv_csr_mie), csr_mstatus: truncate(csr.mv_csr_mstatus), 
+      csr_misa: truncate(csr.mv_csr_misa), frm: truncate(csr.mv_csr_frm)
+    `ifdef non_m_traps 
+      ,csr_mideleg: truncate(csr.mv_csr_mideleg)
+    `endif };
       
 	  method ma_clint_msip = csr.ma_set_mip_msip;
 		method ma_clint_mtip = csr.ma_set_mip_mtip;
