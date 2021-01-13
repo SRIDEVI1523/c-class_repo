@@ -13,14 +13,14 @@ default: create_hex append$(width)
 .PHONY: append4
 append4:
 	@printf '00000297\n02028593\nf1402573\n0182a283\n00028067\n00000000\n80000000\n00000000\n' | cat - boot.hex > temp && mv temp boot.hex
-	@for number in $$(seq 1 7954) ; do \
+	@for number in $$(seq 1 7945) ; do \
     echo "00000000" >> boot.hex; \
   done;
 
 .PHONY: append8
 append8:
 	@printf '0202859300000297\n0182b283f1402573\n0000000000028067\n0000000080000000\n' | cat - boot.hex > temp && mv temp boot.hex
-	@for number in $$(seq 1 8073) ; do \
+	@for number in $$(seq 1 8069) ; do \
     echo "0000000000000000" >> boot.hex; \
   done;
 

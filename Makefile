@@ -161,12 +161,12 @@ csmith: ## to generate and run csmith tests
 
 .PHONY: generate_boot_files
 generate_boot_files: ## to generate boot files for simulation
-generate_boot_files: update_xlen
+	@echo "XLEN=$(XLEN)" > boot/Makefile.inc
 	@mkdir -p bin
-	@cd verification/dts/; make;
-	@cut -c1-8 verification/dts/boot.hex > bin/boot.MSB
+	@cd boot/; make;
+	@cut -c1-8 boot/boot.hex > bin/boot.MSB
 	@if [ "$(XLEN)" = "64" ]; then\
-	  cut -c9-16 verification/dts/boot.hex > bin/boot.LSB;\
+	  cut -c9-16 boot/boot.hex > bin/boot.LSB;\
     else cp bin/boot.MSB bin/boot.LSB;\
   fi
 
