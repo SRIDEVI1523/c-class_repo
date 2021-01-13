@@ -1,6 +1,7 @@
 grp1:
     - MISA
     - MSCRATCH
+    - SSCRATCH
     - MVENDORID
     - MSTATUS
     - SSTATUS
@@ -41,3 +42,4 @@ grp2:
     - MHPMEVENT3
     - MHPMCOUNTER4
     - MHPMEVENT4
+    - CUSTOMCONTROL

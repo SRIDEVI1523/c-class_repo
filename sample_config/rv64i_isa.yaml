@@ -1,13 +1,13 @@
 hart_ids: [0]
 hart0:
-    ISA: RV64IMSUZicsr_Zifencei
+    ISA: RV64IMAFDCSUZicsr_Zifencei
     User_Spec_Version: '2.3'
-    pmp_granularity: 3
+    pmp_granularity: 1
     physical_addr_sz: 32
     supported_xlen:
       - 64
     misa:
-        reset-val: 0x8000000000041104
+        reset-val: 0x800000000014112D
         rv32:
             accessible: false
         rv64:
@@ -27,7 +27,7 @@ hart0:
                     warl:
                         dependency_fields: []
                         legal:
-                          - "extensions[25:0] bitmask [0x0041104, 0x0000000]"
+                          - "extensions[25:0] bitmask [0x014112D, 0x0000000]"
                         wr_illegal:
                           - "Unchanged"
     mvendorid:
@@ -95,16 +95,25 @@ hart0:
                 implemented: false
             sie:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             mie:
                 implemented: true
             upie:
                 implemented: false
             spie:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             mpie:
                 implemented: true
             spp:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             mpp:
                 implemented: true
                 type:
@@ -136,14 +145,26 @@ hart0:
                       - Unchanged
             sum:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             mxr:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             tvm:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             tw:
                 implemented: false
             tsr:
                 implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             sxl:
                 implemented: true
                 type:
@@ -264,6 +285,20 @@ hart0:
                       - Unchanged
 
         reset-val: 0
+    sscratch:
+        rv32:
+            accessible: false
+        rv64:
+            accessible: true
+            type: 
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - sscratch[63:0] in [0x0000000000000000:0xFFFFFFFFFFFFFFFF]
+                    wr_illegal:
+                      - Unchanged
+
+        reset-val: 0
     sepc:
         rv32:
             accessible: false
@@ -273,7 +308,7 @@ hart0:
                 warl:
                     dependency_fields: []
                     legal:
-                      - "sepc[63:0] bitmask [0xFFFFFFFFFFFFFFFC, 0x0000000000000000]"
+                      - "sepc[63:0] bitmask [0xFFFFFFFFFFFFFFFE, 0x0000000000000000]"
                     wr_illegal:
                       - "Unchanged"
         reset-val: 0
@@ -295,16 +330,10 @@ hart0:
             accessible: false
         rv64:
             accessible: true
-            interrupt:
-                implemented: true
-                type:
-                    wlrl:
-                      - 0:1
             exception_code:
-                implemented: true
-                type:
-                    wlrl:
-                      - 0:15
+              implemented: True
+            interrupt:
+              implemented: True
         reset-val: 0
     mepc:
         rv32:
@@ -315,7 +344,7 @@ hart0:
                 warl:
                     dependency_fields: []
                     legal:
-                      - "mepc[63:0] bitmask [0xFFFFFFFFFFFFFFFC, 0x0000000000000000]"
+                      - "mepc[63:0] bitmask [0xFFFFFFFFFFFFFFFE, 0x0000000000000000]"
                     wr_illegal:
                       - "Unchanged"
         reset-val: 0
@@ -337,16 +366,6 @@ hart0:
             accessible: false
         rv64:
             accessible: true
-            interrupt:
-                implemented: true
-                type:
-                    wlrl:
-                      - 0:1
-            exception_code:
-                implemented: true
-                type:
-                    wlrl:
-                      - 0:15
         reset-val: 0
     mcycle:
         rv32:
@@ -426,11 +445,25 @@ hart0:
         accessible: false
       rv64:
         accessible: true
+        type:
+          warl:
+            dependency_fields: []
+            legal:
+              - mideleg[63:0] bitmask [0x000000000000F7FF,0x0000000000000000]
+            wr_illegal:
+              - Unchanged
     medeleg:
       rv32:
         accessible: false
       rv64:
         accessible: true
+        type:
+          warl:
+            dependency_fields: []
+            legal:
+              - medeleg[63:0] bitmask [0x000000000000F7FF,0x0000000000000000]
+            wr_illegal:
+              - Unchanged
     pmpcfg0:
         reset-val: 0
         rv32:

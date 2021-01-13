@@ -5,7 +5,7 @@ hart0:
       rv32:
           accessible: false
       rv64:
-          accessible: true
+          accessible: false
           type:
               ro_constant: 0x0
           shadow:
@@ -19,7 +19,7 @@ hart0:
       rv32:
           accessible: false
       rv64:
-          accessible: true
+          accessible: false
           type:
               ro_constant: 0x0
           shadow:
@@ -29,7 +29,7 @@ hart0:
       address: 0x7C2
       priv_mode: M
     customcontrol:
-      reset-val: 0x0000000000000000
+      reset-val: 0x0000000000000007
       rv32:
         accessible: false
       rv64:
@@ -37,7 +37,7 @@ hart0:
         ienable:
           implemented: true
           type:
-            ro_constant: 0x0
+            ro_constant: 0x1
           description: bit for cache-enable of instruction cache, part of rg_customcontrol
           shadow:
           msb: 0
@@ -45,7 +45,7 @@ hart0:
         denable:
           implemented: true
           type:
-            ro_constant: 0x00    
+            ro_constant: 0x1    
           description: bit for cache-enable of data cache, part of rg_customcontrol
           shadow:
           msb: 1
@@ -53,7 +53,7 @@ hart0:
         bpuenable:
           implemented: true
           type:
-            ro_constant: 0x00    
+            ro_constant: 0x1
           description: bit for enabling branch predictor unit, part of rg_customcontrol
           shadow:
           msb: 2
@@ -61,7 +61,7 @@ hart0:
         arith_excep:
           implemented: true
           type:
-            ro_constant: 0x00    
+            ro_constant: 0x0
           description: bit for enabling arithmetic exceptions, part of rg_customcontrol
           shadow:
           msb: 3
