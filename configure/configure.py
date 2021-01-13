@@ -294,7 +294,7 @@ def capture_compile_cmd(foo, isa_node):
     if pmp_entries > 0:
         macros += ' pmp'
         macros += ' pmpentries='+str(pmp_entries)
-        macros += ' pmp_grainbits='+str(isa_node['pmp_granularity'])
+        macros += ' pmp_grainbits='+str(isa_node['pmp_granularity']+2)
 
 
     if foo['no_of_triggers'] > 0:
