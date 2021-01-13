@@ -40,3 +40,11 @@ run.log
 build/
 
 depends.mk
+
+csrbox/
+
+boot/c-class.dtb
+
+boot/config.c-class
+
+boot/shakti.dtb
