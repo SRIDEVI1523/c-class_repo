@@ -504,7 +504,7 @@ package stage5;
       wr_cache_ready <= r;
     endmethod
   `endif
-   // method mv_cacheenable = csr.mv_cacheenable;
+    method mv_cacheenable = truncate(csr.mv_csr_customcontrol);
     method mv_curr_priv = pack(csr.mv_prv);    
     method mv_csr_mstatus= csr.mv_csr_mstatus;
   `ifdef pmp
