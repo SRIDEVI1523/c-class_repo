@@ -321,9 +321,9 @@ package riscv;
       stage2.ma_resume_wfi(stage5.mv_resume_wfi);
       stage1.csr_misa_c(stage5.mv_csr_misa_c);
       stage3.csr_misa_c(stage5.mv_csr_misa_c);
-  /*  `ifdef bpu
+    `ifdef bpu
       stage0.ma_bpu_enable(unpack(stage5.mv_cacheenable[2]));
-    `endif*/
+    `endif
     endrule
     rule clear_stall_in_decode_stage(flush_from_exe || flush_from_wb);
       stage2.clear_stall(True);
@@ -439,7 +439,7 @@ package riscv;
   	method ma_set_ueip = stage5.ma_set_ueip;
   `endif
     method mv_csr_mstatus = stage5.mv_csr_mstatus;
-   // method mv_cacheenable = stage5.mv_cacheenable;
+    method mv_cacheenable = stage5.mv_cacheenable;
     method mv_curr_priv = stage5.mv_curr_priv;
 		`ifdef supervisor
 			method mv_csr_satp = stage5.mv_csr_satp;
