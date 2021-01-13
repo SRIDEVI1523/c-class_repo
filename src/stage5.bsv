@@ -368,7 +368,8 @@ package stage5;
             if(!rg_csr_wait) begin
             rg_csr_wait <= True;          
             csr.ma_core_req(CSRReq{csr_address: sys.csraddr, writedata: sys.rs1,
-                                      funct3: truncate(sys.func3) });
+                                      funct3: truncate(sys.func3)
+                                  `ifdef compressed , pc_1:sys.lpc[1] `endif });
             end
             else if(csr.mv_core_resp.hit)
               rg_csr_wait <= False;
