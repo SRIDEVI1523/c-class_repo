@@ -111,7 +111,6 @@ package stage5;
   endinterface
 
   (*synthesize*)
-  (*conflict_free="instruction_commit,increment_instruction_counter"*)
 `ifdef debug
   (*preempts="ma_debug_access_csrs,instruction_commit"*)
 `endif
@@ -356,6 +355,7 @@ package stage5;
         end
         else if(commit matches tagged SYSTEM .sys)begin
           //let {drain, newpc}<-csr.system_instruction(sys.csraddr, sys.rs1, sys.func3, sys.lpc);
+          wr_increment_minstret<=True;
           Bool drain = False;
           Bit#(`vaddr) newpc = ?;
           case( sys.func3 )
@@ -379,7 +379,6 @@ package stage5;
            endcase
           let dest= csr_dest;
           if(drain || csr_valid) begin
-            wr_increment_minstret<=True;
             jump_address=newpc;
             fl=drain;
             wr_commit <= tagged Valid CommitData{addr: sys.rd, data: zeroExtend(dest)
