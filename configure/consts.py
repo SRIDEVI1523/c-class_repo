@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: csrbox-integration
+  checkout: 9.0.0
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: master
