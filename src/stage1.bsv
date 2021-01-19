@@ -52,7 +52,7 @@ package stage1;
     // instruction along with other results to be sent to the next stage
     interface TXe#(PIPE1) tx_to_stage2;
   `ifdef rtldump
-    interface TXe#(Bit#(32)) tx_to_stage2_inst;
+    interface TXe#(CommitLogPacket) tx_to_stage2_inst;
   `endif
 
     // method to update epochs on redirection from execute stage
@@ -109,7 +109,7 @@ package stage1;
 		TX#(PIPE1) tx_tostage2 <- mkTX;
 
   `ifdef rtldump
-		TX#(Bit#(32)) tx_inst <- mkTX;
+		TX#(CommitLogPacket) tx_inst <- mkTX;
   `endif
 
     // This variable holds the current epoch values of the pipe
@@ -395,7 +395,8 @@ package stage1;
     `endif
       if(enque_instruction) begin
       `ifdef rtldump
-        tx_inst.u.enq(inst);
+        tx_inst.u.enq(CommitLogPacket{instruction: inst, pc: stage0pc.address, mode: ?,
+            inst_type: tagged None});
       `endif
         tx_tostage2.u.enq(pipedata);
         `logLevel( stage1, 0,$format("[%2d]STAGE1 : Enquing: ",hartid,fshow(pipedata)))

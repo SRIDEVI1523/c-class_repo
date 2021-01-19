@@ -89,10 +89,10 @@ package stage2;
 
   `ifdef rtldump
     /*doc:subifc: receive instruction of trace from previous stage */
-    interface RXe#(Bit#(32)) rx_inst;
+    interface RXe#(CommitLogPacket) rx_inst;
 
     /*doc:subifc: send instruction trace to next stage */
-    interface TXe#(Bit#(32)) tx_inst;
+    interface TXe#(CommitLogPacket) tx_inst;
   `endif
 
     /*doc:method: input from commit stage (stage5) to update the regfile on instruction retirement*/
@@ -152,8 +152,8 @@ package stage2;
 
   `ifdef rtldump
     // fifo interface used to transmit the trace of the instruction for rtl.dump generation
-    TX#(Bit#(32)) txinst <- mkTX;
-    RX#(Bit#(32)) rxinst <- mkRX;
+    TX#(CommitLogPacket) txinst <- mkTX;
+    RX#(CommitLogPacket) rxinst <- mkRX;
   `endif
 
     /*doc:wire: wire to capture the latest csr values from csr-file*/
@@ -370,7 +370,20 @@ package stage2;
         tx_meta.u.enq(stage3meta);
         tx_mtval.u.enq(mtval);
       `ifdef rtldump
-        txinst.u.enq(rxinst.u.first);
+        let clogpkt = rxinst.u.first;
+        clogpkt.inst_type = tagged REG (CommitLogReg{wdata:?, rd: stage3meta.rd, 
+                            irf: `ifdef spfpu stage3meta.rdtype==IRF `else True `endif });
+        if (stage3meta.inst_type == SYSTEM_INSTR) begin
+          clogpkt.inst_type = tagged CSR (CommitLogCSR{csr_address : truncate(imm),
+              rd: stage3meta.rd, rdata:?, wdata:?, op:truncate(func_cause)} );
+        end
+        else if (stage3meta.inst_type == MEMORY) begin
+          clogpkt.inst_type = tagged MEM (CommitLogMem{access: stage3meta.memaccess, 
+                  rd: stage3meta.rd, 
+                  size: truncate(func_cause), address: ?, data: ?, commit_data:?,
+                  irf: `ifdef spfpu stage3meta.rdtype==IRF `else True `endif });
+        end
+        txinst.u.enq(clogpkt);
       `endif
 
         rg_op1[0] <= RFOp1{ addr: decoded.op_addr.rs1addr, data: op1,

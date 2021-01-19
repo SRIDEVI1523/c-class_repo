@@ -56,7 +56,7 @@ package ccore;
     interface Put#(Bit#(64)) sb_clint_mtime;
     interface Put#(Bit#(1)) sb_externalinterrupt;
   `ifdef rtldump
-    interface Get#(DumpType) io_dump;
+     method Maybe#(CommitLogPacket) dump;
   `endif
   `ifdef debug
     interface Hart_Debug_Ifc debug_server;
@@ -395,7 +395,7 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
 		interface master_i = fetch_xactor.axi_side;
 		interface master_d = memory_xactor.axi_side;
     `ifdef rtldump
-      interface io_dump = riscv.dump;
+      interface dump = riscv.dump;
     `endif
   `ifdef debug
     interface debug_server = interface Hart_Debug_Ifc

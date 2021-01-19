@@ -15,6 +15,7 @@ package TbSoc;
 	import AXI4_Fabric:: *;
   import uart::*;
 	import ccore_types::*;
+	import csrbox_decoder :: * ;
   `include "ccore_params.defines"
   `include "Logger.bsv"
   `include "Soc.defines"
@@ -30,6 +31,31 @@ package TbSoc;
   import "BDPI" function ActionValue #(Bit #(8))get_frame(int client_fd);
   import "BDPI" function Action send_tdo(Bit #(1) tdo , int client_fd);
 `endif
+    function Bit#(XLEN) fn_atomic_op (Bit#(5) op,  Bit#(XLEN) rs2,  Bit#(XLEN) loaded);
+      Bit#(XLEN) op1 = loaded;
+      Bit#(XLEN) op2 = rs2;
+    `ifdef RV64
+      if(op[4]==0)begin
+	  		op1=signExtend(loaded[31:0]);
+        op2= signExtend(rs2[31:0]);
+      end
+    `endif
+      Int#(XLEN) s_op1 = unpack(op1);
+	  	Int#(XLEN) s_op2 = unpack(op2);
+
+      case (op[3:0])
+	  			'b0011:return op2;
+	  			'b0000:return (op1+op2);
+	  			'b0010:return (op1^op2);
+	  			'b0110:return (op1&op2);
+	  			'b0100:return (op1|op2);
+	  			'b1100:return min(op1,op2);
+	  			'b1110:return max(op1,op2);
+	  			'b1000:return pack(min(s_op1,s_op2));
+	  			'b1010:return pack(max(s_op1,s_op2));
+	  			default:return op1;
+	  		endcase
+    endfunction
   (*synthesize*)
   module mkTbSoc(Empty);
 
@@ -102,7 +128,87 @@ package TbSoc;
     endrule
 
   `ifdef rtldump
-    rule write_dump_file(rg_cnt>=5);
+
+    rule write_dump_file(rg_cnt >= 5);
+
+      let generate_dump <- $test$plusargs("rtldump");
+      if (soc.dump matches tagged Valid .idump) begin
+    `ifndef openocd
+      if(idump.instruction=='h00006f||idump.instruction =='h00a001)
+        $finish(0);
+      else
+    `endif
+      if(generate_dump) begin
+        if (idump.instruction[1:0] == 'b11)
+        	$fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%8h", idump.instruction, ")");
+        else
+          $fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%4h", idump.instruction[15:0], ")");
+
+        if (idump.inst_type matches tagged REG .d) begin
+          if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
+            $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
+          if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
+            $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
+          if (!d.irf && valueOf(FLEN) == 64)
+            $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
+          if (!d.irf && valueOf(FLEN) == 32)
+            $fwrite(dump, " f%d", d.rd, " 0x%8h", d.wdata);
+        end
+
+        if (idump.inst_type matches tagged CSR .d) begin
+          if (valueOf(XLEN) == 64 && d.rd != 0)
+            $fwrite(dump, " x%d", d.rd, " 0x%16h", d.rdata);
+          if (valueOf(XLEN) == 32 && d.rd != 0)
+            $fwrite(dump, " x%d", d.rd, " 0x%8h", d.rdata);
+          if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
+            if (valueOf(XLEN) == 64) 
+              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%16h", d.rdata);
+            if (valueOf(XLEN) == 32)
+              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%8h", d.rdata);
+          end
+        end
+
+        if (idump.inst_type matches tagged MEM .d) begin
+          let store_data = d.data;
+          if (d.access == Atomic) begin
+            store_data = fn_atomic_op(d.atomic_op,d.data, d.commit_data);
+          end
+          if (d.access == Load || d.access == Atomic) begin
+            if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
+              $fwrite(dump, " x%d", d.rd, " 0x%16h", d.commit_data);
+            if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
+              $fwrite(dump, " x%d", d.rd, " 0x%8h", d.commit_data);
+          end
+
+          if(valueOf(XLEN) ==64 && d.access != Fence && d.access != FenceI)
+            $fwrite(dump, " mem 0x%16h", d.address);
+          if(valueOf(XLEN) ==32&& d.access != Fence && d.access != FenceI)
+            $fwrite(dump, " mem 0x%8h", d.address);
+
+          if (d.access == Atomic) begin
+            if(valueOf(XLEN) ==64)
+              $fwrite(dump, " mem 0x%16h", d.address);
+            if(valueOf(XLEN) ==32)
+              $fwrite(dump, " mem 0x%8h", d.address);
+          end
+
+          if (d.access == Store || d.access == Atomic) begin
+            if (d.size == 0)
+              $fwrite(dump, " 0x%2h", store_data[7:0]);
+            if (d.size == 1)
+              $fwrite(dump, " 0x%4h", store_data[15:0]);
+            if (d.size == 2)
+              $fwrite(dump, " 0x%8h", store_data[31:0]);
+            if (d.size == 3)
+              $fwrite(dump, " 0x%16h", store_data);
+          end
+        end
+          $fwrite(dump, "\n");
+      end
+
+      end
+    endrule
+    /*rule write_dump_file(rg_cnt>=5);
       let generate_dump <- $test$plusargs("rtldump");
       let {prv, pc, instruction, rd, data, rdtype}<- soc.io_dump.get;
     `ifndef openocd
@@ -111,7 +217,11 @@ package TbSoc;
       else
     `endif
       if(generate_dump)begin
-      	$fwrite(dump, prv, " 0x%16h", pc, " (0x%8h", instruction, ")");
+        if (instruction[1:0] == 'b11)
+        	$fwrite(dump, prv, " 0x%16h", pc, " (0x%8h", instruction, ")");
+        else
+          $fwrite(dump, prv, " 0x%16h", pc, " (0x%4h", instruction[15:0], ")");
+
         if(rdtype == FRF && valueOf(FLEN) == 64)
       	  $fwrite(dump, " f%d", rd, " 0x%16h", data[63:0], "\n");
         else if(rdtype == FRF && valueOf(FLEN) == 32)
@@ -121,7 +231,7 @@ package TbSoc;
         else if(rdtype == IRF && valueOf(XLEN) == 32)
     	    $fwrite(dump, " x%d", rd, " 0x%8h", data[31:0], "\n");
       end
-    endrule
+    endrule*/
   `endif
 
   `ifdef debug

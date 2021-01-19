@@ -55,8 +55,8 @@ package stage3;
 
   `ifdef rtldump
     // interface to receive the instruction sequence for the rtl dump feature
-    interface TXe#(Tuple2#(Bit#(`vaddr), Bit#(32))) tx_inst;
-    interface RXe#(Bit#(32)) rx_inst;
+    interface TXe#(CommitLogPacket) tx_inst;
+    interface RXe#(CommitLogPacket) rx_inst;
   `endif
 
     (*always_ready*)
@@ -142,7 +142,7 @@ package stage3;
 
   `ifdef rtldump
     // rx fifo to receive the instruction sequence for rtl.dump feature.
-    RX#(Bit#(32)) rxinst <- mkRX;
+    RX#(CommitLogPacket) rxinst <- mkRX;
   `endif
 
   `ifdef bpu
@@ -161,7 +161,7 @@ package stage3;
     TX#(Stage4Common)   tx_common <- mkTX;
     TX#(Stage4Type)     tx_type   <- mkTX;
   `ifdef rtldump
-    TX#(Tuple2#(Bit#(`vaddr), Bit#(32))) txinst <- mkTX;
+    TX#(CommitLogPacket) txinst <- mkTX;
   `endif
 
     // module implementing the operand bypass behavior
@@ -285,7 +285,7 @@ package stage3;
       let btbresponse = meta.btbresponse;
     `endif
     `ifdef rtldump
-      let instruction = rxinst.u.first;
+      let clogpkt = rxinst.u.first;
     `endif
       Bit#(`vaddr) pc = meta.pc;
       let s4common = Stage4Common{pc    : meta.pc,
@@ -580,7 +580,23 @@ package stage3;
       `endif
         tx_common.u.enq(s4common);
       `ifdef rtldump
-        txinst.u.enq(tuple2(pc, instruction));
+        if (s4type matches tagged Memory .mem)begin
+          CommitLogMem _pkt = ?;
+          if (clogpkt.inst_type matches tagged MEM .cmem) 
+            _pkt = cmem;
+          _pkt.address= memory_address;
+          _pkt.data= arg2;
+          _pkt.atomic_op = {funct3[0],fn};
+          clogpkt.inst_type = tagged MEM _pkt;
+        end
+        else if (s4type matches tagged Regular .x) begin
+          CommitLogReg _pkt = ?;
+          if (clogpkt.inst_type matches tagged REG .creg)
+            _pkt = creg;
+          _pkt.wdata = x.rdvalue;
+          clogpkt.inst_type = tagged REG _pkt;
+        end
+        txinst.u.enq(clogpkt);
       `endif
       end
     endrule
@@ -615,6 +631,7 @@ package stage3;
     interface rx_mtval_from_stage2  = rx_mtval.e;
   `ifdef rtldump
     interface rx_inst = rxinst.e;
+    interface tx_inst = txinst.e;
   `endif
     method Action ma_op1 (RFOp1 i);
       wr_op1 <= i;
@@ -630,9 +647,6 @@ package stage3;
     // ------------------ interfaces to send the executed result to the next stage --------------//
 		interface tx_common_to_stage4 = tx_common.e;
 		interface tx_type_to_stage4   = tx_type.e;
-  `ifdef rtldump
-    interface tx_inst = txinst.e;
-  `endif
     // -------------------------------------------------------------------------------------------//
 
     // Description : This method fires when there is a flush from the write - back stage.

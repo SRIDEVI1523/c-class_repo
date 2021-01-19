@@ -9,6 +9,7 @@ Details:
 */
 package ccore_types;
   `include "ccore_params.defines"
+  `include "csrbox.defines"
   
   import csr_types :: *;
   `ifdef RV64
@@ -144,6 +145,45 @@ package ccore_types;
       Bool step_ie;
       Bool core_debugenable;
   } DebugStatus deriving(Bits, Eq, FShow);
+
+  typedef struct{
+    Bit#(XLEN) address;
+    Bit#(XLEN) data;
+    Bit#(XLEN) commit_data;
+    Access_type access;
+    Bit#(5) rd;
+    Bool irf;
+    Bit#(3) size;
+    Bit#(5) atomic_op;
+  } CommitLogMem deriving(Bits, FShow, Eq);
+
+  typedef struct{
+    Bit#(12) csr_address;
+    Bit#(XLEN) wdata;
+    Bit#(5) rd;
+    Bit#(XLEN) rdata;
+    Bit#(2) op;
+  } CommitLogCSR deriving(Bits, FShow, Eq);
+
+  typedef struct{
+    Bit#(XLEN) wdata;
+    Bit#(5) rd;
+    Bool irf;
+  } CommitLogReg deriving(Bits, FShow, Eq);
+
+  typedef union tagged {
+    void None;
+    CommitLogMem MEM;
+    CommitLogCSR CSR;
+    CommitLogReg REG;
+  } CommitLogType deriving(Bits, FShow, Eq);
+
+  typedef struct{
+    Privilege_mode mode;
+    Bit#(XLEN) pc;
+    Bit#(32) instruction;
+    CommitLogType inst_type;
+  } CommitLogPacket deriving(Bits, FShow, Eq);
 
   typedef Tuple6#(Privilege_mode, Bit#(XLEN), Bit#(32), Bit#(5), Bit#(ELEN), RFType) DumpType;
 

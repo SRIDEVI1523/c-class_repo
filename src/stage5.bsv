@@ -30,7 +30,7 @@ package stage5;
   interface Ifc_stage5;
     interface RXe#(PIPE4) rx_in;
     `ifdef rtldump
-      interface RXe#(Tuple2#(Bit#(`vaddr),Bit#(32))) rx_inst;
+      interface RXe#(CommitLogPacket) rx_inst;
     `endif
     method Maybe#(CommitData) commit_rd;
   `ifdef supervisor
@@ -46,9 +46,9 @@ package stage5;
     `ifdef arith_trap
       method Bit#(1) mv_arith_excep;
    `endif
-    `ifdef rtldump
-      interface Get#(DumpType) dump;
-    `endif
+   `ifdef rtldump
+     method Maybe#(CommitLogPacket) dump;
+   `endif
 		`ifdef supervisor
 			method Bit#(XLEN) mv_csr_satp;
 		`endif
@@ -119,7 +119,7 @@ package stage5;
 
     RX#(PIPE4) rx<-mkRX;
   `ifdef rtldump
-    RX#(Tuple2#(Bit#(`vaddr),Bit#(32))) rxinst <-mkRX;
+    RX#(CommitLogPacket) rxinst <-mkRX;
   `endif
     Ifc_csrbox csr <- mk_csrbox;
 
@@ -145,7 +145,7 @@ package stage5;
     
     Reg#(Bool) rg_csr_wait <- mkDReg(False);
   `ifdef rtldump
-    FIFO#(DumpType) dump_ff <- mkLFIFO;
+    Reg#(Maybe#(CommitLogPacket)) dump_ff <- mkDReg(tagged Invalid);
     let prv=csr.mv_prv;
   `endif
     Reg#(Bool) rg_store_initiated <- mkReg(False);
@@ -223,7 +223,8 @@ package stage5;
     rule instruction_commit;
       let {commit, epoch}=rx.u.first;
     `ifdef rtldump
-      let {simpc,inst}=rxinst.u.first;
+      let clogpkt =rxinst.u.first;
+      clogpkt.mode = prv;
     `endif
       Bool fenceI=False;
     `ifdef supervisor
@@ -233,7 +234,7 @@ package stage5;
       Bool fl = False;
       `ifdef rtldump
         `logLevel( stage5, 0, $format("[%2d]STAGE5: PC: %h: inst: %h epoch:%b rg_epoch:%b commit: ",hartid,
-                simpc,inst,epoch,rg_epoch,fshow(commit)))
+                clogpkt.pc,clogpkt.instruction,epoch,rg_epoch,fshow(commit)))
       `endif
       if(rg_epoch==epoch)begin
       `ifdef triggers
@@ -242,9 +243,9 @@ package stage5;
           fl=True;
           jump_address=newpc;
           rx.u.deq;
-          `ifdef rtldump
-            rxinst.u.deq;
-          `endif
+        `ifdef rtldump
+          rxinst.u.deq;
+        `endif
           `logLevel( stage5, 0, $format("[%2d]STAGE5: Trigger TRAP:%d NewPC:%h fl:%b",hartid,
                                                          rg_take_trigger.cause,jump_address,fl))
         end
@@ -272,9 +273,9 @@ package stage5;
           `endif
           end
           rx.u.deq;
-          `ifdef rtldump
-            rxinst.u.deq;
-          `endif
+        `ifdef rtldump
+          rxinst.u.deq;
+        `endif
           `logLevel( stage5, 0, $format("[%2d]STAGE5: Received TRAP:%d NewPC:%h fl:%b",hartid,t.cause,jump_address,fl))
         end
         else if (commit matches tagged STORE .s)begin
@@ -294,14 +295,7 @@ package stage5;
                                             `ifdef spfpu , rdtype: IRF `endif };
               `endif
             `ifdef rtldump
-              `ifdef atomic
-                Bit#(ELEN) data=s.commitvalue;
-                if(s.rd==0)
-                  data=0;
-                dump_ff.enq(tuple6(prv, signExtend(s.pc), inst, s.rd, data, IRF));
-              `else
-                dump_ff.enq(tuple6(prv, signExtend(s.pc), inst, 0, 0, IRF));
-              `endif
+              dump_ff <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
@@ -327,14 +321,7 @@ package stage5;
                                             `ifdef spfpu ,rdtype: IRF `endif };
               `endif
             `ifdef rtldump
-              `ifdef atomic
-                Bit#(ELEN) data=s.commitvalue;
-                if(s.rd==0)
-                  data=0;
-                dump_ff.enq(tuple6(prv, signExtend(s.pc), inst, s.rd, data, IRF));
-              `else
-                dump_ff.enq(tuple6(prv, signExtend(s.pc), inst, 0, 0, IRF));
-              `endif
+              dump_ff <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
@@ -384,11 +371,16 @@ package stage5;
             wr_commit <= tagged Valid CommitData{addr: sys.rd, data: zeroExtend(dest)
                                       `ifdef spfpu, rdtype: IRF `endif };
             `ifdef rtldump
-              if(sys.rd==0)
-                dest=0;
-              dump_ff.enq(tuple6(prv, signExtend(simpc), inst, sys.rd, zeroExtend(dest), IRF));
-            `endif
-            `ifdef rtldump
+              CommitLogCSR _pkt = ?;
+              if (clogpkt.inst_type matches tagged CSR .pcsr)
+                _pkt = pcsr;
+              if (sys.func3 == 0) begin
+                _pkt.csr_address = 'h300;
+                _pkt.wdata = csr.mv_csr_mstatus;
+              end
+              _pkt.rdata = dest;
+              clogpkt.inst_type = tagged CSR _pkt;
+              dump_ff <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
@@ -409,13 +401,7 @@ package stage5;
           rx.u.deq;
         `ifdef rtldump
           rxinst.u.deq;
-        `endif
-        `ifdef rtldump
-          let data=r.commitvalue;
-          if(r.rd==0 `ifdef spfpu && r.rdtype==IRF `endif )
-            data=0;
-            dump_ff.enq(tuple6(prv, signExtend(simpc), inst, r.rd, data, `ifdef spfpu r.rdtype `else
-            IRF `endif ));
+          dump_ff <= tagged Valid (clogpkt);
         `endif
         end
 
@@ -473,12 +459,7 @@ package stage5;
 		method ma_clint_mtime = csr.ma_set_time;
 		method mv_resume_wfi = unpack( |((csr.mv_csr_mip)& (csr.mv_csr_mie) ));
     `ifdef rtldump
-      interface dump = interface Get
-        method ActionValue#(DumpType) get ;
-          dump_ff.deq;
-          return dump_ff.first;
-        endmethod
-      endinterface;
+      method dump = dump_ff;
     `endif
 		`ifdef supervisor
 			method mv_csr_satp=csr.mv_csr_satp;

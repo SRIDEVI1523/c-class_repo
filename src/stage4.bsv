@@ -33,8 +33,8 @@ package stage4;
     interface TXe#(PIPE4) tx_min;
 
   `ifdef rtldump
-    interface RXe#(Tuple2#(Bit#(`vaddr),Bit#(32))) rx_inst;
-    interface TXe#(Tuple2#(Bit#(`vaddr),Bit#(32))) tx_inst;
+    interface RXe#(CommitLogPacket) rx_inst;
+    interface TXe#(CommitLogPacket) tx_inst;
   `endif
 
     // interface to receive the response from dmem memory sub system
@@ -117,8 +117,8 @@ package stage4;
     TX#(PIPE4) txmin <- mkTX;
 
   `ifdef rtldump
-    RX#(Tuple2#(Bit#(`vaddr),Bit#(32))) rxinst <-mkRX;
-    TX#(Tuple2#(Bit#(`vaddr),Bit#(32))) txinst <-mkTX;
+    RX#(CommitLogPacket) rxinst <-mkRX;
+    TX#(CommitLogPacket) txinst <-mkTX;
   `endif
 
     // fifo to capture the response from the dmem subsystem
@@ -156,17 +156,28 @@ package stage4;
       `logLevel( stage4, 0, $format("[%2d]STAGE4: ",hartid,fshow(s4common)))
       `logLevel( stage4, 0, $format("[%2d]STAGE4: ",hartid,fshow(s4type)))
       Bool operation_done = True;
+    `ifdef rtldump
+      let clogpkt = rxinst.u.first;
+    `endif
       if(s4type matches tagged Trap .t)
         pipe4data = tagged TRAP CommitTrap{cause    : t.cause,
                                            pc       : s4common.pc,
                                            badaddr  : t.badaddr} ;
-      else if(s4type matches tagged Regular .r)
+      else if(s4type matches tagged Regular .r) begin
+      `ifdef rtldump
+        CommitLogReg pkt = ? ;
+        if (clogpkt.inst_type matches tagged REG .creg)
+          pkt = creg;
+        pkt.wdata = r.rdvalue;
+        clogpkt.inst_type = tagged REG pkt;
+      `endif
         pipe4data = tagged REG CommitRegular{ commitvalue : r.rdvalue,
                                                   rd          : s4common.rd
                                                 `ifdef spfpu
                                                   ,fflags     : r.fflags
                                                   ,rdtype     : s4common.rdtype
                                                 `endif };
+      end
       else if(s4type matches tagged System .s)
         pipe4data = tagged SYSTEM CommitSystem { rs1      : s.rs1_imm,
                                                  lpc      : s.lpc,
@@ -177,7 +188,14 @@ package stage4;
         if( ff_memory_response.notEmpty ) begin
           let response = ff_memory_response.first;
           ff_memory_response.deq;
-
+        `ifdef rtldump
+          CommitLogMem _pkt = ?;
+          if (clogpkt.inst_type matches tagged MEM. cmem) 
+            _pkt = cmem;
+          _pkt.commit_data = response.word;
+          clogpkt.inst_type = tagged MEM _pkt;
+        `endif
+          
           `logLevel( stage4, 0, $format("[%2d]STAGE4: Received: ",hartid,fshow(response)))
           Bool trap = response.trap;
           Bit#(`causesize) cause = response.cause;
@@ -240,7 +258,7 @@ package stage4;
         rx_common.u.deq;
         rx_type.u.deq;
       `ifdef rtldump
-        txinst.u.enq(rxinst.u.first);
+        txinst.u.enq(clogpkt);
         rxinst.u.deq;
       `endif
       end

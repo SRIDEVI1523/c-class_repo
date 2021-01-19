@@ -63,7 +63,7 @@ package Soc;
 
   interface Ifc_Soc;
    `ifdef rtldump
-     interface Get#(DumpType) io_dump;
+     method Maybe#(CommitLogPacket) dump;
    `endif
     interface RS232 uart_io;
   `ifdef debug
@@ -117,7 +117,7 @@ package Soc;
     mkConnection(ccore.sb_clint_mtime,clint.sb_clint_mtime);
 
     `ifdef rtldump
-      interface io_dump= ccore.io_dump;
+      interface dump= ccore.dump;
     `endif
     interface uart_io=uart.io;
   `ifdef debug

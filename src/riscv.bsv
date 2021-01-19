@@ -62,7 +62,7 @@ package riscv;
   	method Action ma_set_ueip(Bit#(1) ex_i);
   `endif
   `ifdef rtldump
-    interface Get#(DumpType) dump;
+     method Maybe#(CommitLogPacket) dump;
   `endif
     method Bit#(XLEN) mv_csr_mstatus;
     method Bit#(3) mv_cacheenable;
@@ -138,27 +138,27 @@ package riscv;
     // -- ISBs after stage 1
     FIFOF#(PIPE1) pipe1 <- mkSizedFIFOF(2);
   `ifdef rtldump
-    FIFOF#(Bit#(32)) pipe1inst <- mkSizedFIFOF(2);
+    FIFOF#(CommitLogPacket) pipe1inst <- mkSizedFIFOF(2);
   `endif
 
     // -- ISBs after stage 2
     FIFOF#(Stage3Meta) pipe2_meta <- mkLFIFOF();
     FIFOF#(Bit#(XLEN)) pipe2_mtval <- mkLFIFOF();
   `ifdef rtldump
-    FIFOF#(Bit#(32)) pipe2inst <- mkLFIFOF();
+    FIFOF#(CommitLogPacket) pipe2inst <- mkLFIFOF();
   `endif
 
     // -- ISBs after stage 3
     FIFOF#(Stage4Common) pipe3common <- mkSizedFIFOF(2);
     FIFOF#(Stage4Type)   pipe3type   <- mkSizedFIFOF(2);
   `ifdef rtldump
-    FIFOF#(Tuple2#(Bit#(`vaddr), Bit#(32))) pipe3inst <- mkSizedFIFOF(2);
+    FIFOF#(CommitLogPacket) pipe3inst <- mkSizedFIFOF(2);
   `endif
 
     // -- ISBs after stage 4
     FIFOF#(PIPE4) pipe4 <- mkLFIFOF;
   `ifdef rtldump
-    FIFOF#(Tuple2#(Bit#(`vaddr), Bit#(32))) pipe4inst <- mkLFIFOF;
+    FIFOF#(CommitLogPacket) pipe4inst <- mkLFIFOF;
   `endif
     let {flush_from_exe, flushpc_from_exe}=stage3.flush_from_exe;
     let {flush_from_wb, flushpc_from_wb, fenceI `ifdef supervisor, sfence `endif }=stage5.flush;
