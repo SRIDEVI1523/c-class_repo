@@ -38,6 +38,7 @@ package ccore;
 	import Connectable 				:: *;
   import GetPut:: *;
   import BUtils::*;
+  import csrbox :: * ;
 
 `ifdef debug
   import debug_types::*;
@@ -56,7 +57,8 @@ package ccore;
     interface Put#(Bit#(64)) sb_clint_mtime;
     interface Put#(Bit#(1)) sb_externalinterrupt;
   `ifdef rtldump
-     method Maybe#(CommitLogPacket) dump;
+     interface Sbread sbread;
+     method Maybe#(CommitLogPacket) commitlog;
   `endif
   `ifdef debug
     interface Hart_Debug_Ifc debug_server;
@@ -395,7 +397,8 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
 		interface master_i = fetch_xactor.axi_side;
 		interface master_d = memory_xactor.axi_side;
     `ifdef rtldump
-      interface dump = riscv.dump;
+      interface commitlog = riscv.commitlog;
+      interface sbread = riscv.sbread;
     `endif
   `ifdef debug
     interface debug_server = interface Hart_Debug_Ifc

@@ -16,9 +16,11 @@ package TbSoc;
   import uart::*;
 	import ccore_types::*;
 	import csrbox_decoder :: * ;
+  import csrbox :: * ;
   `include "ccore_params.defines"
   `include "Logger.bsv"
   `include "Soc.defines"
+  `include "csrbox.defines"
   import device_common::*;
   import DReg :: *;
   import Connectable :: *;
@@ -70,6 +72,8 @@ package TbSoc;
   `else
     Ifc_Soc soc <- mkSoc();
   `endif
+
+    `include "csr_probe.bsv"
 
     UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5);
     Reg#(Bool) rg_read_rx<- mkDReg(False);
@@ -132,7 +136,7 @@ package TbSoc;
     rule write_dump_file(rg_cnt >= 5);
 
       let generate_dump <- $test$plusargs("rtldump");
-      if (soc.dump matches tagged Valid .idump) begin
+      if (soc.commitlog matches tagged Valid .idump) begin
     `ifndef openocd
       if(idump.instruction=='h00006f||idump.instruction =='h00a001)
         $finish(0);
@@ -160,11 +164,12 @@ package TbSoc;
             $fwrite(dump, " x%d", d.rd, " 0x%16h", d.rdata);
           if (valueOf(XLEN) == 32 && d.rd != 0)
             $fwrite(dump, " x%d", d.rd, " 0x%8h", d.rdata);
+          Bit#(XLEN) wdata = fn_probe_csr(d.csr_address);
           if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
             if (valueOf(XLEN) == 64) 
-              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%16h", d.rdata);
+              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%16h", wdata);
             if (valueOf(XLEN) == 32)
-              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%8h", d.rdata);
+              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%8h", wdata);
           end
         end
 

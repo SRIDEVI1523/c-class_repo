@@ -30,6 +30,7 @@ package riscv;
   import CustomFIFOs::*;
   import icache_types ::*;
   import dcache_types :: * ;
+  import csrbox :: * ;
   `include "ccore_params.defines"
 
 `ifdef debug
@@ -62,7 +63,8 @@ package riscv;
   	method Action ma_set_ueip(Bit#(1) ex_i);
   `endif
   `ifdef rtldump
-     method Maybe#(CommitLogPacket) dump;
+     method Maybe#(CommitLogPacket) commitlog;
+     interface Sbread sbread;
   `endif
     method Bit#(XLEN) mv_csr_mstatus;
     method Bit#(3) mv_cacheenable;
@@ -414,7 +416,8 @@ package riscv;
     method ma_clint_mtip = stage5.ma_clint_mtip;
     method ma_clint_mtime = stage5.ma_clint_mtime;
     `ifdef rtldump
-      interface dump = stage5.dump;
+      interface commitlog = stage5.commitlog;
+      interface sbread = stage5.sbread;
     `endif
     interface memory_response = stage4.memory_response;
     method Action storebuffer_empty(Bool e);

@@ -47,7 +47,8 @@ package stage5;
       method Bit#(1) mv_arith_excep;
    `endif
    `ifdef rtldump
-     method Maybe#(CommitLogPacket) dump;
+     method Maybe#(CommitLogPacket) commitlog;
+     interface Sbread sbread;
    `endif
 		`ifdef supervisor
 			method Bit#(XLEN) mv_csr_satp;
@@ -145,7 +146,7 @@ package stage5;
     
     Reg#(Bool) rg_csr_wait <- mkDReg(False);
   `ifdef rtldump
-    Reg#(Maybe#(CommitLogPacket)) dump_ff <- mkDReg(tagged Invalid);
+    Reg#(Maybe#(CommitLogPacket)) rg_commitlog <- mkDReg(tagged Invalid);
     let prv=csr.mv_prv;
   `endif
     Reg#(Bool) rg_store_initiated <- mkReg(False);
@@ -295,7 +296,7 @@ package stage5;
                                             `ifdef spfpu , rdtype: IRF `endif };
               `endif
             `ifdef rtldump
-              dump_ff <= tagged Valid (clogpkt);
+              rg_commitlog <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
@@ -321,7 +322,7 @@ package stage5;
                                             `ifdef spfpu ,rdtype: IRF `endif };
               `endif
             `ifdef rtldump
-              dump_ff <= tagged Valid (clogpkt);
+              rg_commitlog <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
@@ -376,11 +377,11 @@ package stage5;
                 _pkt = pcsr;
               if (sys.func3 == 0) begin
                 _pkt.csr_address = 'h300;
-                _pkt.wdata = csr.mv_csr_mstatus;
+                _pkt.wdata = csr.sbread.mv_csr_mstatus;
               end
               _pkt.rdata = dest;
               clogpkt.inst_type = tagged CSR _pkt;
-              dump_ff <= tagged Valid (clogpkt);
+              rg_commitlog <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
@@ -401,7 +402,7 @@ package stage5;
           rx.u.deq;
         `ifdef rtldump
           rxinst.u.deq;
-          dump_ff <= tagged Valid (clogpkt);
+          rg_commitlog <= tagged Valid (clogpkt);
         `endif
         end
 
@@ -447,22 +448,23 @@ package stage5;
       return wr_commit;
     endmethod
     method flush=wr_flush;
-    method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, csr_mip: truncate(csr.mv_csr_mip), 
-      csr_mie: truncate(csr.mv_csr_mie), csr_mstatus: truncate(csr.mv_csr_mstatus), 
-      csr_misa: truncate(csr.mv_csr_misa), frm: truncate(csr.mv_csr_frm)
+    method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, csr_mip: truncate(csr.sbread.mv_csr_mip), 
+      csr_mie: truncate(csr.sbread.mv_csr_mie), csr_mstatus: truncate(csr.sbread.mv_csr_mstatus), 
+      csr_misa: truncate(csr.sbread.mv_csr_misa), frm: truncate(csr.sbread.mv_csr_frm)
     `ifdef non_m_traps 
-      ,csr_mideleg: truncate(csr.mv_csr_mideleg)
+      ,csr_mideleg: truncate(csr.sbread.mv_csr_mideleg)
     `endif };
       
 	  method ma_clint_msip = csr.ma_set_mip_msip;
 		method ma_clint_mtip = csr.ma_set_mip_mtip;
 		method ma_clint_mtime = csr.ma_set_time;
-		method mv_resume_wfi = unpack( |((csr.mv_csr_mip)& (csr.mv_csr_mie) ));
+		method mv_resume_wfi = unpack( |((csr.sbread.mv_csr_mip)& (csr.sbread.mv_csr_mie) ));
     `ifdef rtldump
-      method dump = dump_ff;
+      method commitlog = rg_commitlog;
+      interface sbread = csr.sbread;
     `endif
 		`ifdef supervisor
-			method mv_csr_satp=csr.mv_csr_satp;
+			method mv_csr_satp=csr.sbread.mv_csr_satp;
 		`endif
   	method ma_set_meip = csr.ma_set_mip_meip;
   `ifdef supervisor
@@ -471,7 +473,7 @@ package stage5;
   `ifdef usertraps
   	method ma_set_ueip = csr.ma_set_ueip;
   `endif
-    method mv_csr_misa_c=csr.mv_csr_misa[2];
+    method mv_csr_misa_c=csr.sbread.mv_csr_misa[2];
     method initiate_store=wr_initiate_store;
     method Action write_resp(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
       wr_store_response<=r;
@@ -484,9 +486,9 @@ package stage5;
       wr_cache_ready <= r;
     endmethod
   `endif
-    method mv_cacheenable = truncate(csr.mv_csr_customcontrol);
+    method mv_cacheenable = truncate(csr.sbread.mv_csr_customcontrol);
     method mv_curr_priv = pack(csr.mv_prv);    
-    method mv_csr_mstatus= csr.mv_csr_mstatus;
+    method mv_csr_mstatus= csr.sbread.mv_csr_mstatus;
   `ifdef pmp
     method mv_pmp_cfg = csr.mv_pmpcfg;
     method mv_pmp_addr=csr.mv_pmpaddr;
@@ -518,15 +520,15 @@ package stage5;
 	`endif
 	`ifdef dtim
 	  /*doc:method: */
-	  method  mv_csr_dtim_base = csr.mv_csr_dtim_base;
+	  method  mv_csr_dtim_base = csr.sbread.mv_csr_dtim_base;
     /*doc:method: */
-    method  mv_csr_dtim_bound  = csr.mv_csr_dtim_bound;
+    method  mv_csr_dtim_bound  = csr.sbread.mv_csr_dtim_bound;
   `endif
   `ifdef itim
     /*doc:method: */
-    method mv_csr_itim_base  = csr.mv_csr_itim_base;
+    method mv_csr_itim_base  = csr.sbread.mv_csr_itim_base;
     /*doc:method: */
-    method mv_csr_itim_bound = csr.mv_csr_itim_bound;
+    method mv_csr_itim_bound = csr.sbread.mv_csr_itim_bound;
   `endif
   endmodule
 endpackage

@@ -30,6 +30,7 @@ package Soc;
   import bram :: *;
   import bootrom :: *;
   import debug_halt_loop::*;
+  import csrbox :: * ;
 
 `ifdef debug
   import debug_types::*;                                                                          
@@ -63,7 +64,8 @@ package Soc;
 
   interface Ifc_Soc;
    `ifdef rtldump
-     method Maybe#(CommitLogPacket) dump;
+     interface Sbread sbread;
+     method Maybe#(CommitLogPacket) commitlog;
    `endif
     interface RS232 uart_io;
   `ifdef debug
@@ -117,7 +119,8 @@ package Soc;
     mkConnection(ccore.sb_clint_mtime,clint.sb_clint_mtime);
 
     `ifdef rtldump
-      interface dump= ccore.dump;
+      interface commitlog= ccore.commitlog;
+      interface sbread = ccore.sbread;
     `endif
     interface uart_io=uart.io;
   `ifdef debug
