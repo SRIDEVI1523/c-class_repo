@@ -159,7 +159,10 @@ hart0:
                   wlrl:
                     - 0:1
             tw:
-                implemented: false
+                implemented: true
+                type:
+                  wlrl:
+                    - 0:1
             tsr:
                 implemented: true
                 type:
@@ -189,8 +192,8 @@ hart0:
         rv64:
             accessible: true
             type:
-                ro_constant: 0
-        reset-val: 0
+                ro_constant: 5
+        reset-val: 5
     mimpid:
         rv32:
             accessible: false
