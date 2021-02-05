@@ -192,7 +192,12 @@ package stage4;
           CommitLogMem _pkt = ?;
           if (clogpkt.inst_type matches tagged MEM. cmem) 
             _pkt = cmem;
-          _pkt.commit_data = response.word;
+          if (_pkt.access == Load || (_pkt.access == Atomic && _pkt.atomic_op != 7))
+            _pkt.commit_data = response.word;
+          `ifdef dpfpu
+            if (s.nanboxing == 1)
+              _pkt.commit_data[63:32] = '1;
+          `endif
           clogpkt.inst_type = tagged MEM _pkt;
         `endif
           

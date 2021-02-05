@@ -149,33 +149,38 @@ package TbSoc;
           $fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%4h", idump.instruction[15:0], ")");
 
         if (idump.inst_type matches tagged REG .d) begin
-          if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
-            $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
-          if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
-            $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
-          if (!d.irf && valueOf(FLEN) == 64)
-            $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
-          if (!d.irf && valueOf(FLEN) == 32)
-            $fwrite(dump, " f%d", d.rd, " 0x%8h", d.wdata);
+          if (!(idump.instruction[31:25] =='b0001001 && idump.instruction[14:0] == 'b000000001110011)) begin
+            if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
+              $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
+            if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
+              $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
+            if (!d.irf && valueOf(FLEN) == 64)
+              $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
+            if (!d.irf && valueOf(FLEN) == 32)
+              $fwrite(dump, " f%d", d.rd, " 0x%8h", d.wdata);
+          end
         end
 
         if (idump.inst_type matches tagged CSR .d) begin
+          let csr_address = d.csr_address;
+          if (d.csr_address == 'h100)
+            csr_address = 'h300;
           if (valueOf(XLEN) == 64 && d.rd != 0)
             $fwrite(dump, " x%d", d.rd, " 0x%16h", d.rdata);
           if (valueOf(XLEN) == 32 && d.rd != 0)
             $fwrite(dump, " x%d", d.rd, " 0x%8h", d.rdata);
-          Bit#(XLEN) wdata = fn_probe_csr(d.csr_address);
+          Bit#(XLEN) wdata = fn_probe_csr(csr_address);
           if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
             if (valueOf(XLEN) == 64) 
-              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%16h", wdata);
+              $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%16h", wdata);
             if (valueOf(XLEN) == 32)
-              $fwrite(dump, " " , fn_csr_to_str(d.csr_address), " 0x%8h", wdata);
+              $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
           end
         end
 
         if (idump.inst_type matches tagged MEM .d) begin
           let store_data = d.data;
-          if (d.access == Atomic) begin
+          if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
             store_data = fn_atomic_op(d.atomic_op,d.data, d.commit_data);
           end
           if (d.access == Load || d.access == Atomic) begin
@@ -183,6 +188,10 @@ package TbSoc;
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.commit_data);
             if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%8h", d.commit_data);
+            if (!d.irf && valueOf(FLEN) == 64 )
+              $fwrite(dump, " f%d", d.rd, " 0x%16h", d.commit_data);
+            if (!d.irf && valueOf(FLEN) == 32 )
+              $fwrite(dump, " f%d", d.rd, " 0x%8h", d.commit_data);
           end
 
           if(valueOf(XLEN) ==64 && d.access != Fence && d.access != FenceI)
@@ -190,16 +199,20 @@ package TbSoc;
           if(valueOf(XLEN) ==32&& d.access != Fence && d.access != FenceI)
             $fwrite(dump, " mem 0x%8h", d.address);
 
-          if (d.access == Atomic) begin
+          if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
             if(valueOf(XLEN) ==64)
               $fwrite(dump, " mem 0x%16h", d.address);
             if(valueOf(XLEN) ==32)
               $fwrite(dump, " mem 0x%8h", d.address);
           end
 
-          if (d.access == Store || d.access == Atomic) begin
-            if (d.size == 0)
-              $fwrite(dump, " 0x%2h", store_data[7:0]);
+          if (d.access == Store || (d.access == Atomic && d.atomic_op != 5)) begin
+            if (d.size == 0) begin
+              if (store_data[7:4]==0)
+                $fwrite(dump, " 0x%1h", store_data[3:0]);
+              else
+                $fwrite(dump, " 0x%2h", store_data[7:0]);
+            end
             if (d.size == 1)
               $fwrite(dump, " 0x%4h", store_data[15:0]);
             if (d.size == 2)

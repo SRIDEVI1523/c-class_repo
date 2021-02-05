@@ -593,6 +593,10 @@ package stage3;
           CommitLogReg _pkt = ?;
           if (clogpkt.inst_type matches tagged REG .creg)
             _pkt = creg;
+          else begin
+            _pkt.rd = meta.rd;
+            _pkt.irf = (meta.rdtype==IRF);
+          end
           _pkt.wdata = x.rdvalue;
           clogpkt.inst_type = tagged REG _pkt;
         end
