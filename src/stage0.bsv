@@ -173,6 +173,7 @@ package stage0;
       `endif
 
         let nextpc = (rg_pc[0] & signExtend(3'b100)) + 4;
+        `logLevel( stage0, 0, $format("STAGE0: nextpc: %h rg_fence:%b",nextpc,rg_fence[0]))
 
       `ifdef bpu
         // bpu is flushed in case of ifence and not for sfence
@@ -184,7 +185,7 @@ package stage0;
           // check for edge case
           Bool edgecase = bpuresp.btbresponse.hi && !bpuresp.instr16;
         `endif
-          if (bpuresp.btbresponse.prediction[`statesize - 1] == 1
+          if (bpuresp.btbresponse.prediction[`statesize - 1] == 1 && bpuresp.btbresponse.btbhit 
                                     `ifdef compressed && !edgecase `endif )
             nextpc = bpuresp.nextpc;
         `ifdef compressed
@@ -194,7 +195,7 @@ package stage0;
             rg_delayed_redirect[0] <= tagged Invalid;
           end
           // send pc+4 and store the target for the next round
-          else if(edgecase && bpuresp.btbresponse.prediction > 1)
+          else if(edgecase && bpuresp.btbresponse.prediction > 1 && !rg_fence[0])
             rg_delayed_redirect[0] <= tagged Valid bpuresp.nextpc;
         `endif
 
@@ -202,6 +203,7 @@ package stage0;
           `logLevel( stage0, 0, $format("[%2d]STAGE0: BPU response:",hartid,fshow(bpu_resp)))
         end
       `endif
+      `logLevel( stage0, 0, $format("STAGE0: nextpc1: %h ",nextpc))
 
       // don't update the pc in case fence or sfence instruction
       if( `ifdef ifence !rg_fence[0] && `endif `ifdef supervisor !rg_sfence[0] && `endif True)
