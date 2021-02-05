@@ -71,7 +71,7 @@ verification:
   checkout: 59-update-verif-templates
   recursive: True
   patch:
-    - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
+    - [riscv-tests/env , verification/patches/riscv-tests-cclass.patch]
 benchmarks:
   url: https://gitlab.com/incoresemi/core-generators/benchmarks
   checkout: master
