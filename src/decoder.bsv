@@ -447,7 +447,7 @@ package decoder;
   Bool validOp32  = (funct3==1)?(funct7==0):(funct3==0 || funct3==5)?(funct7=='b0000000||funct7=='b0100000):False;
   Bool validFloat = fs!=0 && ((funct7[0]==0 && csrs.csr_misa[5]==1) `ifdef dpfpu || (funct7[0]==1 &&  csrs.csr_misa[3]==1) `endif );
   Bool validFNM = inst[26]==0 && validFloat;
-  Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110):(funct3!='b101 && funct3!='b110);
+  Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
   //TODO: RM field check
   Bool validFloatOpF = case(inst[31:27])
     'b00000, 'b00001, 'b00010, 'b00011: valid_rounding; // FADD, FSUB, FMUL, FDIV
