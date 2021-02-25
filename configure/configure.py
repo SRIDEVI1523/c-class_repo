@@ -105,7 +105,7 @@ def specific_checks(foo):
             logger.error('D-Cache d_words should be ' + str(xlen/8))
             sys.exit(1)
 
-def capture_compile_cmd(foo, isa_node):
+def capture_compile_cmd(foo, isa_node, debug_spec):
     global bsc_cmd
     global bsc_defines
 
@@ -156,6 +156,8 @@ def capture_compile_cmd(foo, isa_node):
         for w in foo['bsc_compile_options']['suppress_warnings']:
             suppress += str(w)+':'
         suppress = suppress[:-1]
+    if debug_spec is not None:
+        macros += ' debug'
 
     if foo['bsc_compile_options']['assertions']:
         macros += ' ASSERT'
@@ -274,9 +276,6 @@ def capture_compile_cmd(foo, isa_node):
     if foo['fpu_trap']:
         macros += ' arith_trap'
 
-    if foo['debugger_support']:
-        macros += ' debug'
-
     macros += ' csr_low_latency'
     
     total_counters = 0
@@ -366,7 +365,7 @@ def generate_makefile(foo, logging=False):
     if logging:
         logger.info('Dependency Graph Created')
     
-def validate_specs(core_spec, isa_spec, logging=False):
+def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
 
     schema = 'configure/schema.yaml'
     # Load input YAML file
@@ -419,7 +418,7 @@ def validate_specs(core_spec, isa_spec, logging=False):
         error_list = validator.errors
         raise ValidationError("Error in " + core_spec + ".", error_list)
     specific_checks(normalized)
-    capture_compile_cmd(normalized, isa_yaml['hart0'])
+    capture_compile_cmd(normalized, isa_yaml['hart0'], debug_spec)
     generate_makefile(normalized, logging)
 
     logger.info('Configuring Boot-Code')

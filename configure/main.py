@@ -68,18 +68,28 @@ def main():
         else:
             custom_file = None
 
+        if args.dspec:
+            try:
+                debugfile = riscv_config.check_debug_specs(args.dspec, isa_file, work_dir,
+                        True)
+            except ValidationError as msg:
+                logger.error(msg)
+                return 1
+        else:
+            debugfile = None
+
         
         bsv_dir = 'csrbox/'
                       
         os.makedirs(bsv_dir, exist_ok= True)
-        csr_gen.csr_gen(isa_file, args.gspec, custom_file, None, bsv_dir, 'soc',logging=True)
+        csr_gen.csr_gen(isa_file, args.gspec, custom_file, debugfile, None, bsv_dir, 'soc',logging=True)
 
     if args.cspec is None:
         logger.info('No CORE YAML provided')
         sys.exit(0)
     elif args.clean is None:
         configure.validate_specs(os.path.abspath(args.cspec),
-                                 os.path.abspath(args.ispec), True)
+                                 os.path.abspath(args.ispec), debugfile, True)
 
 if __name__ == "__main__":
     exit(main())
