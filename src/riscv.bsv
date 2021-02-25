@@ -34,7 +34,8 @@ package riscv;
   `include "ccore_params.defines"
 
 `ifdef debug
-  import debug_types ::*;
+  import debug_types  :: * ;
+  import csr_types    :: * ;
 `endif
 
   interface Ifc_riscv;
@@ -81,9 +82,10 @@ package riscv;
     // interface to interact with debugger
     method ActionValue#(Bit#(XLEN)) debug_access_gprs(AbstractRegOp cmd);
     method Action ma_debug_access_csrs(AbstractRegOp cmd);
-    method Action ma_debug_halt_request(Bit#(1) ip);
-    method Action ma_debug_resume_request(Bit#(1) ip);
+    method Action ma_debug_haltint (Bit#(1) _int);
+    method Action ma_debug_resumeint (Bit#(1) _int);
     method Bit#(1) mv_core_is_halted;
+    method Bit#(1) mv_core_is_reset;
     method Bit#(1) mv_core_debugenable;
     method Action ma_debugger_available (Bit#(1) avail);
   	method CSRResponse mv_resp_to_core;
@@ -402,8 +404,8 @@ package riscv;
     rule connect_debug_info;
       stage2.debug_status(DebugStatus {debugger_available : wr_debugger_available ,
                                        core_is_halted     : unpack(stage5.mv_core_is_halted),
-                                       step_set           : unpack(stage5.mv_step_is_set),
-                                       step_ie            : unpack(stage5.mv_step_ie),
+                                       step_set           : unpack(stage5.mv_csr_dcsr[2]),
+                                       step_ie            : unpack(stage5.mv_csr_dcsr[11]),
                                        core_debugenable   : unpack(stage5.mv_core_debugenable)} );
     endrule
   `endif
@@ -453,10 +455,11 @@ package riscv;
   `endif
   `ifdef debug
     method debug_access_gprs = stage2.debug_access_gprs;
-    method ma_debug_access_csrs = stage5.ma_debug_access_csrs;
-    method ma_debug_halt_request = stage5.ma_debug_halt_request;
-    method ma_debug_resume_request = stage5.ma_debug_resume_request;
+    method ma_debug_access_csrs= stage5.ma_debug_access_csrs;
+    method ma_debug_haltint = stage5.ma_debug_haltint;
+    method ma_debug_resumeint = stage5.ma_debug_resumeint;
     method mv_core_is_halted = stage5.mv_core_is_halted;
+    method mv_core_is_reset = stage5.mv_core_is_reset;
     method mv_core_debugenable = stage5.mv_core_debugenable;
     method Action ma_debugger_available (Bit#(1) avail);
       wr_debugger_available <= unpack(avail);

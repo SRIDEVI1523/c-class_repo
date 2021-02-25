@@ -41,7 +41,8 @@ package ccore;
   import csrbox :: * ;
 
 `ifdef debug
-  import debug_types::*;
+  import debug_types  :: * ;
+  import csr_types    :: * ;
 `endif
 
 `ifdef supervisor
@@ -96,7 +97,6 @@ package ccore;
   `ifdef debug
     Reg#(Maybe#(Bit#(DXLEN))) rg_abst_response <- mkReg(tagged Invalid); // registered container for responses
     Reg#(Bool) rg_debug_waitcsr <- mkReg(False);
-    Reg#(Bit#(1)) rg_has_reset <- mkReg(0);
     let csr_response = riscv.mv_resp_to_core;
   `endif
 
@@ -369,9 +369,6 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
       else
         rg_debug_waitcsr <= True;
     endrule
-    rule rl_indicate_has_reset;
-      rg_has_reset <= 1;
-    endrule
   `endif
 
     interface sb_clint_msip = interface Put
@@ -425,22 +422,12 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
         rg_abst_response <= tagged Invalid;
         return validValue(rg_abst_response);
       endmethod
-
-      method haltRequest = riscv.ma_debug_halt_request;
-
-      method resumeRequest = riscv.ma_debug_resume_request;
-
+      method haltRequest = riscv.ma_debug_haltint;
+      method resumeRequest = riscv.ma_debug_resumeint;
       method dm_active = riscv.ma_debugger_available;
-
-      method is_halted = riscv.mv_core_is_halted();
-
-      method is_unavailable = ~(riscv.mv_core_debugenable & rg_has_reset);
-
-      method Action hartReset(Bit#(1) hart_reset_v); // Change to reset type // Signal TO Reset HART -Active HIGH
-        noAction;
-      endmethod
-
-      method has_reset = rg_has_reset;
+      method is_halted = riscv.mv_core_is_halted;
+      method is_unavailable = ~(riscv.mv_core_debugenable & riscv.mv_core_is_reset);
+      method has_reset = riscv.mv_core_is_reset;
     endinterface;
   `endif
   endmodule : mkccore_axi4

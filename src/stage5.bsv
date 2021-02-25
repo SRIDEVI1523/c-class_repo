@@ -22,6 +22,7 @@ package stage5;
   import csr_types :: * ;
   import DReg::*;
   import Vector::*;
+  import Clocks :: *;
 `ifdef debug
   import debug_types::*;
 `endif
@@ -76,12 +77,12 @@ package stage5;
     method Vector#(`pmpentries, Bit#(`paddr)) mv_pmp_addr;
   `endif
   `ifdef debug
+    method Bit#(64) mv_csr_dcsr;
     method Action ma_debug_access_csrs(AbstractRegOp cmd);
-    method Action ma_debug_halt_request(Bit#(1) ip);
-    method Action ma_debug_resume_request(Bit#(1) ip);
+    method Action ma_debug_haltint (Bit#(1) _int);
+    method Action ma_debug_resumeint (Bit#(1) _int);
     method Bit#(1) mv_core_is_halted;
-    method Bit#(1) mv_step_is_set;
-    method Bit#(1) mv_step_ie;
+    method Bit#(1) mv_core_is_reset;
     method Bit#(1) mv_core_debugenable;
   	method CSRResponse mv_resp_to_core;
   `endif
@@ -112,17 +113,14 @@ package stage5;
   endinterface
 
   (*synthesize*)
-`ifdef debug
-  (*preempts="ma_debug_access_csrs,instruction_commit"*)
-`endif
   module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
 
-
+    let curr_reset <- exposeCurrentReset;
     RX#(PIPE4) rx<-mkRX;
   `ifdef rtldump
     RX#(CommitLogPacket) rxinst <-mkRX;
   `endif
-    Ifc_csrbox csr <- mk_csrbox;
+    Ifc_csrbox csr <- mk_csrbox( `ifdef debug curr_reset `endif );
 
     // wire that carries the commit data that needs to be written to the integer register file.
     Wire#(Maybe#(CommitData)) wr_commit <- mkDWire(tagged Invalid);
@@ -354,8 +352,8 @@ package stage5;
               end
           default: begin
             if(!rg_csr_wait) begin
-            rg_csr_wait <= True;          
-            csr.ma_core_req(CSRReq{csr_address: sys.csraddr, writedata: sys.rs1,
+              rg_csr_wait <= True;          
+              csr.ma_core_req(CSRReq{csr_address: sys.csraddr, writedata: sys.rs1,
                                       funct3: truncate(sys.func3)
                                   `ifdef compressed , pc_1:sys.lpc[1] `endif });
             end
@@ -363,8 +361,8 @@ package stage5;
               rg_csr_wait <= False;
             else
             rg_csr_wait <= True;
-           end
-           endcase
+          end
+          endcase
           let dest= csr_dest;
           if(drain || csr_valid) begin
             jump_address=newpc;
@@ -451,6 +449,9 @@ package stage5;
     method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, csr_mip: truncate(csr.sbread.mv_csr_mip), 
       csr_mie: truncate(csr.sbread.mv_csr_mie), csr_mstatus: truncate(csr.sbread.mv_csr_mstatus), 
       csr_misa: truncate(csr.sbread.mv_csr_misa), frm: truncate(csr.sbread.mv_csr_frm)
+    `ifdef debug
+      ,csr_dcsr: truncate(csr.sbread.mv_csr_dcsr)
+    `endif
     `ifdef non_m_traps 
       ,csr_mideleg: truncate(csr.sbread.mv_csr_mideleg)
     `endif };
@@ -494,14 +495,14 @@ package stage5;
     method mv_pmp_addr=csr.mv_pmpaddr;
   `endif
   `ifdef debug
-    method ma_debug_access_csrs = csr.ma_debug_access_csrs;
-    method ma_debug_halt_request = csr.ma_debug_halt_request;
-    method ma_debug_resume_request = csr.ma_debug_resume_request;
-    method mv_core_is_halted = csr.mv_core_is_halted;
-    method mv_step_is_set = csr.mv_step_is_set;
-    method mv_step_ie = csr.mv_step_ie;
-    method mv_core_debugenable = csr.mv_core_debugenable;
-    method mv_resp_to_core = csr.mv_resp_to_core;
+    method mv_csr_dcsr = csr.sbread.mv_csr_dcsr;
+//    method ma_debug_access_csrs = csr.ma_debug_access_csrs;
+    method ma_debug_haltint = csr.ma_debug_haltint;
+    method ma_debug_resumeint = csr.ma_debug_resumeint;
+    method mv_core_is_halted = csr.mv_core_halted;
+    method mv_core_is_reset = csr.mv_core_hasreset;
+    method mv_core_debugenable = csr.sbread.mv_csr_customcontrol[4];
+//    method mv_resp_to_core = csr.mv_resp_to_core;
   `endif
 
     `ifdef arith_trap

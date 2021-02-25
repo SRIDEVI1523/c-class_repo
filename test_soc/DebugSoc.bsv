@@ -17,14 +17,16 @@ package DebugSoc ;
   import riscvDebug013::*;     
   import Clocks :: *;
   import ccore_types:: * ;                                                                   
+  import csrbox :: * ;
 
 
 
   `include "Logger.bsv"
   interface Ifc_DebugSoc;
-    `ifdef rtldump
-      interface Get#(DumpType) io_dump;
-    `endif
+  `ifdef rtldump
+     interface Sbread sbread;
+     method Maybe#(CommitLogPacket) commitlog;
+  `endif
     interface RS232 uart_io;
       // ------------- JTAG IOs ----------------------//
     (*always_enabled,always_ready*)                                                               
@@ -112,7 +114,8 @@ package DebugSoc ;
       return tdo.crossed();                                                                       
     endmethod
     `ifdef rtldump
-      interface io_dump = soc.io_dump;
+      interface sbread  =soc.sbread;
+      method commitlog = soc.commitlog;
     `endif
     interface uart_io = soc.uart_io;
 
