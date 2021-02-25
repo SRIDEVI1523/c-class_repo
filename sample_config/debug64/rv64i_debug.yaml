@@ -1,0 +1,65 @@
+hart_ids: [0]
+hart0: &hart0
+    Debug_Spec_Version: '1.0.0'
+    supported_xlen: [64]
+    debug_mode: true
+    dcsr:
+      reset-val: 0x40000003
+      rv32:
+        accessible: false
+      rv64:
+        accessible: true
+        prv:
+          implemented: true
+        step:
+          implemented: true
+        nmip:
+          implemented: true
+          type:
+            ro_variable: true
+        mprven:
+          implemented: true
+        v:
+          implemented: True
+        cause:
+          implemented: True
+          type:
+            ro_variable: true
+        stoptime:
+          implemented: True
+        stopcount:
+          implemented: True
+        stepie:
+          implemented: True
+        ebreaku:
+          implemented: True
+        ebreaks:
+          implemented: True
+        ebreakm:
+          implemented: True
+        ebreakvu:
+          implemented: True
+        ebreakvs:
+          implemented: True
+        debugver:
+          implemented: True
+          type:
+            ro_constant: 0x4
+    dpc:
+      reset-val: 0x0
+      rv64:
+        accessible: true
+      rv32:
+        accessible: false
+    dscratch0:
+      reset-val: 0x0
+      rv64:
+        accessible: true
+      rv32:
+        accessible: false
+    dscratch1:
+      reset-val: 0x0
+      rv64:
+        accessible: true
+      rv32:
+        accessible: false    
