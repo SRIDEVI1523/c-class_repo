@@ -142,7 +142,7 @@ package stage5;
     // the local epoch register
     Reg#(Bit#(1)) rg_epoch <- mkReg(0);
     
-    Reg#(Bool) rg_csr_wait <- mkDReg(False);
+    Reg#(Bool) rg_csr_wait <- mkReg(False);
   `ifdef rtldump
     Reg#(Maybe#(CommitLogPacket)) rg_commitlog <- mkDReg(tagged Invalid);
     let prv=csr.mv_prv;
@@ -158,8 +158,6 @@ package stage5;
     Wire#(Tuple2#(Bool,Bool)) wr_initiate_store <- mkDReg(tuple2(False,False));
   `endif    
     let csr_resp = csr.mv_core_resp;
-    let csr_dest = csr_resp.data;
-    let csr_valid = csr_resp.hit;
   `ifdef triggers
     Reg#(TriggerStatus) rg_take_trigger <- mkConfigReg(unpack(0));
     Reg#(Bit#(`vaddr)) rg_flush_pc <- mkReg(0);
@@ -344,27 +342,28 @@ package stage5;
           wr_increment_minstret<=True;
           Bool drain = False;
           Bit#(`vaddr) newpc = ?;
-          case( sys.func3 )
-          'd0 : begin // URET, SRET, MRET
-                let temp <- csr.mav_upd_on_ret( unpack(truncate(sys.csraddr[9 : 8])) );
-                newpc = temp;
-                drain = True;
-              end
-          default: begin
-            if(!rg_csr_wait) begin
-              rg_csr_wait <= True;          
-              csr.ma_core_req(CSRReq{csr_address: sys.csraddr, writedata: sys.rs1,
-                                      funct3: truncate(sys.func3)
-                                  `ifdef compressed , pc_1:sys.lpc[1] `endif });
-            end
-            else if(csr.mv_core_resp.hit)
-              rg_csr_wait <= False;
-            else
-            rg_csr_wait <= True;
+          if (sys.func3 == 0) begin // URET, SRET, MRET
+            let temp <- csr.mav_upd_on_ret( unpack(truncate(sys.csraddr[9 : 8])) );
+            newpc = temp;
+            drain = True;
           end
-          endcase
-          let dest= csr_dest;
-          if(drain || csr_valid) begin
+          else if(!rg_csr_wait) begin
+            csr.ma_core_req(CSRReq{csr_address: sys.csraddr, writedata: sys.rs1,
+               funct3: truncate(sys.func3) `ifdef compressed , pc_1:sys.lpc[1] `endif });
+            `logLevel( stage5, 0, $format("STAGE5: Sending req to CSRBOX"))
+          end
+
+          if ((sys.func3 != 0 && csr_resp.hit) || (sys.func3==0)) begin
+            rg_csr_wait <= False;
+            `logLevel( stage5, 0, $format("STAGE5: CSRBOX Responded"))
+          end
+          else begin
+            rg_csr_wait <= True;
+            `logLevel( stage5, 0, $format("STAGE5: Waiting for CSRBOX response"))
+          end
+
+          let dest= csr_resp.data;
+          if(drain || csr_resp.hit) begin
             jump_address=newpc;
             fl=drain;
             wr_commit <= tagged Valid CommitData{addr: sys.rd, data: zeroExtend(dest)

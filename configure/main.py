@@ -5,9 +5,12 @@ import sys
 
 import configure.configure as configure
 import configure.utils as utils
-import riscv_config.checker as riscv_config
+import riscv_config.checker as checker
 import csrbox.csr_gen as csr_gen
 from   csrbox.errors import ValidationError
+import csrbox
+import riscv_config
+
 
 
 def main():
@@ -32,6 +35,9 @@ def main():
     logger.info('---------- Available under BSD License---------- ')
     logger.info('\n\n')
 
+    logger.info('Using CSRBOX Version: '+ str(csrbox.__version__))
+    logger.info('Using RISCV-CONFIG Version: '+ str(riscv_config.__version__))
+
     if args.clean is None:
         update_dep = True
         patch = True
@@ -51,7 +57,7 @@ def main():
         os.makedirs(work_dir, exist_ok= True)
         #isa_file = riscv_config.check_isa_specs(os.path.abspath(args.ispec), work_dir, False)
         try:
-            isa_file = riscv_config.check_isa_specs(args.ispec, work_dir, True)
+            isa_file = checker.check_isa_specs(args.ispec, work_dir, True)
         except ValidationError as msg:
             logger.error(msg)
             return 1
@@ -60,7 +66,7 @@ def main():
 
         if args.customspec:
             try:
-                custom_file = riscv_config.check_custom_specs(args.customspec,
+                custom_file = checker.check_custom_specs(args.customspec,
                         work_dir, True)
             except ValidationError as msg:
                 logger.error(msg)
@@ -70,7 +76,7 @@ def main():
 
         if args.dspec:
             try:
-                debugfile = riscv_config.check_debug_specs(args.dspec, isa_file, work_dir,
+                debugfile = checker.check_debug_specs(args.dspec, isa_file, work_dir,
                         True)
             except ValidationError as msg:
                 logger.error(msg)
