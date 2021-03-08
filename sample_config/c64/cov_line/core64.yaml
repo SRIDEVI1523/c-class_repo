@@ -50,7 +50,7 @@ bsc_compile_options:
   top_dir: test_soc
   open_ocd: False
 verilator_configuration:
-  coverage: none
+  coverage: line
   trace: false
   threads: 1
   verbosity: true
