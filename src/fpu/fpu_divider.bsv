@@ -327,9 +327,6 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 		if((lv_sticky | lv_guard | lv_round) == 1)// if any of the sticky,guard or round bit is set, the value is inexact.
 			lv_inexact = 1;
 
-        if(lv_inexact == 1 && lv_quotient_is_subnormal == 1) //Was buried deep inside the SPEC. Phew! Maybe Wrong!!!
-            lv_underflow = 1;
-
 		// Following if-else condition determine the value of lv_round_up. If set, the mantissa needs to be incremented, else the mantissa remains unchanged.
 		if(lv_rounding_mode == 'b000) 
 			lv_round_up = lv_guard & (lv_round|lv_sticky|lv_quotient[3]);
@@ -352,11 +349,17 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
       `ifdef verbose $display("Exponent Incremented 1"); `endif
 			lv_exponent = lv_exponent + 1;
 			lv_rounded_quotient = lv_rounded_quotient >> 1;
+			lv_quotient_is_subnormal= 0;
 		end
 		if(lv_quotient[fPMAN+3] == 0 && lv_rounded_quotient[fPMAN] == 1) begin
       `ifdef verbose $display("Exponent Incremented 2"); `endif
 			lv_exponent = lv_exponent + 1;
+			lv_quotient_is_subnormal= 0;
 		end
+
+        if(lv_inexact == 1 && lv_quotient_is_subnormal == 1) //Was buried deep inside the SPEC. Phew! Maybe Wrong!!!
+            lv_underflow = 1;
+
     Bit#(fpexp) out_exp = lv_exponent[fPEXP-1:0];
     Bit#(fpman) out_man = lv_rounded_quotient[fPMAN-1:0];
     Bit#(fpexp) exp_all_zeros = '0;
