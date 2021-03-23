@@ -362,11 +362,13 @@ package ccore_types;
 
   typedef struct{
     Bit#(`vaddr) pc;
+    Bit#(`vaddr) addr;
+    Access_type access;
   `ifdef atomic
     Bit#(ELEN) commitvalue;
     Bit#(5) rd;
   `endif
-  } CommitStore deriving (Bits, Eq, FShow);
+  } CommitMem deriving (Bits, Eq, FShow);
 
   typedef struct{
     Bit#(ELEN) commitvalue;
@@ -387,7 +389,7 @@ package ccore_types;
 
   typedef union tagged{
     CommitTrap TRAP;
-    CommitStore STORE;
+    CommitMem MEMOP;
     CommitRegular REG;
     CommitSystem SYSTEM;} CommitType deriving(Bits, Eq, FShow);
 

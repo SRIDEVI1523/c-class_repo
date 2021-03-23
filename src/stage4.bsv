@@ -228,15 +228,15 @@ package stage4;
               if( s.nanboxing == 1 )
                 response.word[63 : 32] = '1;
             `endif
-              if(s.memaccess == Store `ifdef atomic || s.memaccess == Atomic `endif )
-                pipe4data = tagged STORE CommitStore{ pc          : s4common.pc
+              if(s.memaccess == Store || response.is_io `ifdef atomic || s.memaccess == Atomic `endif )
+                pipe4data = tagged MEMOP CommitMem{ pc          : s4common.pc,
+                                                     addr        : response.word,
+                                                     access      : s.memaccess,
+                                                     rd          : s4common.rd
                                                     `ifdef atomic
                                                       ,commitvalue :
                                                                     s.memaccess == Atomic?
                                                                     response.word : 0
-                                                    `endif
-                                                    `ifdef atomic
-                                                      ,rd         : s4common.rd
                                                     `endif };
               else
                 pipe4data = tagged REG CommitRegular{ commitvalue : response.word,

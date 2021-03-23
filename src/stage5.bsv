@@ -63,7 +63,7 @@ package stage5;
   `endif
     method Bit#(1) mv_csr_misa_c;
     method Tuple2#(Bool,Bool) initiate_store;
-    method Action write_resp(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
+    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
     (*always_enabled*)
     method Action store_is_cached(Bool c);
     method Action ma_cache_ready(Bool r);
@@ -147,15 +147,15 @@ package stage5;
     Reg#(Maybe#(CommitLogPacket)) rg_commitlog <- mkDReg(tagged Invalid);
     let prv=csr.mv_prv;
   `endif
-    Reg#(Bool) rg_store_initiated <- mkReg(False);
-    Wire#(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr)))) wr_store_response <- mkDWire(tagged Invalid);
-    Wire#(Bool) wr_store_is_cached <- mkDWire(False);
+    Reg#(Bool) rg_memop_initiated <- mkReg(False);
+    Wire#(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr)))) wr_memop_response <- mkDWire(tagged Invalid);
+    Wire#(Bool) wr_memop_is_cached <- mkDWire(False);
   `ifdef dcache
-    Wire#(Tuple2#(Bool,Bool)) wr_initiate_store <- mkDWire(tuple2(False,False));
+    Wire#(Tuple2#(Bool,Bool)) wr_initiate_memop <- mkDWire(tuple2(False,False));
     /*doc:wire: */
     Wire#(Bool) wr_cache_ready <- mkDWire(False);
   `else
-    Wire#(Tuple2#(Bool,Bool)) wr_initiate_store <- mkDReg(tuple2(False,False));
+    Wire#(Tuple2#(Bool,Bool)) wr_initiate_memop <- mkDReg(tuple2(False,False));
   `endif    
     let csr_resp = csr.mv_core_resp;
   `ifdef triggers
@@ -275,14 +275,14 @@ package stage5;
         `endif
           `logLevel( stage5, 0, $format("[%2d]STAGE5: Received TRAP:%d NewPC:%h fl:%b",hartid,t.cause,jump_address,fl))
         end
-        else if (commit matches tagged STORE .s)begin
+        else if (commit matches tagged MEMOP .s)begin
         `ifdef dcache
-          if(!wr_cache_ready && !rg_store_initiated)begin
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Store op Waiting for Cache Ready",hartid))
+          if(!wr_cache_ready && !rg_memop_initiated)begin
+            `logLevel( stage5, 0, $format("[%2d]STAGE5: Memory op Waiting for Cache to be Ready",hartid))
           end
-          else if (!rg_store_initiated && wr_store_is_cached)begin
-            wr_initiate_store <= tuple2(unpack(rg_epoch),True);
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Initiating Store request",hartid))
+          else if (!rg_memop_initiated && wr_memop_is_cached)begin
+            wr_initiate_memop <= tuple2(unpack(rg_epoch),True);
+            `logLevel( stage5, 0, $format("[%2d]STAGE5: Initiating Memory op request",hartid))
             wr_increment_minstret<=True;
               `ifdef atomic
                 wr_commit <= tagged Valid CommitData{addr: s.rd, data:s.commitvalue
@@ -299,32 +299,34 @@ package stage5;
           end
           else
         `endif
-          if(!rg_store_initiated)begin
-            wr_initiate_store <= tuple2(unpack(rg_epoch),True);
-            rg_store_initiated<=True;
+          if(!rg_memop_initiated)begin
+            wr_initiate_memop <= tuple2(unpack(rg_epoch),True);
+            rg_memop_initiated<=True;
             `logLevel( stage5, 0, $format("[%2d]STAGE5: Initiating NC Store request",hartid))
           end
-          else if(wr_store_response matches tagged Valid .resp) begin
-            rg_store_initiated<=False;
+          else if(wr_memop_response matches tagged Valid .resp) begin
+            rg_memop_initiated<=False;
             `logLevel( stage5, 0, $format("[%2d]STAGE5: Store response Received: ",hartid,fshow(resp)))
-            let {err, badaddr} = resp;
+            let {err, data} = resp;
             if(err==0)begin
               wr_increment_minstret<=True;
-              `ifdef atomic
-                wr_commit <= tagged Valid CommitData{addr: s.rd, data: s.commitvalue
-                                            `ifdef spfpu ,rdtype: IRF `endif };
-              `else
-                wr_commit <= tagged Valid CommitData{addr: 0, data: 0
-                                            `ifdef spfpu ,rdtype: IRF `endif };
-              `endif
+              if (s.access != Store)
+                wr_commit <= tagged Valid CommitData{addr: s.rd, data: data 
+                                                    `ifdef spfpu ,rdtype: IRF `endif };
             `ifdef rtldump
+              CommitLogMem _pkt = ?;
+              if (clogpkt.inst_type matches tagged MEM. cmem) 
+                _pkt = cmem;
+              if (_pkt.access == Load || (_pkt.access == Atomic && _pkt.atomic_op != 7))
+                _pkt.commit_data = data;
+              clogpkt.inst_type = tagged MEM _pkt;
               rg_commitlog <= tagged Valid (clogpkt);
               rxinst.u.deq;
             `endif
               rx.u.deq;
             end
             else begin
-              let newpc <- csr.mav_upd_on_trap(`Store_access_fault, s.pc, badaddr);
+              let newpc <- csr.mav_upd_on_trap(`Store_access_fault, s.pc, s.addr);
               fl=True;
               jump_address=newpc;
               rx.u.deq;
@@ -419,9 +421,9 @@ package stage5;
       else begin
         `logLevel( stage5, 0, $format("[%2d]STAGE5: Dropping instruction",hartid))
         Bool _fwd = True;
-        if(commit matches tagged STORE .s) begin
+        if(commit matches tagged MEMOP.s) begin
           if(wr_cache_ready)
-            wr_initiate_store<=tuple2(unpack(rg_epoch),True);
+            wr_initiate_memop<=tuple2(unpack(rg_epoch),True);
           else
             _fwd = False;
         end
@@ -474,12 +476,12 @@ package stage5;
   	method ma_set_ueip = csr.ma_set_ueip;
   `endif
     method mv_csr_misa_c=csr.sbread.mv_csr_misa[2];
-    method initiate_store=wr_initiate_store;
-    method Action write_resp(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
-      wr_store_response<=r;
+    method initiate_store=wr_initiate_memop;
+    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
+      wr_memop_response<=r;
     endmethod
     method Action store_is_cached(Bool c);
-      wr_store_is_cached<=c;
+      wr_memop_is_cached<=c;
     endmethod
   `ifdef dcache
     method Action ma_cache_ready(Bool r);

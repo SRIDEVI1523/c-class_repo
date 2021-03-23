@@ -45,7 +45,7 @@ package riscv;
     interface Get#(DMem_request#(`vaddr, ELEN, 1)) memory_request;
     interface Put#(DMem_core_response#(ELEN, 1)) memory_response;
     method Tuple2#(Bool, Bool) initiate_store;
-    method Action write_resp(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
+    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
     (*always_enabled*)
     method Action storebuffer_empty(Bool e);
     (*always_enabled*)
@@ -383,16 +383,14 @@ package riscv;
         rdtype = r.rdtype;
       `endif
       end
-    `ifdef atomic
-      else if (committype matches tagged STORE .s)begin
-        available = True;
+      else if (committype matches tagged MEMOP .s)begin
+        available = False;
         rd = s.rd;
         rdval = s.commitvalue;
         rdtype = IRF;
       end
-    `endif
-    Bool valid = !(rd==0 `ifdef spfpu && rdtype == IRF `endif ) && epoch == rg_wEpoch ;
-    stage3.fwd_from_pipe4_first(FwdType{valid: valid, available:available,
+      Bool valid = !(rd==0 `ifdef spfpu && rdtype == IRF `endif ) && epoch == rg_wEpoch ;
+      stage3.fwd_from_pipe4_first(FwdType{valid: valid, available:available,
                                   addr:rd, data:rdval `ifdef spfpu , rftype: rdtype `endif });
     endrule
     rule nofwding_from_mem1;
@@ -426,8 +424,8 @@ package riscv;
       stage3.storebuffer_empty(e);
     endmethod
     method initiate_store = stage5.initiate_store;
-    method Action write_resp(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
-      stage5.write_resp(r);
+    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
+      stage5.ma_io_response(r);
     endmethod
     method Action store_is_cached(Bool c);
       stage5.store_is_cached(c);

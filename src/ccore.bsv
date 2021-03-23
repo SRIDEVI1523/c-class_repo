@@ -206,9 +206,12 @@ package ccore;
 	    let fab_resp <- pop_o (memory_xactor.o_rd_data);
 			let lv_data= fab_resp.rdata;
 	  	Bool bus_error = !(fab_resp.rresp == AXI4_OKAY);
-      dmem.put_read_mem_resp.put(DCache_mem_readresp{data:truncate(lv_data),
+      if (fab_resp.rid == 0)
+        dmem.put_read_mem_resp.put(DCache_mem_readresp{data:truncate(lv_data),
                                                  last:fab_resp.rlast,
                                                  err :bus_error});
+      else
+        riscv.ma_io_response(tagged Valid tuple2(pack(bus_error), lv_data));
       `logLevel( core, 1, $format("[%2d]CORE : DMEM Line Response ",hartid, fshow(fab_resp)))
 	  endrule
 
@@ -284,7 +287,7 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   	  	dmem.put_write_mem_resp.put(bus_error);
       else
     `endif
-	  	riscv.write_resp(tagged Valid tuple2(pack(bus_error),?));
+	  	riscv.ma_io_response(tagged Valid tuple2(pack(bus_error),?));
       `logLevel( core, 1, $format("[%2d]CORE : DMEM Write Line Response ",hartid, fshow(response)))
     endrule
 
@@ -301,7 +304,7 @@ rg_shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
     rule handle_itim_write_resp;
 	  	let response <- imem.get_mem_write_itim_resp.get;
 	  	Bool bus_error = response;
-	  	riscv.write_resp(tagged Valid tuple2(pack(bus_error),?));
+	  	riscv.ma_io_response(tagged Valid tuple2(pack(bus_error),?));
       `logLevel( core, 1, $format("[%2d]CORE : ITIM Memory Write Response ",hartid, fshow(response)))
     endrule
   `endif
