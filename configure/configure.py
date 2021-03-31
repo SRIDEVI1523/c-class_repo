@@ -212,10 +212,6 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' histlen='+str(foo['branch_predictor']['history_len'])
         macros += ' histbits='+str(foo['branch_predictor']['history_bits'])
         macros += ' rasdepth='+str(foo['branch_predictor']['ras_depth'])
-        if 'enable' in foo['branch_predictor']['on_reset']:
-            macros += ' bpureset=1'
-        else:
-            macros += ' bpureset=0'
         if foo['branch_predictor']['ras_depth'] > 0:
             macros += ' bpu_ras'
 
@@ -232,10 +228,6 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' icache_ecc'
     if foo['icache_configuration']['instantiate']:
         macros += ' icache'
-        if foo['icache_configuration']['on_reset']:
-            macros += ' icachereset=1'
-        else:
-            macros += ' icachereset=0'
     if foo['icache_configuration']['instantiate'] or \
             foo['branch_predictor']['instantiate']:
         macros += ' ifence'
@@ -262,10 +254,6 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' dcache_ecc'
     if foo['dcache_configuration']['instantiate']:
         macros += ' dcache'
-        if foo['dcache_configuration']['on_reset']:
-            macros += ' dcachereset=1'
-        else:
-            macros += ' dcachereset=0'
     if foo['dcache_configuration']['replacement'] == "RANDOM":
         macros += ' drepl=0'
     if foo['dcache_configuration']['replacement'] == "RR":

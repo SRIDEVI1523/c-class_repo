@@ -144,7 +144,6 @@ m_extension:
 #      instantiated
 #    - ``predictor``: string indicating the type of predictor to be implemented. Valid
 #      values are: 'gshare'
-#    - ``on_reset``: Indicates if the predictor should be enabled on system-reset or
 #      not. Valid values are : ['enable','disable']
 #    - ``btb_depth``: integer indicating the size of the branch target buffer
 #    - ``bht_depth``: integer indicating the size of the bracnh history buffer
@@ -159,7 +158,6 @@ m_extension:
 #    branch_predictor:
 #      instantiate: True
 #      predictor: gshare
-#      on_reset: "enable"
 #      btb_depth: 32
 #      bht_depth: 512
 #      history_len: 8
@@ -174,9 +172,6 @@ branch_predictor:
     predictor: 
       type: string
       allowed: ["gshare"]
-    on_reset : 
-      type: string
-      allowed: ["enable", "disable"]
     btb_depth:
       type: integer
     bht_depth:
@@ -191,7 +186,6 @@ branch_predictor:
   default:
     instantiate: True
     predictor: gshare
-    on_reset: "enable"
     btb_depth: 32
     bht_depth: 512
     history_len: 8
@@ -204,7 +198,6 @@ branch_predictor:
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
 #      instantiated
-#    - ``on_reset``: Indicates if the predictor should be enabled on system-reset or
 #      not. Valid values are : ['enable','disable']
 #    - ``sets``: integer indicating the number of sets in the cache
 #    - ``word_size``: integer indicating the number of bytes in a word. Fixed to 4.
@@ -228,7 +221,6 @@ branch_predictor:
 #
 #    icache_configuration:
 #      instantiate: True
-#      on_reset: "enable"
 #      sets: 4
 #      word_size: 4
 #      block_size: 16
@@ -244,9 +236,6 @@ icache_configuration:
   schema:
     instantiate:
       type: boolean
-    on_reset : 
-      type: string
-      allowed: ["enable", "disable"]
     sets:
       type: integer
     word_size:
@@ -266,7 +255,6 @@ icache_configuration:
       type: boolean
   default:
     instantiate: True
-    on_reset: "enable"
     sets: 4
     word_size: 4
     block_size: 16
@@ -283,7 +271,6 @@ icache_configuration:
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
 #      instantiated
-#    - ``on_reset``: Indicates if the predictor should be enabled on system-reset or
 #      not. Valid values are : ['enable','disable']
 #    - ``sets``: integer indicating the number of sets in the cache
 #    - ``word_size``: integer indicating the number of bytes in a word. Fixed to 4.
@@ -310,7 +297,6 @@ icache_configuration:
 #
 #    dcache_configuration:
 #      instantiate: True
-#      on_reset: "enable"
 #      sets: 4
 #      word_size: 4
 #      block_size: 16
@@ -327,9 +313,6 @@ dcache_configuration:
   schema:
     instantiate:
       type: boolean
-    on_reset : 
-      type: string
-      allowed: ["enable", "disable"]
     sets:
       type: integer
     word_size:
@@ -355,7 +338,6 @@ dcache_configuration:
       allowed: [1,2]
   default:
     instantiate: True
-    on_reset: "enable"
     sets: 4
     word_size: 8
     block_size: 8
