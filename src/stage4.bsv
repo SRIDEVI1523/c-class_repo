@@ -224,27 +224,35 @@ package stage4;
                                                  pc       : s4common.pc,
                                                  badaddr  : truncate(response.word) };
             else begin
-            `ifdef dpfpu
-              if( s.nanboxing == 1 )
-                response.word[63 : 32] = '1;
-            `endif
-              if(s.memaccess == Store || response.is_io `ifdef atomic || s.memaccess == Atomic `endif )
+              if(response.is_io || (s.memaccess == Store || s.memaccess == Atomic))
                 pipe4data = tagged MEMOP CommitMem{ pc          : s4common.pc,
-                                                     addr        : response.word,
-                                                     access      : s.memaccess,
-                                                     rd          : s4common.rd
-                                                    `ifdef atomic
-                                                      ,commitvalue :
-                                                                    s.memaccess == Atomic?
-                                                                    response.word : 0
-                                                    `endif };
-              else
+                                                    cache_resp  : response.word,
+                                                    access      : s.memaccess,
+                                                    rd          : s4common.rd,
+                                                    io          : response.is_io,
+                                                    wdata       : s.data,
+                                                    size        : s.size
+                                                  `ifdef atomic
+                                                    ,atomicop   : s.atomicop
+                                                  `endif
+                                                  `ifdef spfpu
+                                                    ,rdtype     : s4common.rdtype
+                                                  `endif
+                                                  `ifdef dpfpu
+                                                    ,nanboxing   : (s.nanboxing == 1)
+                                                  `endif
+                                                    };
+                                                    
+              else begin
+                if (s.nanboxing == 1)
+                  response.word[63:32] = '1;
                 pipe4data = tagged REG CommitRegular{ commitvalue : response.word,
                                                       rd          : s4common.rd
                                                     `ifdef spfpu
                                                       ,fflags     : 0 // since rd could be FRF
                                                       ,rdtype     : s4common.rdtype
                                                     `endif };
+              end
             end
           end
           else begin

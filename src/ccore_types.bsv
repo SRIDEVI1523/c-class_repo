@@ -315,13 +315,18 @@ package ccore_types;
   } Stage4Common deriving(Bits, Eq, FShow);
 
   typedef struct{
+    Access_type   memaccess;
+    Bit#(ELEN)    data;
+    Bit#(3)       size;
+  `ifdef atomic
+    Bit#(5) atomicop;
+  `endif
+  `ifdef dpfpu
+    Bit#(1)       nanboxing;
+  `endif
   `ifdef triggers
     Bit#(`vaddr)  address;
     Bit#(2)       size;
-  `endif
-    Access_type   memaccess;
-  `ifdef dpfpu
-    Bit#(1)       nanboxing;
   `endif
   } Stage4Memory deriving(Bits, Eq, FShow);
 
@@ -362,11 +367,20 @@ package ccore_types;
 
   typedef struct{
     Bit#(`vaddr) pc;
-    Bit#(`vaddr) addr;
+    Bit#(`vaddr) cache_resp;
     Access_type access;
-  `ifdef atomic
-    Bit#(ELEN) commitvalue;
     Bit#(5) rd;
+    Bool io;
+    Bit#(ELEN) wdata;
+    Bit#(3)   size;
+  `ifdef atomic
+    Bit#(5)   atomicop;
+  `endif
+  `ifdef spfpu
+    RFType rdtype;
+  `endif
+  `ifdef dpfpu
+    Bool       nanboxing;
   `endif
   } CommitMem deriving (Bits, Eq, FShow);
 
@@ -494,6 +508,14 @@ package ccore_types;
     } TriggerStatus deriving(Bits, Eq, FShow);
 
 `endif
+
+  typedef struct{
+    Bit#(`paddr)  address;
+    Bit#(ELEN)    data;
+    Bit#(3)       size;
+    Access_type   access;
+  } IO_memop deriving(Bits, Eq, FShow);
+
 	//-------structure defined here is common across all the CSR grps in the daisy chain-------
 
   typedef struct{

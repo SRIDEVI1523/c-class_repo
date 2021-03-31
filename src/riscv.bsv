@@ -44,19 +44,19 @@ package riscv;
     interface Put#(IMem_core_response#(32, `iesize)) inst_response;
     interface Get#(DMem_request#(`vaddr, ELEN, 1)) memory_request;
     interface Put#(DMem_core_response#(ELEN, 1)) memory_response;
-    method Tuple2#(Bool, Bool) initiate_store;
     method Action ma_io_response(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
     (*always_enabled*)
     method Action storebuffer_empty(Bool e);
-    (*always_enabled*)
-    method Action store_is_cached(Bool c);
-    method Action ma_cache_ready(Bool r);
     (*always_enabled*)
     method Action cache_is_available(Bool avail);
     method Action ma_clint_msip(Bit#(1) intrpt);
     method Action ma_clint_mtip(Bit#(1) intrpt);
     method Action ma_clint_mtime(Bit#(64) c_mtime);
   	method Action ma_set_meip(Bit#(1) ex_i);
+  `ifdef dcache
+    method Tuple2#(Bool, Bool) mv_initiate_store;
+    method Action ma_commit_store_ready (Bool _b);
+  `endif
   `ifdef supervisor
   	method Action ma_set_seip(Bit#(1) ex_i);
   `endif
@@ -116,6 +116,7 @@ package riscv;
     /*doc:method: */
     method Bit#(XLEN) mv_csr_itim_bound ();
   `endif
+    interface TXe#(IO_memop) tx_io_op;
   endinterface
 
   (*synthesize*)
@@ -386,7 +387,7 @@ package riscv;
       else if (committype matches tagged MEMOP .s)begin
         available = False;
         rd = s.rd;
-        rdval = s.commitvalue;
+        rdval = ?;
         rdtype = IRF;
       end
       Bool valid = !(rd==0 `ifdef spfpu && rdtype == IRF `endif ) && epoch == rg_wEpoch ;
@@ -423,14 +424,13 @@ package riscv;
     method Action storebuffer_empty(Bool e);
       stage3.storebuffer_empty(e);
     endmethod
-    method initiate_store = stage5.initiate_store;
+  `ifdef dcache
+    method mv_initiate_store = stage5.mv_initiate_store;
+    method ma_commit_store_ready = stage5.ma_commit_store_ready;
+  `endif
     method Action ma_io_response(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
       stage5.ma_io_response(r);
     endmethod
-    method Action store_is_cached(Bool c);
-      stage5.store_is_cached(c);
-    endmethod
-    method ma_cache_ready = stage5.ma_cache_ready;
     method Action cache_is_available(Bool avail);
       stage3.cache_is_available(avail);
     endmethod
@@ -498,6 +498,7 @@ package riscv;
     /*doc:method: */
     method mv_csr_itim_bound = stage5.mv_csr_itim_bound;
   `endif
+    interface tx_io_op = stage5.tx_io_op;
   endmodule
 
 endpackage

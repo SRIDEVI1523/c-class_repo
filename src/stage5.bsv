@@ -62,11 +62,12 @@ package stage5;
   	method Action ma_set_ueip(Bit#(1) ex_i);
   `endif
     method Bit#(1) mv_csr_misa_c;
-    method Tuple2#(Bool,Bool) initiate_store;
+  `ifdef dcache
+    method Tuple2#(Bool,Bool) mv_initiate_store;
+    method Action ma_commit_store_ready (Bool _b);
+  `endif
     method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
     (*always_enabled*)
-    method Action store_is_cached(Bool c);
-    method Action ma_cache_ready(Bool r);
     method Bit#(3) mv_cacheenable;
     method Bit#(2) mv_curr_priv;
     method Bit#(XLEN) mv_csr_mstatus;
@@ -110,6 +111,7 @@ package stage5;
     /*doc:method: */
     method Bit#(XLEN) mv_csr_itim_bound ();
   `endif
+    interface TXe#(IO_memop) tx_io_op;
   endinterface
 
   (*synthesize*)
@@ -147,16 +149,17 @@ package stage5;
     Reg#(Maybe#(CommitLogPacket)) rg_commitlog <- mkDReg(tagged Invalid);
     let prv=csr.mv_prv;
   `endif
-    Reg#(Bool) rg_memop_initiated <- mkReg(False);
-    Wire#(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr)))) wr_memop_response <- mkDWire(tagged Invalid);
-    Wire#(Bool) wr_memop_is_cached <- mkDWire(False);
+
+    Reg#(Bool) rg_ioop_init <- mkReg(False);
+    Reg#(Bool) rg_atomic_readdone <- mkReg(False);
+    Reg#(Bit#(ELEN)) rg_atomic_data <- mkReg(0);
+    Wire#(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr)))) wr_ioop_response <- mkDWire(tagged Invalid);
   `ifdef dcache
-    Wire#(Tuple2#(Bool,Bool)) wr_initiate_memop <- mkDWire(tuple2(False,False));
-    /*doc:wire: */
-    Wire#(Bool) wr_cache_ready <- mkDWire(False);
-  `else
-    Wire#(Tuple2#(Bool,Bool)) wr_initiate_memop <- mkDReg(tuple2(False,False));
+    Wire#(Tuple2#(Bool,Bool)) wr_commit_cacheop <- mkDWire(tuple2(False,False));
+    Wire#(Bool) wr_cache_store_ready <- mkWire();
   `endif    
+    TX#(IO_memop) ff_tx_io_op <- mkTX();
+
     let csr_resp = csr.mv_core_resp;
   `ifdef triggers
     Reg#(TriggerStatus) rg_take_trigger <- mkConfigReg(unpack(0));
@@ -276,67 +279,85 @@ package stage5;
           `logLevel( stage5, 0, $format("[%2d]STAGE5: Received TRAP:%d NewPC:%h fl:%b",hartid,t.cause,jump_address,fl))
         end
         else if (commit matches tagged MEMOP .s)begin
-        `ifdef dcache
-          if(!wr_cache_ready && !rg_memop_initiated)begin
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Memory op Waiting for Cache to be Ready",hartid))
-          end
-          else if (!rg_memop_initiated && wr_memop_is_cached)begin
-            wr_initiate_memop <= tuple2(unpack(rg_epoch),True);
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Initiating Memory op request",hartid))
-            wr_increment_minstret<=True;
-              `ifdef atomic
-                wr_commit <= tagged Valid CommitData{addr: s.rd, data:s.commitvalue
-                                            `ifdef spfpu , rdtype: IRF `endif };
-              `else
-                wr_commit <= tagged Valid CommitData{addr: 0, data:0
-                                            `ifdef spfpu , rdtype: IRF `endif };
-              `endif
-            `ifdef rtldump
-              rg_commitlog <= tagged Valid (clogpkt);
-              rxinst.u.deq;
-            `endif
-              rx.u.deq;
-          end
-          else
+        `ifdef rtldump
+          CommitLogMem _pkt = ?;
+          if (clogpkt.inst_type matches tagged MEM. cmem) 
+            _pkt = cmem;
+          if (_pkt.access == Load || (_pkt.access == Atomic && _pkt.atomic_op != 7))
+            _pkt.commit_data = s.cache_resp;
         `endif
-          if(!rg_memop_initiated)begin
-            wr_initiate_memop <= tuple2(unpack(rg_epoch),True);
-            rg_memop_initiated<=True;
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Initiating NC Store request",hartid))
-          end
-          else if(wr_memop_response matches tagged Valid .resp) begin
-            rg_memop_initiated<=False;
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Store response Received: ",hartid,fshow(resp)))
-            let {err, data} = resp;
-            if(err==0)begin
-              wr_increment_minstret<=True;
-              if (s.access != Store)
-                wr_commit <= tagged Valid CommitData{addr: s.rd, data: data 
-                                                    `ifdef spfpu ,rdtype: IRF `endif };
-            `ifdef rtldump
-              CommitLogMem _pkt = ?;
-              if (clogpkt.inst_type matches tagged MEM. cmem) 
-                _pkt = cmem;
-              if (_pkt.access == Load || (_pkt.access == Atomic && _pkt.atomic_op != 7))
-                _pkt.commit_data = data;
-              clogpkt.inst_type = tagged MEM _pkt;
-              rg_commitlog <= tagged Valid (clogpkt);
-              rxinst.u.deq;
+
+          if (!s.io && wr_cache_store_ready) begin // Cacheable Store or Atomic op
+            wr_commit_cacheop <= tuple2(unpack(rg_epoch),True);
+            wr_increment_minstret <= True;
+            let cache_resp = s.cache_resp;
+            if (s.access == Atomic) begin
+            `ifdef dpfpu 
+              if (s.nanboxing) cache_resp[63:32] = '1;
             `endif
+              wr_commit <= tagged Valid CommitData{addr: s.rd, data: cache_resp
+                                              `ifdef spfpu , rdtype: IRF `endif } ;
+            end
+            rx.u.deq;
+          `ifdef rtldump
+            _pkt.commit_data = cache_resp;
+            clogpkt.inst_type = tagged MEM _pkt;
+            rg_commitlog <= tagged Valid (clogpkt);
+            rxinst.u.deq;
+          `endif
+          end
+          else if(s.io) begin // Non-Cacheable Memory op
+            if (!rg_ioop_init) begin
+              rg_ioop_init <= True;
+              ff_tx_io_op.u.enq(IO_memop{address: truncate(s.cache_resp), data: s.wdata, 
+                    access: s.access, size: s.size});
+              `logLevel( stage5, 0, $format("STAGE5: Initiating IO op"))
+              if (s.access == Atomic)
+                rg_atomic_readdone <= True;
+            end
+            else if(wr_ioop_response matches tagged Valid .ioresp)begin
+              let {err, data} = ioresp;
+              rg_ioop_init <= False;
+              rg_atomic_readdone <= False;
+              if (err == 1) begin
+                let newpc <- csr.mav_upd_on_trap(s.access == Load? `Load_access_fault:
+                                       `Store_access_fault, s.pc, s.cache_resp);
+                fl=True;
+                jump_address=newpc;
+              end
+              else if (s.access == Atomic && rg_atomic_readdone) begin
+                ff_tx_io_op.u.enq(IO_memop{address: truncate(s.cache_resp), data: s.wdata, 
+                    access: Store, size: s.size});
+                rg_atomic_data <= zeroExtend(data);
+              end
+              else begin
+                wr_increment_minstret <= True;
+              `ifdef atomic
+                if (s.access == Atomic)
+                  data = rg_atomic_data;
+              `endif
+                if (s.access != Store) begin
+                `ifdef dpfpu 
+                  if (s.nanboxing) data[63:32] = '1;
+                `endif
+                  wr_commit <= tagged Valid CommitData{addr: s.rd, data: data
+                                                  `ifdef spfpu , rdtype: IRF `endif } ;
+                end
+              `ifdef rtldump
+                _pkt.commit_data = data;
+                clogpkt.inst_type = tagged MEM _pkt;
+                rg_commitlog <= tagged Valid (clogpkt);
+                rxinst.u.deq;
+              `endif
+              end
               rx.u.deq;
             end
             else begin
-              let newpc <- csr.mav_upd_on_trap(`Store_access_fault, s.pc, s.addr);
-              fl=True;
-              jump_address=newpc;
-              rx.u.deq;
-            `ifdef rtldump
-              rxinst.u.deq;
-            `endif
+              if (s.io)
+                `logLevel( stage5, 0, $format("[%2d]STAGE5: Waiting for IO response",hartid))
+              else
+                `logLevel( stage5, 0, $format("[%2d]STAGE5: Waiting for Cache to be ready",hartid))
             end
-          end
-          else begin
-            `logLevel( stage5, 0, $format("[%2d]STAGE5: Waiting for Store response",hartid))
           end
         end
         else if(commit matches tagged SYSTEM .sys)begin
@@ -420,18 +441,13 @@ package stage5;
       end
       else begin
         `logLevel( stage5, 0, $format("[%2d]STAGE5: Dropping instruction",hartid))
-        Bool _fwd = True;
-        if(commit matches tagged MEMOP.s) begin
-          if(wr_cache_ready)
-            wr_initiate_memop<=tuple2(unpack(rg_epoch),True);
-          else
-            _fwd = False;
-        end
-        if(_fwd) begin
-          rx.u.deq;
+         rx.u.deq;
         `ifdef rtldump
           rxinst.u.deq;
         `endif
+        if(commit matches tagged MEMOP.s) begin
+          if(!s.io)
+            wr_commit_cacheop<=tuple2(unpack(rg_epoch),True);
         end
       end
     endrule
@@ -476,18 +492,15 @@ package stage5;
   	method ma_set_ueip = csr.ma_set_ueip;
   `endif
     method mv_csr_misa_c=csr.sbread.mv_csr_misa[2];
-    method initiate_store=wr_initiate_memop;
-    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
-      wr_memop_response<=r;
-    endmethod
-    method Action store_is_cached(Bool c);
-      wr_memop_is_cached<=c;
-    endmethod
   `ifdef dcache
-    method Action ma_cache_ready(Bool r);
-      wr_cache_ready <= r;
+    method mv_initiate_store=wr_commit_cacheop;
+    method Action ma_commit_store_ready (Bool _b);
+      wr_cache_store_ready <= _b;
     endmethod
   `endif
+    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
+      wr_ioop_response<=r;
+    endmethod
     method mv_cacheenable = truncate(csr.sbread.mv_csr_customcontrol);
     method mv_curr_priv = pack(csr.mv_prv);    
     method mv_csr_mstatus= csr.sbread.mv_csr_mstatus;
@@ -532,5 +545,6 @@ package stage5;
     /*doc:method: */
     method mv_csr_itim_bound = csr.sbread.mv_csr_itim_bound;
   `endif
+    interface tx_io_op = ff_tx_io_op.e;
   endmodule
 endpackage

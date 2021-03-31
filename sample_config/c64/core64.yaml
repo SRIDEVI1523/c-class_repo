@@ -8,9 +8,16 @@ iepoch_size: 2
 m_extension:
   mul_stages : 1
   div_stages : 32
+branch_predictor:
+  instantiate: True
+  predictor: gshare
+  btb_depth: 32
+  bht_depth: 512
+  history_len: 8
+  history_bits: 5
+  ras_depth: 8
 icache_configuration:
   instantiate: true
-  on_reset: enable
   sets: 64
   word_size: 4
   block_size: 16
@@ -21,7 +28,6 @@ icache_configuration:
   one_hot_select: false
 dcache_configuration:
   instantiate: true
-  on_reset: enable
   sets: 64
   word_size: 8
   block_size: 8

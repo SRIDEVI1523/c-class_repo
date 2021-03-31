@@ -436,7 +436,11 @@ package stage3;
                               `ifdef spfpu
                                     ,fflags    :0
                               `endif };
-      let s4memory = Stage4Memory{  memaccess   : meta.memaccess
+      let s4memory = Stage4Memory{  memaccess   : meta.memaccess,
+                                    data        : arg2,
+                                    size        : funct3
+                              `ifdef atomic
+                                   ,atomicop    : {funct3[0], fn}
                               `ifdef triggers
                                   ,address     : memory_address
                                   ,size        : funct3[1:0]
