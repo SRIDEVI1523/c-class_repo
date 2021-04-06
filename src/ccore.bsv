@@ -112,54 +112,13 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
 	Ifc_imem imem <- mkimem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif );
 	Ifc_dmem dmem <- mkdmem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif );
 
-	FIFOF#(IO_memop) ff_io_memop <- mkUGSizedFIFOF(2);
-	Reg#(Bit#(2))    rg_io_state <- mkReg(0);
-
 	mkConnection(imem.get_core_resp, riscv.inst_response); // imem integration
 	mkConnection(imem.put_core_req , riscv.instr_req);
 	mkConnection(dmem.mv_storebuffer_empty, riscv.storebuffer_empty);
-	mkConnection(dmem.mv_cache_available, riscv.cache_is_available);
-	mkConnection(ff_io_memop, riscv.tx_io_op);
+	mkConnection(dmem.mv_dmem_available, riscv.cache_is_available);
 
-  let core_req <- mkConnection(dmem.put_core_req, riscv.memory_request);
-	mkConnection(dmem.get_core_resp, riscv.memory_response); // dmem integration
-
-	/*doc:rule: This rule will initiate an IO read or write as indicated by the WB stage of the
-	* pipeline. If a burst write is on-going then this rule is stalled.*/
-	rule rl_initiate_io(rg_io_state == 0 && ff_io_memop.notEmpty 
-                                      	          `ifdef dcache && rg_burst_count == 0 `endif );
-	  let req = ff_io_memop.first;
-    `logLevel( core, 0, $format("CORE: Received io op: ",fshow(req)))
-	  rg_io_state <= 1;
-    if(req.size[1:0]== 0)
-      req.data = duplicate(req.data[7 : 0]);
-    else if(req.size[1:0] == 1)
-      req.data = duplicate(req.data[15 : 0]);
-    else if(req.size[1:0] == 2)
-      req.data = duplicate(req.data[31 : 0]);
-    Bit#(TDiv#(ELEN, 8)) write_strobe = req.size[1:0] == 0?'b1 :
-                                        req.size[1:0] == 1?'b11 :
-                                        req.size[1:0] == 2?'hf : '1;
-    Bit#(TAdd#(1, TDiv#(ELEN, 32))) byte_offset = truncate(req.address);
-    write_strobe = write_strobe<<byte_offset;
-	  if (req.access != Store) begin
-		  AXI4_Rd_Addr#(`paddr, 0) dmem_request = AXI4_Rd_Addr {araddr : truncate(req.address), aruser: ?,
-        arlen : 0, arsize : zeroExtend(req.size[1:0]), arburst : 'b00, // arburst : 00 - FIXED 01 - INCR 10 - WRAP
-        arid : 1 ,arprot:{1'b0, 1'b0, curr_priv[1]} }; 
-      memory_xactor.i_rd_addr.enq(dmem_request);
-	  end
-	  else begin
-	    AXI4_Wr_Addr#(`paddr, 0) aw = AXI4_Wr_Addr {awaddr : truncate(req.address), awuser : 0,
-        awlen : 0, awsize : zeroExtend(req.size[1 : 0]), awburst : 'b0,
-        awid : 1, awprot:{1'b0, 1'b0, curr_priv[1]} }; // arburst : 00 - FIXED 01 - INCR 10 - WRAP
-
-      let w  = AXI4_Wr_Data {wdata : truncate(req.data), wstrb : write_strobe,
-                             wlast : True, 
-                             wid : 1};
-	    memory_xactor.i_wr_addr.enq(aw);
-	    memory_xactor.i_wr_data.enq(w);
-	  end
-	endrule:rl_initiate_io
+  let core_req <- mkConnection(dmem.receive_core_req, riscv.memory_request);
+	let core_resp <- mkConnection(dmem.send_core_cache_resp, riscv.memory_response); // dmem integration
 
 
   /*doc:rule: This rule sends out requests from the I-cache to the fabric*/
@@ -201,6 +160,57 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
 	  endrule
 	`endif
 
+	/*doc:rule: This rule will initiate an IO read or write as indicated by the WB stage of the
+	* pipeline. If a burst write is on-going then this rule is stalled.*/
+	rule rl_initiate_io( `ifdef dcache rg_burst_count == 0 `endif );
+	  let req <- dmem.send_mem_io_req.get;
+    `logLevel( core, 0, $format("CORE: Received io op: ",fshow(req)))
+    if(req.size[1:0]== 0)
+      req.data = duplicate(req.data[7 : 0]);
+    else if(req.size[1:0] == 1)
+      req.data = duplicate(req.data[15 : 0]);
+    else if(req.size[1:0] == 2)
+      req.data = duplicate(req.data[31 : 0]);
+    Bit#(TDiv#(ELEN, 8)) write_strobe = req.size[1:0] == 0?'b1 :
+                                        req.size[1:0] == 1?'b11 :
+                                        req.size[1:0] == 2?'hf : '1;
+    Bit#(TAdd#(1, TDiv#(ELEN, 32))) byte_offset = truncate(req.address);
+    write_strobe = write_strobe<<byte_offset;
+	  if (!req.read_write) begin
+		  AXI4_Rd_Addr#(`paddr, 0) dmem_request = AXI4_Rd_Addr {araddr : truncate(req.address), aruser: ?,
+        arlen : 0, arsize : zeroExtend(req.size[1:0]), arburst : 'b00, // arburst : 00 - FIXED 01 - INCR 10 - WRAP
+        arid : 1 ,arprot:{1'b0, 1'b0, curr_priv[1]} }; 
+      memory_xactor.i_rd_addr.enq(dmem_request);
+	  end
+	  else begin
+	    AXI4_Wr_Addr#(`paddr, 0) aw = AXI4_Wr_Addr {awaddr : truncate(req.address), awuser : 0,
+        awlen : 0, awsize : zeroExtend(req.size[1 : 0]), awburst : 'b0,
+        awid : 1, awprot:{1'b0, 1'b0, curr_priv[1]} }; // arburst : 00 - FIXED 01 - INCR 10 - WRAP
+
+      let w  = AXI4_Wr_Data {wdata : truncate(req.data), wstrb : write_strobe,
+                             wlast : True, 
+                             wid : 1};
+	    memory_xactor.i_wr_addr.enq(aw);
+	    memory_xactor.i_wr_data.enq(w);
+	  end
+	endrule:rl_initiate_io
+  /*doc:rule: */
+  rule rl_handle_io_read_response(memory_xactor.o_rd_data.first.rid == 1);
+    let response <- pop_o(memory_xactor.o_rd_data);
+  	let bus_error = !(response.rresp == AXI4_OKAY);
+    dmem.receive_mem_io_resp.put(DCache_io_response{data:response.rdata, 
+                                              error:bus_error});
+    `logLevel( core, 1, $format("[%2d]CORE : IO Read Response ",hartid, fshow(response)))
+  endrule:rl_handle_io_read_response
+  rule rl_handle_io_write_resp (memory_xactor.o_wr_resp.first.bid == 1);
+    let response <- pop_o(memory_xactor.o_wr_resp);
+  	let bus_error = !(response.bresp == AXI4_OKAY);
+    dmem.receive_mem_io_resp.put(DCache_io_response{data: ?, 
+                                              error:bus_error});
+    `logLevel( core, 1, $format("[%2d]CORE : IO Write Response ",hartid, fshow(response)))
+  endrule:rl_handle_io_write_resp
+
+
 `ifdef dcache
   Reg#(Maybe#(AXI4_Rd_Addr#(`paddr, 0))) rg_read_line_req <- mkReg(tagged Invalid);
   Reg#(Maybe#(Bit#(`paddr))) wr_write_req <- mkReg(tagged Invalid);
@@ -208,11 +218,11 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
   rule rl_map_dmem_enable;
 	  dmem.ma_cache_enable(unpack(riscv.mv_cacheenable[1]));
   endrule
-  rule rl_initiate_store(tpl_2(riscv.mv_initiate_store));
-    dmem.ma_perform_store(pack(tpl_1(riscv.mv_initiate_store)));
-  endrule
+  mkConnection(dmem.ma_commit_store, riscv.mv_initiate_store);
+  mkConnection(dmem.ma_commit_io, riscv.mv_initiate_ioop);
+  mkConnection(dmem.send_core_io_resp, riscv.ma_io_response);
 
-  mkConnection(dmem.mv_commit_store_ready,riscv.ma_commit_store_ready);
+
 
   // Currently it is possible that the cache can generate a write - request followed by a
   // read - request, but the fabric (due to contention) latches the read first to the slave followed
@@ -221,9 +231,9 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
   // write - response has arrived.
   // The contraint is fullilled using the register wr_write_req which holds the current address of
   // the line being written to the fabric on a eviction
-  rule rl_handle_dmem_line_read_request(rg_read_line_req matches tagged Invalid &&& (!ff_io_memop.notEmpty || rg_io_state !=0));
+  rule rl_handle_dmem_line_read_request(rg_read_line_req matches tagged Invalid );
     Bool perform_req = True;
-  	let req <- dmem.get_read_mem_req.get;
+  	let req <- dmem.send_mem_rd_req.get;
   	AXI4_Rd_Addr#(`paddr, 0) dmem_request = AXI4_Rd_Addr {araddr : truncate(req.address), aruser: ?,
       arlen : req.burst_len, arsize : req.burst_size, arburst : 'b10, // arburst : 00 - FIXED 01 - INCR 10 - WRAP
       arid : 0 ,arprot:{1'b0, 1'b0, curr_priv[1]} }; 
@@ -241,8 +251,7 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
   endrule
 
   rule rl_handle_delayed_read(rg_read_line_req matches tagged Valid .r &&& 
-                                wr_write_req matches tagged Invalid &&&
-                              (!ff_io_memop.notEmpty || rg_io_state !=0));
+                                  wr_write_req matches tagged Invalid );
 	  memory_xactor.i_rd_addr.enq(r);
     `logLevel( core, 1, $format("[%2d]CORE : DMEM Delayed Line Requesting ",hartid, fshow(r)))
     rg_read_line_req <= tagged Invalid;
@@ -252,19 +261,19 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
     let fab_resp <- pop_o (memory_xactor.o_rd_data);
 		let lv_data= fab_resp.rdata;
   	Bool bus_error = !(fab_resp.rresp == AXI4_OKAY);
-    dmem.put_read_mem_resp.put(DCache_mem_readresp{data:truncate(lv_data),
+    dmem.receive_mem_rd_resp.put(DCache_mem_readresp{data:truncate(lv_data),
                                                last:fab_resp.rlast,
                                                err :bus_error});
     `logLevel( core, 1, $format("[%2d]CORE : DMEM Line Response ",hartid, fshow(fab_resp)))
   endrule:rl_handle_dmem_line_resp
 
-  rule rl_handle_dmem_write_request (rg_burst_count == 0 && (!ff_io_memop.notEmpty || rg_io_state !=0));
-    let req = dmem.mv_write_mem_req_rd;
+  rule rl_handle_dmem_write_request (rg_burst_count == 0);
+    let req = dmem.send_mem_wr_req;
 	  Bit#(TDiv#(ELEN, 8)) write_strobe = '1;
     if(req.burst_len > 0)
       rg_burst_count <= rg_burst_count + 1;
     else begin
-      dmem.ma_write_mem_req_deq;
+      dmem.deq_mem_wr_req;
     end
 
 	  AXI4_Wr_Addr#(`paddr, 0) aw = AXI4_Wr_Addr {awaddr : truncate(req.address), awuser : 0,
@@ -283,7 +292,7 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
 
   rule rl_dmem_burst_write_data(rg_burst_count != 0);
     Bool last = rg_burst_count == fromInteger(`dblocks - 1 );
-    let req = dmem.mv_write_mem_req_rd;
+    let req = dmem.send_mem_wr_req;
     req.data = req.data >> rg_shift_amount;
 	  let w  = AXI4_Wr_Data {wdata : truncate(req.data), wstrb : '1, wlast : last,
                            wid : 0};
@@ -292,7 +301,7 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
       rg_burst_count <= 0;
       rg_shift_amount <= (`dwords * 8);
       wr_write_req <= tagged Invalid;
-      dmem.ma_write_mem_req_deq;
+      dmem.deq_mem_wr_req;
     end
     else begin
       rg_shift_amount <= rg_shift_amount + (`dwords * 8);
@@ -306,7 +315,7 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   rule handle_dmem_line_write_resp (memory_xactor.o_wr_resp.first.bid == 0);
     let response <- pop_o(memory_xactor.o_wr_resp);
   	let bus_error = !(response.bresp == AXI4_OKAY);
-	  dmem.put_write_mem_resp.put(bus_error);
+	  dmem.receive_mem_wr_resp.put(bus_error);
     `logLevel( core, 1, $format("[%2d]CORE : DMEM Write Line Response ",hartid, fshow(response)))
   endrule: handle_dmem_line_write_resp
 
@@ -327,27 +336,6 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   endrule
 `endif
 `endif
-
-  /*doc:rule: */
-  rule rl_handle_io_read_response(memory_xactor.o_rd_data.first.rid == 1 && rg_io_state != 0);
-    let fab_resp <- pop_o (memory_xactor.o_rd_data);
-		let lv_data= fab_resp.rdata;
-  	Bool bus_error = !(fab_resp.rresp == AXI4_OKAY);
-    riscv.ma_io_response(tagged Valid tuple2(pack(bus_error), lv_data));
-    rg_io_state <= 0;
-    ff_io_memop.deq;
-    dynamicAssert(ff_io_memop.notEmpty && rg_io_state != 0, "Sending IO response when ff_io_memop is empty");
-    `logLevel( core, 1, $format("[%2d]CORE : IO Line Response ",hartid, fshow(fab_resp)))
-  endrule:rl_handle_io_read_response
-  rule rl_handle_io_write_resp (memory_xactor.o_wr_resp.first.bid == 1 && rg_io_state != 0);
-    let response <- pop_o(memory_xactor.o_wr_resp);
-  	let bus_error = !(response.bresp == AXI4_OKAY);
-	  riscv.ma_io_response(tagged Valid tuple2(pack(bus_error),?));
-	  rg_io_state<=0;
-	  ff_io_memop.deq;
-    `logLevel( core, 1, $format("[%2d]CORE : DMEM IO Write Response ",hartid, fshow(response)))
-    dynamicAssert(ff_io_memop.notEmpty && rg_io_state != 0, "Sending IO response when ff_io_memop is empty");
-  endrule:rl_handle_io_write_resp
 
   mkConnection(imem.ma_curr_priv, curr_priv);
   mkConnection(dmem.ma_curr_priv, curr_priv);
@@ -379,7 +367,7 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
     dmem.put_resp_from_ptw.put(resp);
     rg_ptw_state <= None;
   endrule
-  let ptwalk_req <- mkConnection(dmem.put_core_req, ptwalk.request_to_cache);
+  let ptwalk_req <- mkConnection(dmem.receive_core_req, ptwalk.request_to_cache);
   mkConnection(dmem.get_ptw_resp, ptwalk.response_frm_cache);
   mkConnection(dmem.get_hold_req, ptwalk.hold_req);
 `endif

@@ -44,7 +44,7 @@ package riscv;
     interface Put#(IMem_core_response#(32, `iesize)) inst_response;
     interface Get#(DMem_request#(`vaddr, ELEN, 1)) memory_request;
     interface Put#(DMem_core_response#(ELEN, 1)) memory_response;
-    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
+    method Action ma_io_response(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize)) r);
     (*always_enabled*)
     method Action storebuffer_empty(Bool e);
     (*always_enabled*)
@@ -54,8 +54,8 @@ package riscv;
     method Action ma_clint_mtime(Bit#(64) c_mtime);
   	method Action ma_set_meip(Bit#(1) ex_i);
   `ifdef dcache
-    method Tuple2#(Bool, Bool) mv_initiate_store;
-    method Action ma_commit_store_ready (Bool _b);
+    method Bit#(1) mv_initiate_store;
+    method Bit#(1) mv_initiate_ioop;
   `endif
   `ifdef supervisor
   	method Action ma_set_seip(Bit#(1) ex_i);
@@ -116,7 +116,6 @@ package riscv;
     /*doc:method: */
     method Bit#(XLEN) mv_csr_itim_bound ();
   `endif
-    interface TXe#(IO_memop) tx_io_op;
   endinterface
 
   (*synthesize*)
@@ -388,7 +387,7 @@ package riscv;
         available = False;
         rd = s.rd;
         rdval = ?;
-        rdtype = IRF;
+        rdtype = `ifdef spfpu s.rdtype `else IRF `endif ;
       end
       Bool valid = !(rd==0 `ifdef spfpu && rdtype == IRF `endif ) && epoch == rg_wEpoch ;
       stage3.fwd_from_pipe4_first(FwdType{valid: valid, available:available,
@@ -426,11 +425,9 @@ package riscv;
     endmethod
   `ifdef dcache
     method mv_initiate_store = stage5.mv_initiate_store;
-    method ma_commit_store_ready = stage5.ma_commit_store_ready;
+    method mv_initiate_ioop = stage5.mv_initiate_ioop;
   `endif
-    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1), Bit#(`vaddr))) r);
-      stage5.ma_io_response(r);
-    endmethod
+    method ma_io_response = stage5.ma_io_response;
     method Action cache_is_available(Bool avail);
       stage3.cache_is_available(avail);
     endmethod
@@ -498,7 +495,6 @@ package riscv;
     /*doc:method: */
     method mv_csr_itim_bound = stage5.mv_csr_itim_bound;
   `endif
-    interface tx_io_op = stage5.tx_io_op;
   endmodule
 
 endpackage

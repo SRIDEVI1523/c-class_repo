@@ -187,10 +187,6 @@ package stage3;
     // Wire indicating if the store buffer in the memory stage or dcache is empty or not?
     Wire#(Bool) wr_storebuffer_empty <- mkWire();
 
-  `ifdef atomic
-    // address which holds the reservation address for LR / SC instructions
-    Reg#(Maybe#(Bit#(`vaddr))) rg_loadreserved_addr <- mkReg(tagged Invalid);
-  `endif
     // This variable holds the current epoch values of the pipe
     let curr_epochs = {rg_eEpoch, rg_wEpoch};
 
@@ -401,25 +397,7 @@ package stage3;
     `endif
       // --------------- In case of Memory operation send request to Dmem ----------------//
       if(operands_available && epochs_match && meta.inst_type == MEMORY && !memory_trap) begin
-      `ifdef atomic
-        if(meta.memaccess == Atomic && fn == 'b0101) begin // LR
-          rg_loadreserved_addr <= tagged Valid memory_address;
-          meta.memaccess = Load;
-        end
-        if(meta.memaccess == Atomic && fn == 'b0111) begin // SC
-            rg_loadreserved_addr <= tagged Invalid;
-          if(rg_loadreserved_addr matches tagged Valid .scaddr &&& scaddr ==
-                                                                    memory_address)begin
-            meta.memaccess = Store;
-          end
-          else begin
-            aluout.aluresult = 1;
-            meta.inst_type = ALU;
-          end
-        end
-      `endif
-        if(meta.inst_type == MEMORY )
-          send_memory_request(memory_address, meta.epochs[0], funct3, meta.memaccess, fn, arg2);
+        send_memory_request(memory_address, meta.epochs[0], funct3, meta.memaccess, fn, arg2);
       end
       // ---------------------------------------------------------------------------------- //
 
@@ -436,11 +414,10 @@ package stage3;
                               `ifdef spfpu
                                     ,fflags    :0
                               `endif };
-      let s4memory = Stage4Memory{  memaccess   : meta.memaccess,
-                                    data        : arg2,
-                                    size        : funct3
+      let s4memory = Stage4Memory{  memaccess   : meta.memaccess
                               `ifdef atomic
                                    ,atomicop    : {funct3[0], fn}
+                              `endif
                               `ifdef triggers
                                   ,address     : memory_address
                                   ,size        : funct3[1:0]

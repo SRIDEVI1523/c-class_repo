@@ -26,6 +26,7 @@ package stage5;
 `ifdef debug
   import debug_types::*;
 `endif
+  import dcache_types::*;
 
 
   interface Ifc_stage5;
@@ -63,10 +64,10 @@ package stage5;
   `endif
     method Bit#(1) mv_csr_misa_c;
   `ifdef dcache
-    method Tuple2#(Bool,Bool) mv_initiate_store;
-    method Action ma_commit_store_ready (Bool _b);
+    method Bit#(1) mv_initiate_store;
+    method Bit#(1) mv_initiate_ioop;
   `endif
-    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
+    method Action ma_io_response(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize)) r);
     (*always_enabled*)
     method Bit#(3) mv_cacheenable;
     method Bit#(2) mv_curr_priv;
@@ -111,7 +112,6 @@ package stage5;
     /*doc:method: */
     method Bit#(XLEN) mv_csr_itim_bound ();
   `endif
-    interface TXe#(IO_memop) tx_io_op;
   endinterface
 
   (*synthesize*)
@@ -153,12 +153,12 @@ package stage5;
     Reg#(Bool) rg_ioop_init <- mkReg(False);
     Reg#(Bool) rg_atomic_readdone <- mkReg(False);
     Reg#(Bit#(ELEN)) rg_atomic_data <- mkReg(0);
-    Wire#(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr)))) wr_ioop_response <- mkDWire(tagged Invalid);
+    Wire#(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize))) wr_ioop_response <- mkDWire(tagged Invalid);
   `ifdef dcache
-    Wire#(Tuple2#(Bool,Bool)) wr_commit_cacheop <- mkDWire(tuple2(False,False));
-    Wire#(Bool) wr_cache_store_ready <- mkWire();
+//    Wire#(Tuple2#(Bool,Bool)) wr_commit_cacheop <- mkDWire(tuple2(False,False));
+    Wire#(Bit#(1)) wr_commit_cacheop <- mkWire();
+    Wire#(Bit#(1)) wr_commit_ioop <- mkWire();
   `endif    
-    TX#(IO_memop) ff_tx_io_op <- mkTX();
 
     let csr_resp = csr.mv_core_resp;
   `ifdef triggers
@@ -283,21 +283,20 @@ package stage5;
           CommitLogMem _pkt = ?;
           if (clogpkt.inst_type matches tagged MEM. cmem) 
             _pkt = cmem;
-          if (_pkt.access == Load || (_pkt.access == Atomic && _pkt.atomic_op != 7))
-            _pkt.commit_data = s.cache_resp;
         `endif
 
-          if (!s.io && wr_cache_store_ready) begin // Cacheable Store or Atomic op
-            wr_commit_cacheop <= tuple2(unpack(rg_epoch),True);
+          if (!s.io) begin // Cacheable Store or Atomic op
+            wr_commit_cacheop <= rg_epoch;
             wr_increment_minstret <= True;
-            let cache_resp = s.cache_resp;
-            if (s.access == Atomic) begin
-            `ifdef dpfpu 
-              if (s.nanboxing) cache_resp[63:32] = '1;
-            `endif
+          `ifdef atomic
+            let cache_resp = s.atomic_rd_data;
+            if (s.memaccess == Atomic) begin
               wr_commit <= tagged Valid CommitData{addr: s.rd, data: cache_resp
                                               `ifdef spfpu , rdtype: IRF `endif } ;
             end
+          `else
+            Bit#(ELEN) cache_resp = 0;
+          `endif
             rx.u.deq;
           `ifdef rtldump
             _pkt.commit_data = cache_resp;
@@ -309,40 +308,24 @@ package stage5;
           else if(s.io) begin // Non-Cacheable Memory op
             if (!rg_ioop_init) begin
               rg_ioop_init <= True;
-              ff_tx_io_op.u.enq(IO_memop{address: truncate(s.cache_resp), data: s.wdata, 
-                    access: s.access, size: s.size});
-              `logLevel( stage5, 0, $format("STAGE5: Initiating IO op"))
-              if (s.access == Atomic)
-                rg_atomic_readdone <= True;
+              wr_commit_ioop <= rg_epoch;
             end
             else if(wr_ioop_response matches tagged Valid .ioresp)begin
-              let {err, data} = ioresp;
               rg_ioop_init <= False;
               rg_atomic_readdone <= False;
-              if (err == 1) begin
-                let newpc <- csr.mav_upd_on_trap(s.access == Load? `Load_access_fault:
-                                       `Store_access_fault, s.pc, s.cache_resp);
+              if (ioresp.trap) begin
+                let newpc <- csr.mav_upd_on_trap(ioresp.cause, s.pc, ioresp.word);
                 fl=True;
                 jump_address=newpc;
               end
-              else if (s.access == Atomic && rg_atomic_readdone) begin
-                ff_tx_io_op.u.enq(IO_memop{address: truncate(s.cache_resp), data: s.wdata, 
-                    access: Store, size: s.size});
-                rg_atomic_data <= zeroExtend(data);
-              end
               else begin
                 wr_increment_minstret <= True;
-              `ifdef atomic
-                if (s.access == Atomic)
-                  data = rg_atomic_data;
+                let data = ioresp.word;
+              `ifdef dpfpu 
+                if (s.nanboxing) data[63:32] = '1;
               `endif
-                if (s.access != Store) begin
-                `ifdef dpfpu 
-                  if (s.nanboxing) data[63:32] = '1;
-                `endif
                   wr_commit <= tagged Valid CommitData{addr: s.rd, data: data
-                                                  `ifdef spfpu , rdtype: IRF `endif } ;
-                end
+                                                  `ifdef spfpu , rdtype: s.rdtype `endif } ;
               `ifdef rtldump
                 _pkt.commit_data = data;
                 clogpkt.inst_type = tagged MEM _pkt;
@@ -447,7 +430,7 @@ package stage5;
         `endif
         if(commit matches tagged MEMOP.s) begin
           if(!s.io)
-            wr_commit_cacheop<=tuple2(unpack(rg_epoch),True);
+            wr_commit_cacheop<=rg_epoch;
         end
       end
     endrule
@@ -494,11 +477,9 @@ package stage5;
     method mv_csr_misa_c=csr.sbread.mv_csr_misa[2];
   `ifdef dcache
     method mv_initiate_store=wr_commit_cacheop;
-    method Action ma_commit_store_ready (Bool _b);
-      wr_cache_store_ready <= _b;
-    endmethod
+    method mv_initiate_ioop = wr_commit_ioop;
   `endif
-    method Action ma_io_response(Maybe#(Tuple2#(Bit#(1),Bit#(`vaddr))) r);
+    method Action ma_io_response(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize)) r);
       wr_ioop_response<=r;
     endmethod
     method mv_cacheenable = truncate(csr.sbread.mv_csr_customcontrol);
@@ -545,6 +526,5 @@ package stage5;
     /*doc:method: */
     method mv_csr_itim_bound = csr.sbread.mv_csr_itim_bound;
   `endif
-    interface tx_io_op = ff_tx_io_op.e;
   endmodule
 endpackage

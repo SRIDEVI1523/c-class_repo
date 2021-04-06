@@ -316,8 +316,6 @@ package ccore_types;
 
   typedef struct{
     Access_type   memaccess;
-    Bit#(ELEN)    data;
-    Bit#(3)       size;
   `ifdef atomic
     Bit#(5) atomicop;
   `endif
@@ -367,14 +365,11 @@ package ccore_types;
 
   typedef struct{
     Bit#(`vaddr) pc;
-    Bit#(`vaddr) cache_resp;
-    Access_type access;
-    Bit#(5) rd;
     Bool io;
-    Bit#(ELEN) wdata;
-    Bit#(3)   size;
+    Access_type memaccess;
+    Bit#(5) rd;
   `ifdef atomic
-    Bit#(5)   atomicop;
+    Bit#(ELEN) atomic_rd_data;
   `endif
   `ifdef spfpu
     RFType rdtype;

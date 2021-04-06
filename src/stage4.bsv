@@ -224,16 +224,13 @@ package stage4;
                                                  pc       : s4common.pc,
                                                  badaddr  : truncate(response.word) };
             else begin
-              if(response.is_io || (s.memaccess == Store || s.memaccess == Atomic))
+              if(response.is_io || response.sb_allocated)
                 pipe4data = tagged MEMOP CommitMem{ pc          : s4common.pc,
-                                                    cache_resp  : response.word,
-                                                    access      : s.memaccess,
-                                                    rd          : s4common.rd,
                                                     io          : response.is_io,
-                                                    wdata       : s.data,
-                                                    size        : s.size
+                                                    memaccess   : s.memaccess
+                                                    ,rd         : s4common.rd
                                                   `ifdef atomic
-                                                    ,atomicop   : s.atomicop
+                                                    ,atomic_rd_data: response.word
                                                   `endif
                                                   `ifdef spfpu
                                                     ,rdtype     : s4common.rdtype
@@ -252,6 +249,12 @@ package stage4;
                                                       ,fflags     : 0 // since rd could be FRF
                                                       ,rdtype     : s4common.rdtype
                                                     `endif };
+              `ifdef rtldump `ifdef atomic
+                if (s.memaccess == Atomic && !response.sb_allocated && s.atomicop=='b0111) begin
+                  clogpkt.inst_type = tagged REG (CommitLogReg{wdata: response.word, rd:
+                      s4common.rd, irf: `ifdef spfpu (s4common.rdtype==IRF) `else True `endif });
+                end
+              `endif `endif
               end
             end
           end
