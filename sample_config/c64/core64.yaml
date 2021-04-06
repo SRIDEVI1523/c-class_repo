@@ -1,4 +1,3 @@
-ISA: RV64IMAFDCSU
 s_extension:
   itlb_size: 4
   dtlb_size: 4
@@ -34,6 +33,7 @@ dcache_configuration:
   ways: 4
   fb_size: 8
   sb_size: 2
+  ib_size: 2
   replacement: RR
   ecc_enable: false
   one_hot_select: false

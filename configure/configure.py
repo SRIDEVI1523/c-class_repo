@@ -43,27 +43,14 @@ def specific_checks(foo):
  allowed value')
             sys.exit(1)
 
-    # check s_extension
-#    s_mode = foo['s_extension']['mode']
-#    s_itlbsize = foo['s_extension']['itlb_size']
-#    s_dtlbsize = foo['s_extension']['dtlb_size']
-#    s_asid_width = foo['s_extension']['asid_width']
-#    if 'S' in foo['ISA']:
-#        if xlen is 32 and s_mode != 'sv32' :
-#            logger.error('Only sv32 supported in RV32')
-#            sys.exit(1)
-#        if xlen is 64 and s_mode not in ['sv48', 'sv39'] :
-#            logger.error('Only sv39/sv48 supported in RV64')
-#            sys.exit(1)
-#        if xlen is 32 and s_asid_width > 9:
-#            logger.error('in RV32 ASID cannot be greater than 9')
-#            sys.exit(1)
-#        if xlen is 64 and s_asid_width > 16:
-#            logger.error('in RV32 ASID cannot be greater than 16')
-#            sys.exit(1)
+    # check a_extension
+    if 'A' in foo['ISA']:
+        res_sz = foo['a_extension']['reservation_size']
+        if not (res_sz and (not(res_sz & (res_sz - 1)))):
+            logger.error('reservation_size must be power of 2')
+            raise SystemExit
 
     # check m_extension
-
     m_mulstages = foo['m_extension']['mul_stages']
     m_divstages = foo['m_extension']['div_stages']
     if 'M' in foo['ISA']:
@@ -163,6 +150,10 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' ASSERT'
     if foo['bsc_compile_options']['trace_dump']:
         macros += ' rtldump'
+    if foo['ovl_assertions']:
+        macros += ' ovl_assert'
+    if foo['sva_assertions']:
+        macros += ' sva_assert'
 
     macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
     macros += ' dbuswidth='+str(xlen)
@@ -184,6 +175,7 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     
     if 'A' in foo['ISA']:
         macros += ' atomic'
+        macros += ' reservation_sz='+str(foo['a_extension']['reservation_size'])
     if 'F' in foo['ISA']:
         macros += ' spfpu'
     if 'D' in foo['ISA']:
@@ -244,6 +236,7 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     macros += ' dsets='+str(foo['dcache_configuration']['sets'])
     macros += ' dfbsize='+str(foo['dcache_configuration']['fb_size'])
     macros += ' dsbsize='+str(foo['dcache_configuration']['sb_size'])
+    macros += ' dibsize='+str(foo['dcache_configuration']['ib_size'])
     if foo['dcache_configuration']['rwports'] == 2:
         macros += ' dcache_dualport'
     if foo['dcache_configuration']['one_hot_select']:
@@ -384,7 +377,6 @@ def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
         march += 'D'
 
 
-    inp_yaml['ISA'] = isa_yaml['hart0']['ISA']
     # instantiate validator
     if logging:
         logger.info('Load Schema ' + str(schema))
@@ -405,6 +397,7 @@ def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
     else:
         error_list = validator.errors
         raise ValidationError("Error in " + core_spec + ".", error_list)
+    normalized['ISA'] = isa_yaml['hart0']['ISA']
     specific_checks(normalized)
     capture_compile_cmd(normalized, isa_yaml['hart0'], debug_spec)
     generate_makefile(normalized, logging)

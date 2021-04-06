@@ -1,26 +1,4 @@
 ###
-#
-#ISA
-#  **Description**: Takes input a string representing the ISA supported by the implementation. All extension names
-#  (other than Zext) should be mentioned in upper-case. Z extensions should begin with an upper-case
-#  'Z' followed by lower-case extension name (without Camel casing)
-#
-#  .. note:: Zicsr is enabled by default and cannot be switched off. Zifencei is controlled based on
-#    whether the caches are enabled or not
-#
-#  **Examples**:
-#
-#  .. code-block:: none
-#
-#    ISA: RV32IMA
-#    ISA: RV64IMAFDCZifencei
-
-ISA:
-  type: string
-  regex: ^RV(32|64|128)[IE]+[ACDEFGIJLMNPQSTUVX]*(Zicsr|Zifencei|Zam|Ztso|){,1}(_Zifencei){,1}(_Zam){,1}(_Ztso){,1}$
-  required: true
-
-###
 #total_events
 # **Description**: Total number of events in the system
 #
@@ -105,6 +83,31 @@ s_extension:
   default:
     itlb_size: 4
     dtlb_size: 4
+
+###
+#a_extension
+#  **Description**: Describes various A-extension related parameters. These params take effect only
+#  when the "A" extension is enabled in the riscv_config ISA
+#
+#     - ``reservation_size``: integer indicate the size of the reservation in terms of bytes.
+#       Minimum value is 4 and must be a power of 2.
+#
+#  **Examples**:
+#
+#  .. code-block:: yaml
+#
+#     a_extension:
+#       reservation_size: 8
+
+a_extension:
+  type: dict
+  schema:
+    reservation_size: 
+      type: integer
+      min: 4
+  default:
+    reservation_size: 8
+
 
 ###
 #m_extension
@@ -278,6 +281,7 @@ icache_configuration:
 #    - ``ways``: integer indicating the number of the ways in the cache
 #    - ``fb_size``: integer indicating the number of fill-buffer entries in the cache
 #    - ``sb_size``: integer indicating the number of store-buffer entries in the cache. Fixed to 2
+#    - ``ib_Size``: integer indicating the number of io-buffer entries in the cache. Default to 2
 #    - ``replacement``: strings indicating the replacement policy. Valid values are:
 #      ["PLRU", "RR", "Random"]
 #    - ``ecc_enable``: boolean field indicating if ECC should be enabled on the
@@ -303,6 +307,7 @@ icache_configuration:
 #      ways: 4
 #      fb_size: 4
 #      sb_size: 2
+#      ib_size: 2
 #      replacement: "PLRU"
 #      ecc_enable: false
 #      one_hot_select: false
@@ -326,6 +331,8 @@ dcache_configuration:
     sb_size:
       type: integer
       allowed: [2]
+    ib_size:
+      type: integer
     replacement:
       type: string
       allowed: ["PLRU", "RR", "Random"]
@@ -344,6 +351,7 @@ dcache_configuration:
     ways: 4
     fb_size: 8
     sb_size: 2
+    ib_size: 2
     replacement: "PLRU"
     tag_banks: 1
     data_banks: 1
@@ -565,6 +573,9 @@ verilator_configuration:
 #      of for asic/fpga synthesis. The valid values are: [ 'sim', 'asic', 'fpga' ]
 #    - ``suppress_warnings``: List of warnings which can be suppressed during
 #      bluespec compilation. Valid values are: ["none", "all", "G0010", "T0054", "G0020", "G0024", "G0023", "G0096", "G0036", "G0117", "G0015"]
+#    - ``ovl_assertions``: boolean value indicating if OVL based assertions must be turned on/off
+#    - ``ovl_path``: string indicating the path where the OVL library is installed.
+#    - ``sva_assertions``: boolean value indicating if SVA based assertions must be turned on/off
 #    - ``verilog_dir``: the directory name of where the generated verilog will be
 #      dumped
 #    - ``open_ocd``: a boolean field indicating if the test-bench should have an
@@ -606,6 +617,12 @@ bsc_compile_options:
       schema:
         type: string
         allowed: ["none", "all", "G0010","T0054","G0020","G0024","G0023","G0096","G0036","G0117","G0015"]
+    ovl_assertions:
+      type: boolean
+    ovl_path:
+      type: string
+    sva_assertions:
+      type: boolean
     verilog_dir:
       type: string
     open_ocd:
@@ -622,6 +639,9 @@ bsc_compile_options:
     test_memory_size: 33554432
     assertions: True
     trace_dump: True
+    ovl_assertions: False
+    ovl_path: ''
+    sva_assertions: False
     suppress_warnings: "none"
     top_module: mkTbSoc
     top_file: TbSoc
