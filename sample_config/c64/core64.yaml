@@ -46,6 +46,9 @@ no_of_triggers: 0
 bsc_compile_options:
   test_memory_size: 33554432
   assertions: true
+  ovl_assertions: False
+  sva_assertions: False
+  ovl_path: ""
   trace_dump: true
   compile_target: 'sim'
   suppress_warnings: ["none"]

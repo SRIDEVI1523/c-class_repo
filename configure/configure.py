@@ -92,6 +92,12 @@ def specific_checks(foo):
             logger.error('D-Cache d_words should be ' + str(xlen/8))
             sys.exit(1)
 
+    if foo['bsc_compile_options']['ovl_assertions']:
+        if foo['bsc_compile_options']['ovl_path'] is None or \
+                foo['bsc_compile_options']['ovl_path'] == '':
+                    logger.error('Please set ovl_path in core spec')
+                    raise SystemExit
+
 def capture_compile_cmd(foo, isa_node, debug_spec):
     global bsc_cmd
     global bsc_defines
@@ -150,9 +156,9 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' ASSERT'
     if foo['bsc_compile_options']['trace_dump']:
         macros += ' rtldump'
-    if foo['ovl_assertions']:
+    if foo['bsc_compile_options']['ovl_assertions']:
         macros += ' ovl_assert'
-    if foo['sva_assertions']:
+    if foo['bsc_compile_options']['sva_assertions']:
         macros += ' sva_assert'
 
     macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
@@ -320,6 +326,8 @@ def generate_makefile(foo, logging=False):
         verilator_speed = ''
     verilator_cmd = verilator_cmd.format(verilator_trace, verilator_coverage,
             verilator_threads)
+    if foo['bsc_compile_options']['ovl_assertions']:
+        verilator_cmd += ' -y '+foo['bsc_compile_options']['ovl_path']
     path = '.:%/Libraries'
     for p in bsv_path_file:
         path += ':'+p
@@ -383,6 +391,8 @@ def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
     schema_yaml = utils.load_yaml(schema)
 
     validator = Validator(schema_yaml)
+    validator.allow_unknown = False
+    validator.purge_readonly = True
     normalized = validator.normalized(inp_yaml, schema_yaml)
 
     # Perform Validation
