@@ -55,7 +55,7 @@ package stage2;
 
   // -- project imports --//
 	import registerfile::*;       // for instantiating the registerfile
-	import decoder::*;            // for the decode functions.
+	import decoder2::*;            // for the decode functions.
   import ccore_types::*;       // for pipe - line types
   `include "ccore_params.defines"  // for core parameters
   `include "Logger.bsv"         // for logging display statements.
