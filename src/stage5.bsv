@@ -430,7 +430,9 @@ package stage5;
         `endif
         if(commit matches tagged MEMOP.s) begin
           if(!s.io)
-            wr_commit_cacheop<=rg_epoch;
+            wr_commit_cacheop <= rg_epoch;
+          else
+            wr_commit_ioop <= rg_epoch;
         end
       end
     endrule

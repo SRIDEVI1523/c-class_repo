@@ -224,7 +224,7 @@ package stage4;
                                                  pc       : s4common.pc,
                                                  badaddr  : truncate(response.word) };
             else begin
-              if(response.is_io || response.sb_allocated)
+              if(response.entry_alloc)
                 pipe4data = tagged MEMOP CommitMem{ pc          : s4common.pc,
                                                     io          : response.is_io,
                                                     memaccess   : s.memaccess
@@ -250,7 +250,7 @@ package stage4;
                                                       ,rdtype     : s4common.rdtype
                                                     `endif };
               `ifdef rtldump `ifdef atomic
-                if (s.memaccess == Atomic && !response.sb_allocated && s.atomicop=='b0111) begin
+                if (s.memaccess == Atomic && !response.entry_alloc && s.atomicop=='b0111) begin
                   clogpkt.inst_type = tagged REG (CommitLogReg{wdata: response.word, rd:
                       s4common.rd, irf: `ifdef spfpu (s4common.rdtype==IRF) `else True `endif });
                 end
