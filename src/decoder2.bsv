@@ -1,8 +1,8 @@
 //See LICENSE.iitm for license details
 /*
 
-Author: Neel Gala
-Email id: neelgala@gmail.com
+Author: Snehashri Sivaraman
+Email id: snehashrisivaraman@gmail.com
 Details:
 This module primarily holds the combo functions to decode the instructions and provide
 various meta data to fetch operands and execute on them.
@@ -145,8 +145,8 @@ package decoder2;
 	endfunction
 
   typedef enum {Q0='b00, Q1='b01, Q2='b10} Quadrant deriving(Bits,Eq,FShow);
-  
-  function Bit#(5) func_rs1(Bit#(32) inst );
+  (*noinline*)
+  function Bit#(5) func_dec_rs1(Bit#(32) inst );
     case (inst) matches
        `JAL_INSTR: return 0 ;
        `LUI_INSTR: return 0 ;
@@ -156,124 +156,122 @@ package decoder2;
      endcase
   endfunction
   
-  function Op1type func_rs1type(Bit#(32) inst );
-   Op1type rs1type = IntegerRF;
+  (*noinline*)
+  function Op1type func_dec_rs1type(Bit#(32) inst );
     case (inst) matches
-       `JAL_INSTR: rs1type = PC ;
-       `JALR_INSTR: rs1type = PC ;
-       `AUIPC_INSTR: rs1type = PC;
+       `JAL_INSTR: return PC ;
+       `JALR_INSTR: return PC ;
+       `AUIPC_INSTR: return PC;
        `ifdef spfpu
-       `R4_TYPE: rs1type = FloatingRF;
-       `FN_INSTR: if (inst[31:28] != 13 || inst[31:28] != 15 ) rs1type = FloatingRF;
+       `R4_TYPE: return FloatingRF;
+       `FN_INSTR: if (inst[31:28] != 13 || inst[31:28] != 15 ) return FloatingRF; else return IntegerRF;
        `endif
-        default: rs1type= IntegerRF ;
+        default: return IntegerRF ;
      endcase
-  return rs1type;
   endfunction
   
-  function Bit#(5) func_rs2(Bit#(32) inst, CSRtoDecode csrs );
-    Bit#(5) rs2 = 0 ;
+  (*noinline*)
+  function Bit#(5) func_dec_rs2(Bit#(32) inst, CSRtoDecode csrs );
     case (inst) matches
-       `JAL_INSTR: rs2= 0 ;
-       `JALR_INSTR: rs2= 0 ;
-       `LUI_INSTR: rs2= 0 ;
-       `AUIPC_INSTR: rs2= 0;
-       `ECALL_EBREAK_INSTR: rs2= 0;
-       `ADD_SHIFT_INSTR: rs2= 0;
-       `FENCE_INSTR: rs2= 0;
-       `LOAD_INSTR: rs2= 0;
-       `FLW_INSTR: rs2= 0;
-       `F_S_INSTR: if ((csrs.csr_misa[3]|csrs.csr_misa[5])==1) rs2= ({3'b000, inst[21:20]}); 
-       `CSR_INSTR: if (inst[14:12] != 0) rs2= 0;
-       `LR_INSTR: rs2= 0;
-        default: rs2= inst[24:20] ;
+       `JAL_INSTR: return 0 ;
+       `JALR_INSTR: return 0 ;
+       `LUI_INSTR: return 0 ;
+       `AUIPC_INSTR: return 0;
+       `ECALL_EBREAK_INSTR: return 0;
+       `ADD_SHIFT_INSTR: return 0;
+       `FENCE_INSTR: return 0;
+       `LOAD_INSTR: return 0;
+       `FLW_INSTR: return 0;
+       `F_S_INSTR: if ((csrs.csr_misa[3]|csrs.csr_misa[5])==1) return ({3'b000, inst[21:20]}); else return inst[24:20];
+       `CSR_INSTR: if (inst[14:12] != 0) return 0; else return inst[24:20];
+       `LR_INSTR: return 0;
+        default: return inst[24:20] ;
      endcase
-   return rs2;
   endfunction
   
-  function Op2type func_rs2type(Bit#(32) inst `ifdef compressed , Bool compressed `endif );
-   Op2type rs2type = IntegerRF;
+  (*noinline*)
+  function Op2type func_dec_rs2type(Bit#(32) inst `ifdef compressed , Bool compressed `endif );
     case (inst) matches
-       `JAL_INSTR: `ifdef compressed if(compressed) rs2type = Constant2; else `endif rs2type=Constant4;
-       `JALR_INSTR: `ifdef compressed if(compressed) rs2type = Constant2; else `endif rs2type=Constant4;
-       `FENCE_INSTR: `ifdef compressed if(compressed) rs2type = Constant2; else `endif rs2type=Constant4;
-       `AUIPC_INSTR: rs2type = Immediate;
-       `LUI_INSTR: rs2type= Immediate;
-       `ADD_SHIFT_INSTR: rs2type=Immediate;
+       `JAL_INSTR: `ifdef compressed if(compressed) return Constant2; else `endif return Constant4;
+       `JALR_INSTR: `ifdef compressed if(compressed) return Constant2; else `endif return Constant4;
+       `FENCE_INSTR: `ifdef compressed if(compressed) return Constant2; else `endif return Constant4;
+       `AUIPC_INSTR: return Immediate;
+       `LUI_INSTR: return Immediate;
+       `ADD_SHIFT_INSTR: return Immediate;
        `ifdef spfpu
-       `R4_TYPE: rs2type = FloatingRF;
-       `FSTORE_TYPE:  rs2type = FloatingRF;
-       `FN_INSTR: if (inst[30]==0) rs2type = FloatingRF;
+       `R4_TYPE: return FloatingRF;
+       `FSTORE_TYPE:  return FloatingRF;
+       `FN_INSTR: if (inst[30]==0) return FloatingRF; else return IntegerRF;
        `endif
-        default: rs2type= IntegerRF ;
+        default: return IntegerRF ;
      endcase
-  return rs2type;
   endfunction
   
-  function Bit#(5) func_rd(Bit#(32) inst );
+  (*noinline*)
+  function Bit#(5) func_dec_rd(Bit#(32) inst );
     case (inst) matches
        `BRANCH_INSTR: return 0 ;
        `STORE_INSTR: return 0 ;
         default: return inst[11:7] ;
      endcase
   endfunction
-    
-  function Bit#(32) func_immediate(Bit#(32) inst, CSRtoDecode csrs );
-   Bit#(32) immediate = 0; 
+  
+  (*noinline*)
+  function Bit#(32) func_dec_immediate(Bit#(32) inst, CSRtoDecode csrs );
     case (inst) matches
-       `S_TYPE: immediate = {duplicate(inst[31]), inst[30:25] ,inst[11:8] ,inst[7]} ;
-       `FSTORE_TYPE: if (csrs.csr_misa[5]==1) immediate = {duplicate(inst[31]), inst[30:25] ,inst[11:8] ,inst[7]} ;
-       `B_TYPE: immediate = {duplicate(inst[31]), inst[7], inst[30:25], inst[11:8], 1'b0};
-       `U_TYPE: immediate = { inst[31], inst[30:20], inst[19:12], 12'b0};
-       `J_TYPE: immediate = { duplicate(inst[31]), inst[19:12], inst[20], inst[30:25], inst[24:21], 1'b0};
+       `S_TYPE: return {duplicate(inst[31]), inst[30:25] ,inst[11:8] ,inst[7]} ;
+       `FSTORE_TYPE: if (csrs.csr_misa[5]==1) return {duplicate(inst[31]), inst[30:25] ,inst[11:8] ,inst[7]} ; else return 0;
+       `B_TYPE: return {duplicate(inst[31]), inst[7], inst[30:25], inst[11:8], 1'b0};
+       `U_TYPE: return { inst[31], inst[30:20], inst[19:12], 12'b0};
+       `J_TYPE: return { duplicate(inst[31]), inst[19:12], inst[20], inst[30:25], inst[24:21], 1'b0};
   `ifdef atomic
-        `A_TYPE: immediate = 32'b0; `endif
-        default: immediate={duplicate(inst[31]), inst[30:25] ,inst[24:21] ,inst[20]} ;
+       `A_TYPE: return 32'b0; `endif
+       default: return {duplicate(inst[31]), inst[30:25] ,inst[24:21] ,inst[20]} ;
      endcase
-     return immediate;
   endfunction
   
-  function Access_type func_mem_access(Bit#(32) inst);
-   Access_type mem_access= Load;
+  (*noinline*)
+  function Access_type func_dec_mem_access(Bit#(32) inst);
     case(inst) matches
-     `S_TYPE: mem_access=Store;
-     `FENCE_INSTR: if (inst[12] == 0) mem_access=Fence; else mem_access=FenceI;
- `ifdef atomic
-      `A_TYPE: mem_access=Atomic; `endif
- `ifdef supervisor
-      `SFENCE_INSTR: mem_access=SFence; `endif
-       default: mem_access=Load;
-      endcase
-      return mem_access;
-      endfunction
-      
-      `ifdef spfpu
-      
-  function RFType func_rdtype(Bit#(32) inst );
-    RFType rdtype=IRF;
-    case (inst) matches
-       `FLW_INSTR: rdtype= FRF ;
-       `FN_INSTR: if(inst[31:28] != 10 || inst[31:28] != 12 || inst[31:28] != 13) rdtype= FRF ;
-       `R4_TYPE: rdtype= FRF;
-       default: rdtype= IRF ;
+       `S_TYPE: return Store;
+       `FENCE_INSTR: if (inst[12] == 0) return Fence; else return FenceI;
+    `ifdef atomic
+       `A_TYPE: return Atomic; `endif
+    `ifdef supervisor
+       `SFENCE_INSTR: return SFence; `endif
+       default: return Load;
      endcase
-     return rdtype;
+  endfunction
+      
+ `ifdef spfpu
+  (*noinline*)    
+  function RFType func_dec_rdtype(Bit#(32) inst );
+    case (inst) matches
+       `FLW_INSTR: return FRF ;
+       `FN_INSTR: if(inst[31:28] != 10 || inst[31:28] != 12 || inst[31:28] != 13) return FRF ; else return IRF;
+       `R4_TYPE: return FRF;
+       default: return IRF ;
+     endcase
   endfunction
   
-  function Bit#(5) func_rs3(Bit#(32) inst);
-       case(inst) matches
-        `R4_TYPE: return inst[31:27];
-        default: return 0;
-        endcase
-     endfunction
-     
-     function RFType func_rs3type(Bit#(32) inst);
-       case(inst) matches
-        `R4_TYPE: return FRF;
-        default: return IRF;
-        endcase
-     endfunction
+  (*noinline*)
+  function Bit#(5) func_dec_rs3(Bit#(32) inst);
+    case(inst) matches
+       `R4_TYPE: return inst[31:27];
+       default: return 0;
+     endcase
+  endfunction
+  
+  (*noinline*)
+  function RFType func_dec_rs3type(Bit#(32) inst);
+    case(inst) matches
+       `R4_TYPE: return FRF;
+       default: return IRF;
+     endcase
+  endfunction
+  
      `endif
+     
   (*noinline*)
   function DecodeOut decoder_func_32(Bit#(32) inst, CSRtoDecode csrs
                                     `ifdef compressed , Bool compressed `endif );
@@ -289,17 +287,17 @@ package decoder2;
 
     // ------- Default declarations of all local variables -----------//
 
-		Bit#(5) rs1=func_rs1(inst);
-		Bit#(5) rs2=func_rs2(inst, csrs);
-		Bit#(5) rd =func_rd(inst) ;
+		Bit#(5) rs1=func_dec_rs1(inst);
+		Bit#(5) rs2=func_dec_rs2(inst, csrs);
+		Bit#(5) rd =func_dec_rd(inst) ;
 		Bit#(5) opcode= inst[6:2];
 		Bit#(3) funct3= inst[14:12];
-    Bit#(7) funct7 = inst[31:25];
+                Bit#(7) funct7 = inst[31:25];
 		Bool word32 =False;
 
 		//operand types
-		Op1type rs1type=func_rs1type(inst);
-		Op2type rs2type=func_rs2type(inst `ifdef compressed , compressed `endif );
+		Op1type rs1type=func_dec_rs1type(inst);
+		Op2type rs2type=func_dec_rs2type(inst `ifdef compressed , compressed `endif );
 
     // ------------------------------------------------------------------
 
@@ -309,11 +307,8 @@ package decoder2;
     Bool stype= (opcode=='b01000 || (opcode=='b01001 && csrs.csr_misa[5]==1) );
     Bool r4type= (opcode[4:2]=='b100);
 
-    Bit#(32) immediate_value=func_immediate(inst, csrs);
-    // ----------------------------------------------------------------------------------
-
-    //memory access type
-		Access_type mem_access=func_mem_access(inst);
+    Bit#(32) immediate_value=func_dec_immediate(inst, csrs);
+    Access_type mem_access=func_dec_mem_access(inst);
 
 
       
@@ -528,9 +523,9 @@ package decoder2;
     Bool rerun = mem_access==Fence || mem_access==FenceI || inst_type==SYSTEM_INSTR
                 `ifdef supervisor || mem_access==SFence `endif ;
   `ifdef spfpu
-    Bit#(5) rs3=func_rs3(inst);
- 		RFType rs3type=func_rs3type(inst);
-    RFType rdtype=func_rdtype(inst);
+    Bit#(5) rs3=func_dec_rs3(inst);
+    RFType rs3type=func_dec_rs3type(inst);
+    RFType rdtype=func_dec_rdtype(inst);
   `endif
     
     let op_addr = OpAddr{rs1addr:rs1, rs2addr:rs2, rd:rd
