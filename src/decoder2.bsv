@@ -307,98 +307,13 @@ package decoder2;
 
     // Identify the type of intruction first
     Bool stype= (opcode=='b01000 || (opcode=='b01001 && csrs.csr_misa[5]==1) );
-   // Bool btype= (opcode=='b11000);
-   // Bool utype= (opcode=='b01101 || opcode=='b00101);
-   // Bool jtype= (opcode=='b11011);
     Bool r4type= (opcode[4:2]=='b100);
-   // Bool atomictype=(opcode=='b01011);
 
-    // refer to section 2.3 (Immediate Encoding Variants) of the risc-v iser spec for more details
-    // on the following logic.
-    // The default values are chosen such that in case of FPU,  the immediate encoding will hold the
-    // upper 7-bit for further decoding.
-    // The default values also enable capturing the encoding for atomic operations as well.
-    //Bit#(1) bit0 = inst[20]; // because of I-type instructions
-    //`ifdef atomic
-      //if(atomictype)
-  //      bit0=0;
-    //  else
-   // `endif
-  //  if(stype)
-    //  bit0=inst[7];
-   // else if(btype || utype || jtype)
-     // bit0=0;
-
- //   Bit#(4) bit1_4=inst[24:21]; // I/J-type instructions
-   // `ifdef atomic
-     // if(atomictype)
-       // bit1_4=0;
-      //else
-    //`endif
- //   if(stype || btype) // S/B-Type
- //     bit1_4=inst[11:8];
- //   else if(utype) // U type
- //     bit1_4=0;
-
- //   Bit#(6) bit5_10=inst[30:25];
- //   `ifdef atomic
- //     if(atomictype)
- //       bit5_10=0;
- //     else
- //   `endif
- //   if(utype)
-//      bit5_10=0;
-
-  //  Bit#(1) bit11 = inst[31]; // I/S type
-    //`ifdef atomic
-      //if(atomictype)
-        //bit11=0;
-    //  else
-   // `endif
-   // if(btype)
-     // bit11=inst[7];
-  //  else if(utype)
-    //  bit11=0;
-  //  else if(jtype)
-  //    bit11=inst[20];
-
- //   Bit#(8) bit12_19=duplicate(inst[31]); // I/S/B type
-   // `ifdef atomic
-     // if(atomictype)
-     //   bit12_19=0;
-     // else
-    //`endif
-   // if(utype || jtype)
-     // bit12_19=inst[19:12];
-
-//    Bit#(11) bit20_30=duplicate(inst[31]); // I/B/S/J type
-  //  `ifdef atomic
-    //  if(atomictype)
-      //  bit20_30=0;
-   //   else
-  //  `endif
-  //  if(utype)
-  //    bit20_30=inst[30:20];
-  //  Bit#(1) bit31= `ifdef atomic (atomictype)?0: `endif inst[31];
     Bit#(32) immediate_value=func_immediate(inst, csrs);
     // ----------------------------------------------------------------------------------
 
     //memory access type
 		Access_type mem_access=func_mem_access(inst);
-	//	if(stype)
-	//	mem_access=Store;
-   // if(funct3[0]==0 && opcode=='b00011)
-     // mem_access=Fence;
-   // if(funct3[0]==1 && opcode=='b00011)
-     // mem_access=FenceI;
-  //`ifdef atomic
-    //if(opcode=='b01011)
-      //mem_access=Atomic;
-  //`endif
-  //`ifdef supervisor
-    //if(opcode=='b11100 && funct7=='b0001001 && funct3==0) // SFENCE
-      //mem_access=SFence;
- // `endif
 
 
       
@@ -419,36 +334,6 @@ package decoder2;
     // Atomic   PC    op1   op1    0
     /////////////////////////////////////////////////////////////////////////////////
 
-		//instruction following U OR UJ TYPE INSTRUCTION FORMAT
-		//funct3[2]==1 might not be required as division is not included till now
-	//	if (opcode==`JAL_op  || opcode==`LUI_op || opcode==`AUIPC_op ||
-        //(opcode==`SYSTEM_INSTR_op && funct3[2]==1))
-	//		rs1=0;
-		//if ( (opcode==`SYSTEM_INSTR_op `ifdef supervisor && funct3!=0 && funct7!='b0001001 `endif )
-         // || opcode[4:2]=='b000 || opcode==`LUI_op // CSR ( and not SFENCE) or (Load) or LUI
-  	//		  ||opcode[4:2] == 'b001 || opcode==`JAL_op || opcode==`JALR_op	|| // AUIPC or JAL or JALR
-         // (opcode[4:2]=='b101 && funct7[5]==1 && (csrs.csr_misa[3]|csrs.csr_misa[5])==1) )
-	//		rs2=0;
-		//if (opcode==`BRANCH_op || opcode[4:1]=='b0100 || (opcode=='b00011))
-		//	rd=0;
-
-		//if(opcode==`JAL_op || opcode==`JALR_op|| opcode==`AUIPC_op )
-		//	rs1type=PC;
-  //  `ifdef spfpu
-	//    else if(opcode[4:2]=='b100 || (opcode[4:2]=='b101 && // (F(N)MADD or F(N)SUB)
-	//	    (funct7[6:3]!='b1101 && funct7[6:3]!='b1111)))     // some of the conversion operations
-	//		rs1type=FloatingRF;
-    //`endif
-
-		//if(opcode==`JALR_op || opcode==`JAL_op || opcode=='b00011)
-		//	`ifdef compressed if(compressed) rs2type = Constant2; else `endif
-      //rs2type=Constant4;
-   // else if(opcode[4:2] == 'b001 || opcode==`LUI_op )
-	//		rs2type=Immediate;
-    //`ifdef spfpu // All convert + FSQRToperations do not need rs2
-     // else if((opcode[4:2]=='b101 && funct7[5]!='b1) || opcode==`FSTORE_op || opcode[4:2]=='b100)
-	//      rs2type=FloatingRF;
-    //`endif
 // ------------------------------------------------------------------------------------------- //
   Bit#(`causesize) trapcause=`Illegal_inst;
   Bool validload = `ifdef RV32 funct3!=3 && funct3!=7 `else funct3!=7 `endif ;
@@ -646,13 +531,6 @@ package decoder2;
     Bit#(5) rs3=func_rs3(inst);
  		RFType rs3type=func_rs3type(inst);
     RFType rdtype=func_rdtype(inst);
-    //if(opcode=='b00001 || (opcode[4:2]=='b101 &&
-      // funct7[6:3]!='b1010 && funct7[6:3]!='b1100 && funct7[6:3]!='b1110 ) || opcode[4:2]=='b100)
-      //rdtype=FRF;
-    //if(!r4type)begin
-      //rs3type=IRF;
-      //rs3=0;
-    //end
   `endif
     
     let op_addr = OpAddr{rs1addr:rs1, rs2addr:rs2, rd:rd
