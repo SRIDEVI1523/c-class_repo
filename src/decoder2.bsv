@@ -181,9 +181,9 @@ package decoder2;
        `ADD_SHIFT_INSTR: return 0;
        `FENCE_INSTR: return 0;
        `LOAD_INSTR: return 0;
-       `FLW_INSTR: return 0;
+       `FLOAD_INSTR: return 0;
        `F_S_INSTR: if ((csrs.csr_misa[3]|csrs.csr_misa[5])==1) return ({3'b000, inst[21:20]}); else return inst[24:20];
-       `CSR_INSTR: if (inst[14:12] != 0) return 0; else return inst[24:20];
+       `CSR_INSTR: if (inst[14:12] != 0 && inst[14:12] != 4) return 0; else return inst[24:20];
        `LR_INSTR: return 0;
         default: return inst[24:20] ;
      endcase
@@ -247,7 +247,7 @@ package decoder2;
   (*noinline*)    
   function RFType func_dec_rdtype(Bit#(32) inst );
     case (inst) matches
-       `FLW_INSTR: return FRF ;
+       `FLOAD_INSTR: return FRF ;
        `FN_INSTR: if(inst[31:28] != 10 || inst[31:28] != 12 || inst[31:28] != 13) return FRF ; else return IRF;
        `R4_TYPE: return FRF;
        default: return IRF ;
@@ -271,20 +271,148 @@ package decoder2;
   endfunction
   
      `endif
-     
+  (*noinline*)
+  
+  function Instruction_type func_dec_insttype(Bit#(32) inst, Bit#(1) fs, CSRtoDecode csrs, Bool valid_rounding);
+    case (inst) matches
+       `LOAD_INSTR: `ifdef RV32 if (inst[14:12]!=3 && inst[14:12]!=7) `else if(inst[14:12]!=7) `endif return MEMORY; else return TRAP;
+    `ifdef spfpu
+       `FLW_INSTR: if (fs!=0 && (csrs.csr_misa[5]==1)) return MEMORY; else return TRAP;
+       `ifdef dpfpu
+       `FLD_INSTR: if (fs!=0 `ifdef dpfpu && (csrs.csr_misa[3]==1)`endif) return MEMORY; else return TRAP;
+       `FSD_INSTR: if (csrs.csr_misa[3]==1 && fs!=0) return MEMORY; else return TRAP;
+       `FM_N_ADD_D_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FADD_D_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FQSRT_D_INSTR:  if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FSGNJ_D_INSTR: if(inst[13:12] != 3 && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FMIN_MAX_D_INSTR: if( fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FCVT_S_D_INSTR: if( valid_rounding && inst[25]=~inst[20] && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FMV_X_FCLASS_D_INSTR: if( fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FEQ_D_INSTR: if(inst[13:12] != 3 && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FCVT_W_L_D_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FCVT_D_W_L_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FMV_X_D_INSTR: if( fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `endif
+       `FSW_INSTR: if (csrs.csr_misa[5]==1 && fs!=0) return MEMORY; else return TRAP;
+       `FM_N_ADD_S_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FADD_S_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FQSRT_S_INSTR:  if( valid_rounding && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FSGNJ_S_INSTR: if(inst[13:12] != 3 && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FMIN_MAX_INSTR: if( fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FCVT_W_L_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FMV_X_FCLASS_INSTR: if( fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FEQ_INSTR: if(inst[13:12] != 3 && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FCVT_S_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+       `FMV_W_INSTR: if( fs!=0 && csrs.csr_misa[5]==1) return FLOAT; else return TRAP;
+    `endif
+       `AUIPC_INSTR: return ALU;
+       `FENCE_INSTR: return MEMORY;
+       `SLLI_INSTR: return ALU;
+       `SRLI_INSTR: return ALU;
+       `SRAI_INSTR: return ALU;
+       `ADD_SHIFT_INSTR_32: if (inst[14:12] != 1 || inst[14:12] != 5) return ALU; else return TRAP;
+       `ifdef RV64
+       `ADDIW_INSTR: return ALU;
+       `SLLIW_INSTR:  return ALU;
+       `SRLIW_INSTR: return ALU;
+       `SRAIW_INSTR: return ALU;
+       `endif
+     `ifdef RV32
+       `STORE_XLEN_INSTR: if (inst[13:12] != 3) return MEMORY; else return TRAP;
+      `else
+       `STORE_XLEN_INSTR: return MEMORY;
+      `endif
+  `ifdef atomic
+      `LR_W_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `SC_W_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP; 
+      `AMOSWAP_W_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOADD_W_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOXOR_W_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOAND_W_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOOR_W_INSTR:   if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOMIN_W_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOMAX_W_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOMINU_W_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP; 
+      `AMOMAXU_W_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+       
+    `ifdef RV64
+      `LR_D_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `SC_D_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP; 
+      `AMOSWAP_D_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOADD_D_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOXOR_D_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOAND_D_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOOR_D_INSTR:   if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOMIN_D_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOMAX_D_INSTR:  if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `AMOMINU_D_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP; 
+      `AMOMAXU_D_INSTR: if (csrs.csr_misa[0]==1) return MEMORY; else return TRAP;
+      `endif
+      `endif
+    `ifdef muldiv
+      `MUL_OPS: if (csrs.csr_misa[12]==1) return MULDIV; else return TRAP;
+      `endif
+      `ADD_SUB_INSTR: return ALU;
+      `SLL_SRA_INSTR: return ALU;
+      `SHIFT_AND_INSTR: return ALU; 
+      `ifdef RV64
+      `ifdef muldiv
+      `MULW_INSTR: if (csrs.csr_misa[12]==1) return MULDIV; else return TRAP;
+      `DIVW_OPS: if (csrs.csr_misa[12]==1) return MULDIV; else return TRAP;
+      `endif
+      `ADDW_SUBW_INSTR: return ALU;
+      `SRLW_SRAW_INSTR: return ALU;
+      `SLLW_INSTR: return ALU;
+      `endif
+      `LUI_OP: return ALU;
+      `BRANCH_INSTR: if(inst[14:12] !=2 || inst[14:12] != 3) return BRANCH; else return TRAP;
+      `JALR_INSTR: return JALR;
+      `JAL_INSTR: return JAL;
+      `URET_INSTR: if(csrs.csr_misa[13]==1) return SYSTEM_INSTR; else return TRAP;
+    `ifdef supervisor
+      `SRET_INSTR: if (csrs.csr_misa[18]==1 && csrs.prv!=User && (csrs.prv==Machine || (csrs.prv==Supervisor && csrs.csr_mstatus[22]==0))) return SYSTEM_INSTR;
+                 else return TRAP;
+              `endif
+       `MRET_INSTR: if(csrs.prv==Machine) return SYSTEM_INSTR; else return TRAP;
+       `WFI_INSTR: if(csrs.csr_mstatus[21] == 0 || csrs.prv == Machine) return WFI; else return TRAP;
+       `SFENCE_INSTR: if(csrs.csr_mstatus[20]==0 || csrs.prv == Machine) return MEMORY; else return TRAP;
+       `CSR_INSTR: if(funct3!=0 && funct3!=4 && access_is_valid && address_is_valid) return SYSTEM_INSTR; return TRAP;
+        default: return TRAP ;
+     endcase
+  endfunction
+   
+  (*noinline*)
+  function Bit#(`causesize) func_dec_trapcause(Bit#(32) inst, CSRtoDecode csrs);
+   `ifdef debug
+    Bool ebreakm = unpack(csrs.csr_dcsr[15]);
+    Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif );
+    Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[13] `else 0 `endif );
+  `endif
+    case (inst) matches
+    `ECALL_INSTR: return (csrs.csr_misa[20]==1 && csrs.prv==User)?`Ecall_from_user: 
+                  `ifdef supervisor (csrs.csr_misa[18]==1 && csrs.prv==Supervisor)?`Ecall_from_supervisor: `endif
+                                              `Ecall_from_machine;
+    `EBREAK_INSTR: `ifdef debug
+                    if(                   (ebreakm && csrs.prv == Machine) 
+                      `ifdef supervisor || (ebreaks && csrs.prv == Supervisor) `endif 
+                      `ifdef user       || (ebreaku && csrs.prv == User)    `endif ) begin
+                      let trapcause = `HaltEbreak;
+                      trapcause[`causesize - 1] = 1;
+                      return trapcause;
+                    end
+                    
+                    else
+                  `endif
+                    return `Breakpoint;
+    default: return `Illegal_inst ;
+     endcase
+  endfunction  
   (*noinline*)
   function DecodeOut decoder_func_32(Bit#(32) inst, CSRtoDecode csrs
                                     `ifdef compressed , Bool compressed `endif );
 
     Bit#(1) fs = |csrs.csr_mstatus[14:13];
     Bit#(3) frm = csrs.frm;
-
-  `ifdef debug
-    Bool ebreakm = unpack(csrs.csr_dcsr[15]);
-    Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif );
-    Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[13] `else 0 `endif );
-  `endif
-
     // ------- Default declarations of all local variables -----------//
 
 		Bit#(5) rs1=func_dec_rs1(inst);
@@ -330,139 +458,12 @@ package decoder2;
     /////////////////////////////////////////////////////////////////////////////////
 
 // ------------------------------------------------------------------------------------------- //
-  Bit#(`causesize) trapcause=`Illegal_inst;
-  Bool validload = `ifdef RV32 funct3!=3 && funct3!=7 `else funct3!=7 `endif ;
-  Bool validFload = fs!=0 && ((csrs.csr_misa[5]==1 &&  funct3==2) `ifdef dpfpu || (csrs.csr_misa[3]==1 && funct3==3) `endif ) ;
-`ifdef RV32
-  Bool validImm = (funct3==1)?(funct7==0):(funct3==5)? (funct7 == 'b0000000 || funct7=='b0100000):True;
-  Bool validImm32 = False;
-`else
-  Bool validImm = (funct3==1)?(funct7[6:1]==0):(funct3==5)? (funct7[6:1] == 'b000000 || funct7[6:1]=='b010000):True;
-  Bool validImm32 = (funct3==0)?True:(funct3==1)? (funct7==0):(funct3==5)?(funct7=='b0000000 || funct7=='b0100000):False;
-`endif
-  Bool validStore = `ifdef RV32 funct3<3 `else funct3<4 `endif ;
-  Bool validFStore = (csrs.csr_misa[5]==1 && fs!=0 && funct3==2) `ifdef dpfpu || (csrs.csr_misa[3]==1 && fs!=0 && funct3==3) `endif ;
-  Bool validAtomicOp = case(inst[31:27])
-      'd0, 'd1, 'd3, 'd4, 'd8, 'd12, 'd16, 'd20, 'd24, 'd28: True;
-      'd2: if (inst[24:20]==0) True; else False;
-      default: False;
-    endcase;
-  Bool validAtomic = (csrs.csr_misa[0]==1 && (funct3==2 `ifdef RV64 || funct3==3 `endif ) && validAtomicOp);
-  Bool validMul = (csrs.csr_misa[12]==1 && funct7==1)?True:False;
-  Bool validOp = (funct3==0 || funct3==5)?(funct7 == 'b0000000 || funct7=='b0100000):(funct7==0);
-  Bool validMul32 = (csrs.csr_misa[12]==1 && funct7==1 && (funct3==0 || funct3>3));
-  Bool validOp32  = (funct3==1)?(funct7==0):(funct3==0 || funct3==5)?(funct7=='b0000000||funct7=='b0100000):False;
-  Bool validFloat = fs!=0 && ((funct7[0]==0 && csrs.csr_misa[5]==1) `ifdef dpfpu || (funct7[0]==1 &&  csrs.csr_misa[3]==1) `endif );
-  Bool validFNM = inst[26]==0 && validFloat;
+  Bit#(`causesize) trapcause=func_dec_trapcause(inst, csrs);
   Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
-  //TODO: RM field check
-  Bool validFloatOpF = case(inst[31:27])
-    'b00000, 'b00001, 'b00010, 'b00011: valid_rounding; // FADD, FSUB, FMUL, FDIV
-    'b01011: (inst[24:20]==0 && valid_rounding); // FSQRT.S
-    'b00100: (funct3<3); // FSGNJ.S FSGNJN.S FSGNJX.S
-    'b00101: (funct3<2); // FMIN.S FMAX.S
-    'b11000: (inst[24:21]==0 && valid_rounding); // FCVT.W.S FCVT.WU.S
-    'b11100: (inst[24:20]==0 && (funct3==0 || funct3==1)); // FMV.X.W, FCLASS.S
-    'b10100: (funct3<3); //FEQ.S FLT.S FLE.S
-    'b11010: (inst[24:21]==0 && valid_rounding); // FCVT.S.W FCVT.S.WU
-    'b11110: (inst[24:20]==0 && funct3==0); //FMV.W.X
-    default: False;
-  endcase;
-  Bool validFloatOpD = case(inst[31:27])
-    'b11000: (inst[24:21]=='b0001 && valid_rounding); // FCVT.L.D FCVT.LU.D
-    'b11010: (inst[24:21]=='b0001 && valid_rounding); // FCVT.D.L FCVT.D.LU
-  `ifdef dpfpu
-    'b11110: (inst[24:20]==0 && funct3==0); // FMV.D.X
-    'b11100: (inst[24:20]==0 && funct3==0); // FMV.X.D
-  `endif
-    'b01000: (inst[24:21]=='b0 && valid_rounding && inst[25] == ~inst[20]); // FCVT.S.D
-    default: False;
-  endcase;
 	Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa);
 	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12],
                                         	csrs.csr_mstatus[20], csrs.prv);
-  Instruction_type inst_type = TRAP;
-  case (opcode[4:3])
-    'b00: case(opcode[2:0])
-        'b000: if(validload) inst_type=MEMORY;      // Load
-      `ifdef spfpu
-        'b001: if(validFload) inst_type=MEMORY;     // F-Load
-      `endif
-        'b011: if(funct3==0 || funct3==1) inst_type = MEMORY;    // Fence, FenceI
-        'b100: if(validImm) inst_type = ALU;        // OP-Imm
-        'b101: inst_type=ALU;                       // AUIPC
-      `ifdef RV64
-        'b110: if(validImm32) inst_type = ALU;      // Op-IMM32
-      `endif
-      endcase
-    'b01: case(opcode[2:0])
-        'b000: if(validStore) inst_type = MEMORY;     // Store
-      `ifdef spfpu
-        'b001: if(validFStore) inst_type = MEMORY;    // F-Store
-      `endif
-      `ifdef atomic
-        'b011: if(validAtomic) inst_type = MEMORY;    // Atomic
-      `endif
-        'b100: `ifdef muldiv  if(validMul) inst_type=MULDIV; else `endif  // MULDIV
-                if(validOp) inst_type=ALU; // OP
-        'b101: inst_type = ALU;
-      `ifdef RV64
-        'b110: `ifdef muldiv if(validMul32) inst_type=MULDIV; else `endif // MULDIV-32
-              if(validOp32) inst_type=ALU; // OP
-      `endif
-      endcase
-  `ifdef spfpu
-    'b10: case(opcode[2:0])
-      'b000, 'b001, 'b010, 'b011:if(validFNM && valid_rounding) inst_type=FLOAT;
-      'b100: if(validFNM && (validFloatOpF || validFloatOpD)) inst_type=FLOAT;
-      endcase
-  `endif
-    'b11: case(opcode[2:0])
-      'b000: if(funct3!=2 && funct3!=3) inst_type=BRANCH; // BRANCH
-      'b001: if(funct3==0) inst_type=JALR; // JALR
-      'b011: inst_type=JAL; // jal
-      'b100: case(funct3)
-          'b000:  if(inst[31:7]==0) trapcause=(csrs.csr_misa[20]==1 && csrs.prv==User)?`Ecall_from_user:
-                  `ifdef supervisor (csrs.csr_misa[18]==1 && csrs.prv==Supervisor)?`Ecall_from_supervisor: `endif
-                                              `Ecall_from_machine;
-                  else if(inst[31:7]=='h2000) begin
-                  `ifdef debug
-                    if(                   (ebreakm && csrs.prv == Machine) 
-                      `ifdef supervisor || (ebreaks && csrs.prv == Supervisor) `endif 
-                      `ifdef user       || (ebreaku && csrs.prv == User)    `endif ) begin
-                      trapcause = `HaltEbreak;
-                      trapcause[`causesize - 1] = 1;
-                    end
-                    else
-                  `endif
-                    trapcause = `Breakpoint;
-                 end
-                 // URET op
-                 else if(inst[31:20]=='h002 && inst[19:15]==0 && inst[11:7]==0 && csrs.csr_misa[13]==1) inst_type=SYSTEM_INSTR;
-              `ifdef supervisor
-                // SRET
-                 else if(inst[31:20]=='h102 && inst[19:15]==0 && inst[11:7]==0 && csrs.csr_misa[18]==1 &&
-                        csrs.prv!=User && (csrs.prv==Machine || (csrs.prv==Supervisor &&
-                        csrs.csr_mstatus[22]==0))) inst_type=SYSTEM_INSTR;
-              `endif
-                // MRET
-                else if(inst[31:20]=='h302 && inst[19:15]==0 && inst[11:7]==0 && csrs.prv==Machine)
-                        inst_type=SYSTEM_INSTR;
-                else if(inst[31:20]=='h105 && inst[19:15]==0 && inst[11:7]==0 ) begin
-                   if(csrs.csr_mstatus[21] == 0 || csrs.prv == Machine)
-                      inst_type=WFI;
-                end
-              `ifdef supervisor
-                else if(inst[31:25]=='b0001001 && inst[11:7]==0)begin
-                  if(csrs.csr_mstatus[20]==0 || csrs.prv == Machine) 
-                    inst_type=MEMORY; // SFENCE
-                end
-              `endif
-          default: if(funct3!=0 && funct3!=4 && access_is_valid && address_is_valid)
-                    inst_type=SYSTEM_INSTR;
-      endcase
-    endcase
-  endcase
+  Instruction_type inst_type = func_dec_insttype(inst, fs, csrs, valid_rounding);
   if(inst[1:0]!='b11 && inst_type != TRAP)begin
     inst_type=TRAP;
     trapcause=`Illegal_inst;
