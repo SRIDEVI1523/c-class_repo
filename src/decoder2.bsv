@@ -278,15 +278,15 @@ package decoder2;
        `LOAD_INSTR: `ifdef RV32 if (inst[14:12]!=3 && inst[14:12]!=7) `else if(inst[14:12]!=7) `endif return MEMORY; else return TRAP;
     `ifdef spfpu
        `FLW_INSTR: if (fs!=0 && (csrs.csr_misa[5]==1)) return MEMORY; else return TRAP;
-       `ifdef dpfpu
-       `FLD_INSTR: if (fs!=0 `ifdef dpfpu && (csrs.csr_misa[3]==1)`endif) return MEMORY; else return TRAP;
+    `ifdef dpfpu
+       `FLD_INSTR: if (fs!=0 && (csrs.csr_misa[3]==1) ) return MEMORY; else return TRAP;
        `FSD_INSTR: if (csrs.csr_misa[3]==1 && fs!=0) return MEMORY; else return TRAP;
        `FM_N_ADD_D_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FADD_D_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FQSRT_D_INSTR:  if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FSGNJ_D_INSTR: if(inst[13:12] != 3 && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FMIN_MAX_D_INSTR: if( fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
-       `FCVT_S_D_INSTR: if( valid_rounding && inst[25]=~inst[20] && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
+       `FCVT_S_D_INSTR: if( valid_rounding && inst[25]==(~inst[20]) && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FMV_X_FCLASS_D_INSTR: if( fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FEQ_D_INSTR: if(inst[13:12] != 3 && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
        `FCVT_W_L_D_INSTR: if( valid_rounding && fs!=0 && csrs.csr_misa[3]==1) return FLOAT; else return TRAP;
@@ -310,7 +310,7 @@ package decoder2;
        `SLLI_INSTR: return ALU;
        `SRLI_INSTR: return ALU;
        `SRAI_INSTR: return ALU;
-       `ADD_SHIFT_INSTR_32: if (inst[14:12] != 1 || inst[14:12] != 5) return ALU; else return TRAP;
+       `ADD_SHIFT_INSTR_32: if (inst[14:12] != 1 || inst[14:12] != 5) return ALU; else return TRAP; 
        `ifdef RV64
        `ADDIW_INSTR: return ALU;
        `SLLIW_INSTR:  return ALU;
@@ -353,7 +353,7 @@ package decoder2;
       `MUL_OPS: if (csrs.csr_misa[12]==1) return MULDIV; else return TRAP;
       `endif
       `ADD_SUB_INSTR: return ALU;
-      `SLL_SRA_INSTR: return ALU;
+      `SRL_SRA_INSTR: return ALU;
       `SHIFT_AND_INSTR: return ALU; 
       `ifdef RV64
       `ifdef muldiv
@@ -364,7 +364,7 @@ package decoder2;
       `SRLW_SRAW_INSTR: return ALU;
       `SLLW_INSTR: return ALU;
       `endif
-      `LUI_OP: return ALU;
+      `LUI_INSTR: return ALU;
       `BRANCH_INSTR: if(inst[14:12] !=2 || inst[14:12] != 3) return BRANCH; else return TRAP;
       `JALR_INSTR: return JALR;
       `JAL_INSTR: return JAL;
@@ -375,11 +375,41 @@ package decoder2;
               `endif
        `MRET_INSTR: if(csrs.prv==Machine) return SYSTEM_INSTR; else return TRAP;
        `WFI_INSTR: if(csrs.csr_mstatus[21] == 0 || csrs.prv == Machine) return WFI; else return TRAP;
-       `SFENCE_INSTR: if(csrs.csr_mstatus[20]==0 || csrs.prv == Machine) return MEMORY; else return TRAP;
-       `CSR_INSTR: if(funct3!=0 && funct3!=4 && access_is_valid && address_is_valid) return SYSTEM_INSTR; return TRAP;
+ `ifdef supervisor
+       `SFENCE_INSTR: if(csrs.csr_mstatus[20]==0 || csrs.prv == Machine) return MEMORY; else return TRAP; `endif
+       `CSR_INSTR: if(inst[14:12]!=0 && inst[14:12]!=4 && valid_csr_access(inst[31:20],inst[19:15], inst[13:12], csrs.csr_mstatus[20], csrs.prv) && address_valid(inst[31:20],csrs.csr_misa)) return SYSTEM_INSTR; else return TRAP;
         default: return TRAP ;
      endcase
   endfunction
+  
+  (*noinline*)
+      function Bit#(4) func_dec_fn(Bit#(32) inst, CSRtoDecode csrs);
+	  case(inst) matches
+	    `ifdef atomic
+               `A_TYPE: if((inst[27]|inst[28]) == 1) return {inst[29:27],1'b1}; else return {inst[31:29],inst[27]};
+               `endif
+             `BRANCH_INSTR: if(inst[14]==0) return {2'b0,1,inst[12]}; else return {1'b1,inst[14:12]};
+             `ifdef RV64
+             `ADDIW_INSTR: return 'b0000;
+             `SLLIW_INSTR: return 'b0001;
+             `SRLIW_INSTR: return 'b0101;
+             `SRAIW_INSTR: return 'b1011; `endif
+             `ADD_SHIFT_INSTR_32: if (inst[14:12] == 2) return 'b1100; else if (inst[14:12]==3) return 'b1110; else return {1'b0, inst[14:12]};
+             `SRLI_INSTR: return 'b0101;
+             `SRAI_INSTR: return 'b1011;
+             `ADD_SUB_INSTR: if(inst[30]==1) return 'b1010; else return 'b0000;
+             `SRL_SRA_INSTR: if(inst[30]==1) return 'b1011; else return 'b0101;
+             `SHIFT_AND_INSTR: if(inst[14:12] ==2 ) return 'b1100; else if (inst[14:12] ==3) return 'b1110; else return {1'b0,inst[14:12]};
+             `ifdef RV64
+             `ADDW_SUBW_INSTR: if(inst[30]==1) return 'b1010; else return 'b0000;
+             `MULW_INSTR: if(inst[30]==1) return 'b1010; else return 'b0000;
+             `SRLW_SRAW_INSTR: if(inst[30]==1) return 'b1011; else return 'b0101;
+             `SLLW_INSTR: return 'b0001;
+             `DIVW_OPS: return {1'b0,inst[14:12]}; `endif
+             `R4_TYPE: if ((csrs.csr_misa[5]|csrs.csr_misa[3])==1) return inst[5:2]; else return 0;
+             default: return 0;
+          endcase
+      endfunction
    
   (*noinline*)
   function Bit#(`causesize) func_dec_trapcause(Bit#(32) inst, CSRtoDecode csrs);
@@ -407,39 +437,13 @@ package decoder2;
     default: return `Illegal_inst ;
      endcase
   endfunction  
+  
   (*noinline*)
   function DecodeOut decoder_func_32(Bit#(32) inst, CSRtoDecode csrs
                                     `ifdef compressed , Bool compressed `endif );
 
     Bit#(1) fs = |csrs.csr_mstatus[14:13];
     Bit#(3) frm = csrs.frm;
-    // ------- Default declarations of all local variables -----------//
-
-		Bit#(5) rs1=func_dec_rs1(inst);
-		Bit#(5) rs2=func_dec_rs2(inst, csrs);
-		Bit#(5) rd =func_dec_rd(inst) ;
-		Bit#(5) opcode= inst[6:2];
-		Bit#(3) funct3= inst[14:12];
-                Bit#(7) funct7 = inst[31:25];
-		Bool word32 =False;
-
-		//operand types
-		Op1type rs1type=func_dec_rs1type(inst);
-		Op2type rs2type=func_dec_rs2type(inst `ifdef compressed , compressed `endif );
-
-    // ------------------------------------------------------------------
-
-    //---------------- Decoding the immediate values-------------------------------------
-
-    // Identify the type of intruction first
-    Bool stype= (opcode=='b01000 || (opcode=='b01001 && csrs.csr_misa[5]==1) );
-    Bool r4type= (opcode[4:2]=='b100);
-
-    Bit#(32) immediate_value=func_dec_immediate(inst, csrs);
-    Access_type mem_access=func_dec_mem_access(inst);
-
-
-      
     // Following table describes what the ALU will need for some critical operations. Based on this
     // the next set of logic is implemented. rs1+ rs2 is a XLEN bit adder. rs3+ rs4 is `paddr bit
     // adder.
@@ -456,61 +460,38 @@ package decoder2;
     // AUIPC    PC    Imm   PC    Imm   (rs1=0, rs2=0 since neither required)
     // Atomic   PC    op1   op1    0
     /////////////////////////////////////////////////////////////////////////////////
+		Bit#(5) rs1=func_dec_rs1(inst);
+		Bit#(5) rs2=func_dec_rs2(inst, csrs);
+		Bit#(5) rd =func_dec_rd(inst) ;
+		Bit#(3) funct3= inst[14:12];
+		Bool word32 =False;
 
-// ------------------------------------------------------------------------------------------- //
-  Bit#(`causesize) trapcause=func_dec_trapcause(inst, csrs);
-  Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
-	Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa);
-	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12],
-                                        	csrs.csr_mstatus[20], csrs.prv);
-  Instruction_type inst_type = func_dec_insttype(inst, fs, csrs, valid_rounding);
-  if(inst[1:0]!='b11 && inst_type != TRAP)begin
-    inst_type=TRAP;
-    trapcause=`Illegal_inst;
-  end
+		//operand types
+		Op1type rs1type=func_dec_rs1type(inst);
+		Op2type rs2type=func_dec_rs2type(inst `ifdef compressed , compressed `endif );
 
-  // checks: TVM=1 TW=1 TSR=0
-// --------------------------------------------------------------------------------------------//
+    // ------------------------------------------------------------------
+
+    //---------------- Decoding the immediate values-------------------------------------
+
+    // Identify the type of intruction first
+    Bool stype= (inst[6:2]=='b01000 || (inst[6:2]=='b01001 && csrs.csr_misa[5]==1) );
+    Bool r4type= (inst[6:4]=='b100);
+
+    Bit#(32) immediate_value=func_dec_immediate(inst, csrs);
+    Access_type mem_access=func_dec_mem_access(inst);
+    Bit#(`causesize) trapcause=func_dec_trapcause(inst, csrs);
+    Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
+    Instruction_type inst_type = func_dec_insttype(inst, fs, csrs, valid_rounding);
+    if(inst[1:0]!='b11 && inst_type != TRAP)begin
+       inst_type=TRAP;
+       trapcause=`Illegal_inst;
+     end
 
     // --------- Function for ALU -------------
     // In case of Atomic operations as well,  the immediate portion will ensure the right opcode is
     // sent to the cache for operations.
-		Bit#(4) fn=0;
-    `ifdef atomic
-    if( opcode==`ATOMIC_op )begin
-      if((inst[27]|inst[28]) == 1)
-        fn={inst[29:27],1'b1};
-      else
-        fn={inst[31:29],inst[27]};
-    end
-    `endif
-		if(opcode==`BRANCH_op )begin
-			if(funct3[2]==0)
-				fn={2'b0,1,funct3[0]};
-			else
-				fn={1'b1,funct3};
-		end
-		else if(`ifdef RV64 opcode==`IMM_ARITHW_op || `endif opcode==`IMM_ARITH_op )begin
-			fn=case(funct3)
-				'b010: 'b1100;
-				'b011: 'b1110;
-				'b101: if(funct7[5]==1) 'b1011; else 'b0101;
-				default:{1'b0,funct3};
-			endcase;
-		end
-		else if(`ifdef RV64 opcode==`ARITHW_op || `endif opcode==`ARITH_op )begin
-			fn=case(funct3)
-				'b000:if(funct7[5]==1) 'b1010; else 'b0000;
-				'b010:'b1100;
-				'b011:'b1110;
-				'b101:if (funct7[5]==1) 'b1011;else 'b0101;
-				default:{1'b0,funct3};
-			endcase;
-		end
-    else if(opcode[4:3]=='b10 && (csrs.csr_misa[5]|csrs.csr_misa[3])==1) // floating point instructions
-	  		fn=opcode[3:0];
-    // ---------------------------------------
-
+		Bit#(4) fn=func_dec_fn(inst, csrs);
     if(inst_type==SYSTEM_INSTR)
       immediate_value={'d0,inst[19:15],immediate_value[11:0]};// TODO fix this
   `ifdef spfpu
