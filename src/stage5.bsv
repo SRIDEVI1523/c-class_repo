@@ -330,10 +330,12 @@ package stage5;
                 _pkt.commit_data = data;
                 clogpkt.inst_type = tagged MEM _pkt;
                 rg_commitlog <= tagged Valid (clogpkt);
-                rxinst.u.deq;
               `endif
               end
               rx.u.deq;
+            `ifdef rtldump
+              rxinst.u.deq;
+            `endif
             end
             else begin
               if (s.io)
