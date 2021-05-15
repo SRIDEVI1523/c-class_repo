@@ -29,9 +29,6 @@ package registerfile;
 	import ConfigReg::*;
   import GetPut::*;
   `include "Logger.bsv"
-`ifdef debug
-  import debug_types :: *; // for importing the debug abstract interface
-`endif
 	/*===========================*/
 
 	interface Ifc_registerfile;
@@ -41,16 +38,9 @@ package registerfile;
     method ActionValue#(Bit#(FLEN)) read_rs3(Bit#(5) addr);
   `endif
 		method Action commit_rd (CommitData c);
-  `ifdef debug
-    // interface to interact with debugger
-    method ActionValue#(Bit#(XLEN)) debug_access_gprs(AbstractRegOp cmd);
-  `endif
 	endinterface
 
 	(*synthesize*)
-`ifdef debug
-  (*conflict_free="debug_access_gprs,commit_rd"*)
-`endif
 	module mkregisterfile#(parameter Bit#(XLEN) hartid) (Ifc_registerfile);
     String rf ="";
 		RegFile#(Bit#(5), Bit#(XLEN)) integer_rf <- mkRegFileWCF(0, 31);
@@ -131,31 +121,5 @@ package registerfile;
 			  	integer_rf.upd(c.addr, truncate(c.data)); // truncate is required when XLEN<ELEN
 			  end
 		endmethod
-  `ifdef debug
-    // MethodName: debug_access_gprs
-    // Explicit Conditions: initialize = False;
-    // Implicit Conditions: None;
-    // Description: This method is used by te debugger to access the register files.
-    method ActionValue#(Bit#(XLEN)) debug_access_gprs(AbstractRegOp cmd) if(!initialize);
-      Bit#(XLEN) resultop = 0;
-      if(cmd.read_write) begin // write_operation
-        `ifdef spfpu
-          if(cmd.rftype)
-            floating_rf.upd(truncate(cmd.address), cmd.writedata);
-          else
-        `endif
-            integer_rf.upd(truncate(cmd.address), cmd.writedata);
-      end
-      else begin // read operation
-        `ifdef spfpu
-          if(cmd.rftype)
-            resultop = floating_rf.sub(truncate(cmd.address));
-          else
-        `endif
-            resultop = integer_rf.sub(truncate(cmd.address));
-      end
-      return resultop;
-    endmethod
-  `endif
 	endmodule
 endpackage
