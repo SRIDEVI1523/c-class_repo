@@ -151,6 +151,7 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         suppress = suppress[:-1]
     if debug_spec is not None:
         macros += ' debug'
+        macros += ' debug_bus_sz='+str(xlen)
 
     if foo['bsc_compile_options']['assertions']:
         macros += ' ASSERT'
@@ -166,11 +167,10 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     macros += ' resetpc='+str(foo['reset_pc'])
     macros += ' paddr='+str(isa_node['physical_addr_sz'])
     macros += ' vaddr='+str(xlen)
-    macros += ' causesize=6'
     macros += ' CORE_'+str(foo['bus_protocol'])
     macros += ' iesize='+str(foo['iepoch_size'])
     macros += ' desize='+str(foo['depoch_size'])
-    macros += ' dtvec_base='+str(foo['dtvec_base'])
+    macros += ' num_harts='+str(foo['num_harts'])
 
     if foo['bsc_compile_options']['compile_target'] == 'sim':
         macros += ' simulate'
@@ -286,11 +286,30 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     if foo['no_of_triggers'] > 0:
         macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
         macros += ' mcontext=0  scontext=0'
+
+    # reset cycle latency
+    dsets = foo['dcache_configuration']['sets']
+    isets = foo['dcache_configuration']['sets']
+    rfset = 32
+    macros += ' reset_cycles='+str(max(dsets, isets, rfset))
+
+    # find the size of interrupts
+    max_int_cause = 11
+    max_ex_cause = 15
+    for ci in isa_node['custom_interrupts']:
+        max_int_cause = max(max_int_cause,ci['cause_val'])
+    for ci in isa_node['custom_exceptions']:
+        max_ex_cause = max(max_ex_cause,ci['cause_val'])
+    print(max_ex_cause)
+    print(max_int_cause)
+    macros += ' max_int_cause='+str(max_int_cause+1)
+    macros += ' causesize='+str(math.ceil(math.log2(max(max_int_cause, max_ex_cause)))+1)
         
 
     bsc_cmd = bsc_cmd.format(foo['bsc_compile_options']['verilog_dir'],
             foo['bsc_compile_options']['build_dir'], suppress)
     bsc_defines = macros
+
 
 def generate_makefile(foo, logging=False):
     global bsc_cmd

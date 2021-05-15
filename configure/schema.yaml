@@ -1,4 +1,16 @@
 ###
+#num_harts
+# **Description**: Total number of harts to be instantiated
+#
+#  **Examples**:
+#
+#  .. code-block:: yaml
+#
+#     num_harts: 2
+
+num_harts: {type: integer, default: 1, min: 1, max: 1024}
+
+###
 #total_events
 # **Description**: Total number of events in the system
 #

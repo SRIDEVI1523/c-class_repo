@@ -5,7 +5,7 @@ bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
 +RTS -K40000M -RTS -check-assert  -keep-fires \
 -opt-undetermined-vals -remove-false-rules -remove-empty-rules \
 -remove-starved-rules -remove-dollar -unspecified-to X -show-schedule \
--show-module-use {2}'''
+-show-module-use -cross-info {2}'''
 
 bsc_defines = ''
 
