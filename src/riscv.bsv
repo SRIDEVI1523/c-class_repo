@@ -130,6 +130,15 @@ package riscv;
     Ifc_stage4 stage4 <- mkstage4(hartid);
     Ifc_stage5 stage5 <- mkstage5(hartid);
 
+    /*doc:reg: This register stays high once the hart has been reset */
+    Reg#(Bit#(1)) rg_reset_done <- mkReg(0);
+    /*doc:reg: This register sends a single cycle pulse one the hart is out of reset*/
+    Reg#(Bit#(1)) rg_reset_event <- mkDReg(0);
+    /*doc:reg: This register is used to set the above registers after certain amount of clock cycles
+     * have passed since the deassertion of the reset*/
+    Reg#(Bit#(TAdd#(1,TLog#(`reset_cycles)))) rg_reset_cycle <- mkReg(0);
+
+
   `ifdef debug
     Wire#(Bool) wr_debugger_available <- mkWire();
   `endif
@@ -226,6 +235,18 @@ package riscv;
       stage5.ma_events(lv_total_count);
     endrule
 `endif
+
+    /*doc:rule: */
+    rule rl_assert_reset_done;
+      if (rg_reset_cycle == `reset_cycles) begin
+        rg_reset_done <= 1;
+        rg_reset_event <= 1;
+        rg_reset_cycle <= rg_reset_cycle + 1;
+        `logLevel( riscv, 0, $format("RISCV: Hart is out of reset sequence"))
+      end
+      else if (rg_reset_cycle < `reset_cycles) 
+        rg_reset_cycle <= rg_reset_cycle + 1;
+    endrule:rl_assert_reset_done
 
     mkConnection(stage0.tx_to_stage1, pipe0);
     mkConnection(pipe0, stage1.rx_from_stage0);
