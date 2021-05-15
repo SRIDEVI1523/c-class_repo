@@ -20,6 +20,6 @@
 `define ClintEnd    'h020B_FFFF
 `define SignBase    'h0002_0000
 `define SignEnd     'h0002_000c
-`define DebugBase   'h0000_0100
-`define DebugEnd    'h0000_010F
+`define DebugBase   'h0000_0000
+`define DebugEnd    'h0000_0FFF
 
