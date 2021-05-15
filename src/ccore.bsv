@@ -54,16 +54,26 @@ typedef enum {None, IWalk, DWalk} PTWState deriving(Bits, Eq, FShow);
 interface Ifc_ccore_axi4;
 	interface AXI4_Master_IFC#(`paddr, ELEN, USERSPACE) master_d;
 	interface AXI4_Master_IFC#(`paddr, ELEN, USERSPACE) master_i;
-  interface Put#(Bit#(1)) sb_clint_msip;
-  interface Put#(Bit#(1)) sb_clint_mtip;
-  interface Put#(Bit#(64)) sb_clint_mtime;
-  interface Put#(Bit#(1)) sb_externalinterrupt;
+  method Action sb_clint_msip (Bit#(1) m) ;
+  method Action sb_clint_mtip (Bit#(1) m) ;
+  method Action sb_clint_mtime(Bit#(64) m);
+	method Action sb_plic_meip(Bit#(1) ex_i);
+`ifdef supervisor
+	method Action sb_plic_seip(Bit#(1) ex_i);
+`endif
+`ifdef usertraps
+	method Action sb_plic_ueip(Bit#(1) ex_i);
+`endif
 `ifdef rtldump
-   interface Sbread sbread;
-   method Maybe#(CommitLogPacket) commitlog;
+  interface Sbread sbread;
+  method Maybe#(CommitLogPacket) commitlog;
 `endif
 `ifdef debug
-  interface Hart_Debug_Ifc debug_server;
+  method Action ma_debug_interrupt(Bit#(1) _int);
+  method Bit#(1) mv_core_is_reset;
+  method Bit#(1) mv_core_debugenable;
+  (*always_enabled*)
+  method Action ma_debugger_available (Bit#(1) avail);
 `endif
 endinterface : Ifc_ccore_axi4
 
@@ -98,12 +108,6 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
   Reg#(Bit#(TLog#(TMul#(TMul#(`dwords, 8), `dblocks)))) rg_shift_amount <- mkReg(`dwords * 8 );
 `endif
   let curr_priv = riscv.mv_curr_priv;
-`ifdef debug
-  Reg#(Maybe#(Bit#(DXLEN))) rg_abst_response <- mkReg(tagged Invalid); // registered container for responses
-  Reg#(Bool) rg_debug_waitcsr <- mkReg(False);
-  let csr_response = riscv.mv_resp_to_core;
-`endif
-
 `ifdef pmp
   let lv_pmp_cfg = riscv.mv_pmp_cfg;
   let lv_pmp_adr = riscv.mv_pmp_addr;
@@ -385,81 +389,27 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   `endif
 `endif   
   
-  // TODO: remove this with new clint
+  method sb_clint_msip = riscv.ma_clint_msip;
+  method sb_clint_mtip = riscv.ma_clint_mtip; 
+  method sb_clint_mtime = riscv.ma_clint_mtime;
+	method sb_plic_meip  = riscv.ma_set_meip;
 `ifdef supervisor
-  rule rl_pulldown_seip;
-    riscv.ma_set_seip(0);
-  endrule:rl_pulldown_seip
+	method sb_plic_seip = riscv.ma_set_seip;
 `endif
-  `ifdef debug
-    rule rl_wait_for_csr_response(rg_debug_waitcsr && !isValid(rg_abst_response));
-      if (csr_response.hit) begin
-        rg_abst_response <= tagged Valid csr_response.data;
-        rg_debug_waitcsr <= False;
-      end
-      else
-        rg_debug_waitcsr <= True;
-    endrule
-  `endif
-
-  interface sb_clint_msip = interface Put
-	  method Action put(Bit#(1) intrpt);
-      riscv.ma_clint_msip(intrpt);
-    endmethod
-  endinterface;
-  interface sb_clint_mtip = interface Put
-    method Action put(Bit#(1) intrpt);
-      riscv.ma_clint_mtip(intrpt);
-    endmethod
-  endinterface;
-  interface sb_clint_mtime = interface Put
-		method Action put (Bit#(64) c_mtime);
-      riscv.ma_clint_mtime(c_mtime);
-    endmethod
-  endinterface;
-  interface sb_externalinterrupt = interface Put
-    method Action put(Bit#(1) intrpt);
-      riscv.ma_set_meip(intrpt);
-    endmethod
-  endinterface;
+`ifdef usertraps
+	method sb_plic_ueip = riscv.ma_set_ueip;
+`endif
 	interface master_i = fetch_xactor.axi_side;
 	interface master_d = memory_xactor.axi_side;
-  `ifdef rtldump
-    interface commitlog = riscv.commitlog;
-    interface sbread = riscv.sbread;
-  `endif
+`ifdef rtldump
+  interface commitlog = riscv.commitlog;
+  interface sbread = riscv.sbread;
+`endif
 `ifdef debug
-  interface debug_server = interface Hart_Debug_Ifc
-
-    method Action   abstractOperation(AbstractRegOp cmd)if (!(isValid(rg_abst_response)) 
-                                                            && !rg_debug_waitcsr );
-      if(cmd.address < zeroExtend(14'h1000))begin // Explot address bits to optimize this filter
-        riscv.ma_debug_access_csrs(cmd);
-        if (csr_response.hit)
-          rg_abst_response <= tagged Valid zeroExtend(csr_response.data);
-        else
-          rg_debug_waitcsr <= True;
-      end
-      else if(cmd.address < `ifdef spfpu 'h1040 `else 'h1020 `endif )begin
-        let lv_resp <- riscv.debug_access_gprs(cmd);
-        rg_abst_response <= tagged Valid zeroExtend(lv_resp);
-      end
-      else begin
-        rg_abst_response <= tagged Valid zeroExtend(32'h00000000);
-      end
-    endmethod
-
-    method ActionValue#(Bit#(DXLEN)) abstractReadResponse if (isValid(rg_abst_response) );
-      rg_abst_response <= tagged Invalid;
-      return validValue(rg_abst_response);
-    endmethod
-    method haltRequest = riscv.ma_debug_haltint;
-    method resumeRequest = riscv.ma_debug_resumeint;
-    method dm_active = riscv.ma_debugger_available;
-    method is_halted = riscv.mv_core_is_halted;
-    method is_unavailable = ~(riscv.mv_core_debugenable & riscv.mv_core_is_reset);
-    method has_reset = riscv.mv_core_is_reset;
-  endinterface;
+  method ma_debug_interrupt= riscv.ma_debug_interrupt;
+  method mv_core_is_reset = riscv.mv_core_is_reset;
+  method mv_core_debugenable = riscv.mv_core_debugenable;
+  method ma_debugger_available = riscv.ma_debugger_available;
 `endif
 endmodule : mkccore_axi4
 

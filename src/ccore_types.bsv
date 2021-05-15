@@ -140,7 +140,7 @@ package ccore_types;
 
   typedef struct {
       Bool debugger_available;
-      Bool core_is_halted;
+      Bool debug_mode;
       Bool step_set;
       Bool step_ie;
       Bool core_debugenable;

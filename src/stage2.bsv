@@ -59,9 +59,6 @@ package stage2;
   import ccore_types::*;       // for pipe - line types
   `include "ccore_params.defines"  // for core parameters
   `include "Logger.bsv"         // for logging display statements.
-`ifdef debug
-  import debug_types :: *; // for importing the debug abstract interface
-`endif
 
 
 	interface Ifc_stage2;
@@ -119,9 +116,6 @@ package stage2;
 		method Action ma_resume_wfi (Bool w);
 
   `ifdef debug
-    /*doc:method: interface to interact with debugger*/
-    method ActionValue#(Bit#(XLEN)) debug_access_gprs(AbstractRegOp cmd);
-
     (*always_enabled, always_ready*)
     /*doc:method debug related info checking interrupts */
     method Action debug_status (DebugStatus status);
@@ -129,9 +123,6 @@ package stage2;
 	endinterface : Ifc_stage2
 
   (*synthesize*)
-`ifdef debug
-  (*conflict_free="commit_rd, debug_access_gprs"*)
-`endif
   module mkstage2#(parameter Bit#(XLEN) hartid) (Ifc_stage2);
 
     String stage2=""; // defined for logger
@@ -312,10 +303,10 @@ package stage2;
       // to the halted stage. When the core is again halted then, rg_step_done is reset to False.
       `ifdef debug
         `logLevel( stage2, 0, $format("[%2d]STAGE2: step_done:%b",hartid,rg_step_done))
-        if(rg_step_done && wr_debug_info.core_is_halted)
+        if(rg_step_done && wr_debug_info.debug_mode)
           rg_step_done<=False;
         else
-          rg_step_done <= !wr_debug_info.core_is_halted && wr_debug_info.step_set
+          rg_step_done <= !wr_debug_info.debug_mode && wr_debug_info.step_set
                                                       && wr_debug_info.debugger_available;
       `endif
 
@@ -485,7 +476,6 @@ package stage2;
     endmethod
 
   `ifdef debug
-    method debug_access_gprs = registerfile.debug_access_gprs;
     method Action debug_status (DebugStatus status);
       wr_debug_info <= status;
     endmethod

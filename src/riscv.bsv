@@ -32,9 +32,9 @@ package riscv;
   import dcache_types :: * ;
   import csrbox :: * ;
   `include "ccore_params.defines"
+  `include "Logger.bsv"
 
 `ifdef debug
-  import debug_types  :: * ;
   import csr_types    :: * ;
 `endif
 
@@ -53,15 +53,15 @@ package riscv;
     method Action ma_clint_mtip(Bit#(1) intrpt);
     method Action ma_clint_mtime(Bit#(64) c_mtime);
   	method Action ma_set_meip(Bit#(1) ex_i);
-  `ifdef dcache
-    method Bit#(1) mv_initiate_store;
-    method Bit#(1) mv_initiate_ioop;
-  `endif
   `ifdef supervisor
   	method Action ma_set_seip(Bit#(1) ex_i);
   `endif
   `ifdef usertraps
   	method Action ma_set_ueip(Bit#(1) ex_i);
+  `endif
+  `ifdef dcache
+    method Bit#(1) mv_initiate_store;
+    method Bit#(1) mv_initiate_ioop;
   `endif
   `ifdef rtldump
      method Maybe#(CommitLogPacket) commitlog;
@@ -79,16 +79,11 @@ package riscv;
   `endif
 
   `ifdef debug
-    // interface to interact with debugger
-    method ActionValue#(Bit#(XLEN)) debug_access_gprs(AbstractRegOp cmd);
-    method Action ma_debug_access_csrs(AbstractRegOp cmd);
-    method Action ma_debug_haltint (Bit#(1) _int);
-    method Action ma_debug_resumeint (Bit#(1) _int);
-    method Bit#(1) mv_core_is_halted;
+    method Action ma_debug_interrupt(Bit#(1) _int);
     method Bit#(1) mv_core_is_reset;
     method Bit#(1) mv_core_debugenable;
+    (*always_enabled*)
     method Action ma_debugger_available (Bit#(1) avail);
-  	method CSRResponse mv_resp_to_core;
   `endif
 `ifdef perfmonitors
   `ifdef icache
@@ -422,7 +417,7 @@ package riscv;
   `ifdef debug
     rule connect_debug_info;
       stage2.debug_status(DebugStatus {debugger_available : wr_debugger_available ,
-                                       core_is_halted     : unpack(stage5.mv_core_is_halted),
+                                       debug_mode: unpack(stage5.mv_debug_mode),
                                        step_set           : unpack(stage5.mv_csr_dcsr[2]),
                                        step_ie            : unpack(stage5.mv_csr_dcsr[11]),
                                        core_debugenable   : unpack(stage5.mv_core_debugenable)} );
@@ -436,10 +431,17 @@ package riscv;
     method ma_clint_msip= stage5.ma_clint_msip;
     method ma_clint_mtip = stage5.ma_clint_mtip;
     method ma_clint_mtime = stage5.ma_clint_mtime;
-    `ifdef rtldump
-      interface commitlog = stage5.commitlog;
-      interface sbread = stage5.sbread;
-    `endif
+  	method ma_set_meip = stage5.ma_set_meip;
+  `ifdef supervisor
+  	method ma_set_seip = stage5.ma_set_seip;
+  `endif
+  `ifdef usertraps
+  	method ma_set_ueip = stage5.ma_set_ueip;
+  `endif
+  `ifdef rtldump
+    interface commitlog = stage5.commitlog;
+    interface sbread = stage5.sbread;
+  `endif
     interface memory_response = stage4.memory_response;
     method Action storebuffer_empty(Bool e);
       stage3.storebuffer_empty(e);
@@ -452,35 +454,23 @@ package riscv;
     method Action cache_is_available(Bool avail);
       stage3.cache_is_available(avail);
     endmethod
-  	method ma_set_meip = stage5.ma_set_meip;
-  `ifdef supervisor
-  	method ma_set_seip = stage5.ma_set_seip;
-  `endif
-  `ifdef usertraps
-  	method ma_set_ueip = stage5.ma_set_ueip;
-  `endif
     method mv_csr_mstatus = stage5.mv_csr_mstatus;
     method mv_cacheenable = stage5.mv_cacheenable;
     method mv_curr_priv = stage5.mv_curr_priv;
-		`ifdef supervisor
-			method mv_csr_satp = stage5.mv_csr_satp;
-		`endif
+  `ifdef supervisor
+		method mv_csr_satp = stage5.mv_csr_satp;
+	`endif
   `ifdef pmp
     method mv_pmp_cfg = stage5.mv_pmp_cfg;
     method mv_pmp_addr = stage5.mv_pmp_addr;
   `endif
   `ifdef debug
-    method debug_access_gprs = stage2.debug_access_gprs;
-    method ma_debug_access_csrs= stage5.ma_debug_access_csrs;
-    method ma_debug_haltint = stage5.ma_debug_haltint;
-    method ma_debug_resumeint = stage5.ma_debug_resumeint;
-    method mv_core_is_halted = stage5.mv_core_is_halted;
-    method mv_core_is_reset = stage5.mv_core_is_reset;
+    method ma_debug_interrupt = stage5.ma_debug_interrupt;
+    method mv_core_is_reset = rg_reset_event;
     method mv_core_debugenable = stage5.mv_core_debugenable;
     method Action ma_debugger_available (Bit#(1) avail);
       wr_debugger_available <= unpack(avail);
     endmethod
-  	method mv_resp_to_core = stage5.mv_resp_to_core;
   `endif
   `ifdef perfmonitors
   `ifdef icache

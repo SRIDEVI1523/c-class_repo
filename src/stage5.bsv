@@ -23,9 +23,6 @@ package stage5;
   import DReg::*;
   import Vector::*;
   import Clocks :: *;
-`ifdef debug
-  import debug_types::*;
-`endif
   import dcache_types::*;
 
 
@@ -40,9 +37,10 @@ package stage5;
   `else
     method Tuple3#(Bool, Bit#(`vaddr), Bool) flush;
   `endif
-   method CSRtoDecode mv_csrs_to_decode;
-   	  method Action ma_clint_msip(Bit#(1) intrpt);
-          method Action ma_clint_mtip(Bit#(1) intrpt);
+    (*always_ready*)
+    method CSRtoDecode mv_csrs_to_decode;
+   	method Action ma_clint_msip(Bit#(1) intrpt);
+    method Action ma_clint_mtip(Bit#(1) intrpt);
 	  method Action ma_clint_mtime(Bit#(64) c_mtime);
     //This method returns value of csr_reg which enables/disables arith_exceptions
     `ifdef arith_trap
@@ -80,13 +78,9 @@ package stage5;
   `endif
   `ifdef debug
     method Bit#(64) mv_csr_dcsr;
-    method Action ma_debug_access_csrs(AbstractRegOp cmd);
-    method Action ma_debug_haltint (Bit#(1) _int);
-    method Action ma_debug_resumeint (Bit#(1) _int);
-    method Bit#(1) mv_core_is_halted;
-    method Bit#(1) mv_core_is_reset;
+    method Action ma_debug_interrupt (Bit#(1) _int);
+    method Bit#(1) mv_debug_mode;
     method Bit#(1) mv_core_debugenable;
-  	method CSRResponse mv_resp_to_core;
   `endif
   `ifdef triggers
     method Vector#(`trigger_num, TriggerData) trigger_data1;
@@ -122,7 +116,7 @@ package stage5;
   `ifdef rtldump
     RX#(CommitLogPacket) rxinst <-mkRX;
   `endif
-    Ifc_csrbox csr <- mk_csrbox( `ifdef debug curr_reset `endif );
+    Ifc_csrbox csr <- mk_csrbox();
 
     // wire that carries the commit data that needs to be written to the integer register file.
     Wire#(Maybe#(CommitData)) wr_commit <- mkDWire(tagged Invalid);
@@ -351,7 +345,7 @@ package stage5;
           Bool drain = False;
           Bit#(`vaddr) newpc = ?;
           if (sys.func3 == 0) begin // URET, SRET, MRET
-            let temp <- csr.mav_upd_on_ret( unpack(truncate(sys.csraddr[9 : 8])) );
+            let temp <- csr.mav_upd_on_ret( truncateLSB(sys.csraddr));
             newpc = temp;
             drain = True;
           end
@@ -495,13 +489,9 @@ package stage5;
   `endif
   `ifdef debug
     method mv_csr_dcsr = csr.sbread.mv_csr_dcsr;
-//    method ma_debug_access_csrs = csr.ma_debug_access_csrs;
-    method ma_debug_haltint = csr.ma_debug_haltint;
-    method ma_debug_resumeint = csr.ma_debug_resumeint;
-    method mv_core_is_halted = csr.mv_core_halted;
-    method mv_core_is_reset = csr.mv_core_hasreset;
+    method ma_debug_interrupt= csr.ma_set_mip_debug_interrupt;
+    method mv_debug_mode= csr.mv_debug_mode;
     method mv_core_debugenable = csr.sbread.mv_csr_customcontrol[4];
-//    method mv_resp_to_core = csr.mv_resp_to_core;
   `endif
 
     `ifdef arith_trap
