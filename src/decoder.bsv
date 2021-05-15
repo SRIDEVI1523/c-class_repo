@@ -21,113 +21,10 @@ package decoder;
   import ccore_types::*;
   import BUtils::*;
   
-  import csr_types :: *;
   import csrbox_decoder :: * ;
+  import csr_types :: * ;
   `include "ccore_params.defines"
-//  (*noinline*)
-//  function Bool address_valid(Bit#(12) addr, Bit#(26) misa);
-//    Bool valid=False;
-//    case(addr[9:8])
-//      // user level CSRS
-//      'b00: case(addr[11:10])
-//              'b00: case (addr[7:0])
-//                `ifdef user
-//                  // User Trap setup and user trap handling registers
-//                  'h0, 'h4, 'h5, 'h40, 'h41, 'h42, 'h43, 'h44: valid=unpack(misa[13]&misa[20]);
-//                `endif
-//                  // user floating point csrs
-//                  'h1, 'h2, 'h3: valid=True;
-//              endcase
-//              // User Counters/Timers
-//            `ifdef user
-//              'b11: case(addr[7:5])
-//                  'b000: valid=True;
-//                `ifdef RV32
-//                  'b100: valid=True;
-//                `endif
-//              endcase
-//            `endif
-//             'b10: begin
-//                   valid =(addr[7:0]==0);
-//                   end
-//            endcase
-//      // supervisor level CSRS
-//    `ifdef supervisor
-//      'b01: case(addr[11:10])
-//              'b00: case(addr[7:4])
-//                // supervisor trap setup
-//                'h0:case(addr[3:0])
-//                  'h0, 'h4, 'h5, 'h6: valid=unpack(misa[18]);
-//                `ifdef usertraps
-//                  'h2, 'h3: valid=unpack(misa[13]&misa[20]);
-//                `endif
-//                endcase
-//                // supervisor trap handling.
-//                'h4: case(addr[3:0])
-//                  'h0, 'h1, 'h2, 'h3, 'h4: valid=unpack(misa[18]);
-//                endcase
-//                // supervisor protection and translation
-//                'h8: if(addr[3:0]==0) valid=unpack(misa[18]);
-//              endcase
-//            endcase
-//    `endif
-//    // machine level CSRS
-//    'b11: case(addr[11:10])
-//            // machine info registers
-//            'b11: if(addr[7:4]==1)
-//                    case(addr[3:0])
-//                      'h1, 'h2, 'h3, 'h4: valid=True;
-//                    endcase
-//            'b00: case(addr[7:4])
-//                    // Machine Trap Setup
-//                  'h0:case(addr[3:0])
-//                        'h0, 'h1, 'h4, 'h5, 'h6: valid=True;
-//                      `ifdef non_m_traps
-//                        'h2, 'h3: if( ((misa[13]&misa[20])==1) || misa[18]==1) valid=True;
-//                      `endif
-//                      endcase
-//                  // Machine counter Setup
-//                  'h2: if(addr[3:0] != 1 && addr[3:0] != 2) valid = True;
-//                  'h3: valid=True;
-//                    // Machine Trap Handling
-//                  'h4:case(addr[3:0])
-//                        'h0, 'h1, 'h2, 'h3, 'h4: valid=True;
-//                      endcase
-//                    // Maching Protection and Translation
-//                `ifdef pmp
-//                  'hA:case(addr[3:0])
-//                        'h0, 'h2 `ifdef RV32 ,'h1,'h3 `endif : valid=True;
-//                      endcase
-//                    // PMP ADDR registers
-//                  'hB: if(`pmpentries!=0 ) valid=True;
-//                `endif
-//                  endcase
-//              // Machine Counter/Timers
-//            'b10: if(addr[7:4] == 0 || addr[7:4] == 1 || 
-//                     ( addr[7:4] == 8 && addr[3:0]!=1 ) || addr[7:4] ==9 )valid=True;
-//           // TODO B01 and 801 should be invalid
-//              // DTVEC and DEnable
-//            'b01: begin
-//                `ifdef debug
-//                  if( addr[7:0] == 'hC0 || addr[7:0] == 'hC1 ) valid = True;
-//                `endif
-//                `ifdef perfmonitors
-//                  if(addr[7:0] == 'hC2) valid = True;
-//                `endif
-//                `ifdef triggers
-//                  if( addr[7:4] == 'hA && addr[3:0] < 4) valid = True;
-//                `endif
-//                `ifdef dtim
-//                  if( addr[7:0] == 'hC3 || addr[7:0]== 'hC4) valid = True;
-//                `endif
-//                `ifdef itim
-//                  if( addr[7:0] == 'hC5 || addr[7:0]== 'hC6) valid = True;
-//                `endif
-//            end
-//          endcase
-//    endcase
-//    return valid;
-//  endfunction
+  `include "csrbox.defines"
 
   (*noinline*)
   function Bool hasCSRPermission(Bit#(12) address, Bool write,  Privilege_mode prv);
@@ -153,13 +50,13 @@ package decoder;
 	function Tuple2#(Bit#(`causesize), Bool) chk_interrupt(
 	                                                        Privilege_mode prv, 
 	                                                        Bit#(XLEN) mstatus,
-                                                          Bit#(19) mip, 
-                                                          Bit#(19) mie 
+                                                          Bit#(`max_int_cause) mip, 
+                                                          Bit#(`max_int_cause) mie 
                                                         `ifdef non_m_traps 
-                                                          ,Bit#(12) mideleg 
+                                                          ,Bit#(`max_int_cause) mideleg 
                                                         `endif
                                                         `ifdef supervisor `ifdef usertraps
-                                                          ,Bit#(12) sideleg 
+                                                          ,Bit#(`max_int_cause) sideleg 
                                                         `endif `endif
                                                         `ifdef debug
                                                           ,DebugStatus debug, Bool step_done
@@ -175,45 +72,46 @@ package decoder;
     Bool u_enabled = (mstatus[0]==1 && prv==User);
   `endif
     
-    Bit#(19) d_interrupts = 0;
-    Bit#(19) m_interrupts = 0;
-    Bit#(19) s_interrupts = 0;
-    Bit#(19) u_interrupts = 0;
+    Bit#(`max_int_cause) d_interrupts = 0;
+    Bit#(`max_int_cause) m_interrupts = 0;
+    Bit#(`max_int_cause) s_interrupts = 0;
+    Bit#(`max_int_cause) u_interrupts = 0;
 
 
   `ifdef debug
     Bool d_enabled = debug.debugger_available && debug.core_debugenable;
-    d_interrupts = { mip[18],mip[17],17'd0} & signExtend(pack(d_enabled));
+    d_interrupts = { mip[16],16'd0} & signExtend(pack(d_enabled)) &
+    signExtend(~pack(debug.debug_mode));
   `endif
 
     // truncating because in debug mode mie and mip are 14 bits. 12-halt-req 13-resume-req
     m_interrupts =                mie & mip & signExtend(pack(m_enabled))
              `ifdef non_m_traps & ~zeroExtend(mideleg) `endif
-             `ifdef debug       & signExtend(pack(!debug.core_is_halted)) `endif ;
+             `ifdef debug       & signExtend(pack(!debug.debug_mode)) `endif ;
   `ifdef supervisor
     s_interrupts =              mie & mip & zeroExtend(mideleg) & signExtend(pack(s_enabled))
                `ifdef usertraps & ~zeroExtend(sideleg) `endif
-               `ifdef debug     & signExtend(pack(!debug.core_is_halted)) `endif ;
+               `ifdef debug     & signExtend(pack(!debug.debug_mode)) `endif ;
   `endif
   `ifdef usertraps
     u_interrupts =                mie & mip & zeroExtend(mideleg) & signExtend(pack(u_enabled))
               `ifdef supervisor & sideleg `endif
-              `ifdef debug      & signExtend(pack(!debug.core_is_halted)) `endif ;
+              `ifdef debug      & signExtend(pack(!debug.debug_mode)) `endif ;
   `endif
 
-    Bit#(19) pending_interrupts = d_interrupts | m_interrupts | s_interrupts | u_interrupts;
+    Bit#(`max_int_cause) pending_interrupts = d_interrupts | m_interrupts | s_interrupts | u_interrupts;
 		// format pendingInterrupt value to return
-    Bool taketrap=unpack(|pending_interrupts) `ifdef debug ||  (step_done && !debug.core_is_halted) `endif ;
+    Bool taketrap=unpack(|pending_interrupts) `ifdef debug ||  (step_done && !debug.debug_mode) `endif ;
 
     Bit#(TSub#(`causesize, 1)) int_cause='1;
+    Bit#(1) mode = 1;
   `ifdef debug
-    if(step_done && !debug.core_is_halted) begin
-      int_cause = `HaltStep;
+    if(step_done && !debug.debug_mode) begin
+      int_cause = `halt_step;
+      mode = 0;
     end
-    else if(pending_interrupts[17] == 1)
-      int_cause = `HaltDebugger;
-    else if(pending_interrupts[18] == 1)
-      int_cause = `Resume_int;
+    else if(pending_interrupts[16] == 1)
+      int_cause = `debug_interrupt;
     else
   `endif
     if(pending_interrupts[11]==1)
@@ -244,21 +142,22 @@ package decoder;
   `endif
 
 
-		return tuple2({1'b1,int_cause}, taketrap);
+		return tuple2({mode,int_cause}, taketrap);
 	endfunction
 
   typedef enum {Q0='b00, Q1='b01, Q2='b10} Quadrant deriving(Bits,Eq,FShow);
   (*noinline*)
   function DecodeOut decoder_func_32(Bit#(32) inst, CSRtoDecode csrs
-                                    `ifdef compressed , Bool compressed `endif );
+                                    `ifdef compressed , Bool compressed `endif 
+                                    `ifdef debug ,DebugStatus debug `endif );
 
     Bit#(1) fs = |csrs.csr_mstatus[14:13];
     Bit#(3) frm = csrs.frm;
 
   `ifdef debug
-    Bool ebreakm = unpack(csrs.csr_dcsr[15]);
-    Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif );
-    Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[13] `else 0 `endif );
+    Bool ebreakm = unpack(csrs.csr_dcsr[15]) && !debug.debug_mode;
+    Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif ) && !debug.debug_mode;
+    Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[13] `else 0 `endif ) && !debug.debug_mode;
   `endif
 
     // ------- Default declarations of all local variables -----------//
@@ -523,8 +422,8 @@ package decoder;
                     if(                   (ebreakm && csrs.prv == Machine) 
                       `ifdef supervisor || (ebreaks && csrs.prv == Supervisor) `endif 
                       `ifdef user       || (ebreaku && csrs.prv == User)    `endif ) begin
-                      trapcause = `HaltEbreak;
-                      trapcause[`causesize - 1] = 1;
+                      trapcause = `halt_ebreak;
+                      trapcause[`causesize - 1] = 0;
                     end
                     else
                   `endif
@@ -668,7 +567,9 @@ package decoder;
                 Bit#(`causesize) cause, CSRtoDecode csrs, Bool curr_rerun,
                 Bool rerun_fencei `ifdef supervisor ,Bool rerun_sfence `endif
                 `ifdef debug , DebugStatus debug, Bool step_done `endif ) =  actionvalue
-      DecodeOut result_decode = decoder_func_32(inst, csrs `ifdef compressed ,compressed `endif );
+      DecodeOut result_decode = decoder_func_32(inst, csrs 
+                                `ifdef compressed ,compressed `endif 
+                                `ifdef debug      ,debug      `endif );
       let {icause, takeinterrupt} = chk_interrupt( csrs.prv, 
                                                    csrs.csr_mstatus,
                                                    csrs.csr_mip, 

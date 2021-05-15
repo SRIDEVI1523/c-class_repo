@@ -164,9 +164,9 @@
 `define Supervisor_external_int 9
 `define Machine_external_int  11
 `define CounterInterrupt      16
-`define HaltEbreak            17
-`define HaltTrigger           18
-`define HaltDebugger          19
-`define HaltStep              20
-`define HaltReset             21
-`define Resume_int            22
+//`define HaltEbreak            17
+//`define HaltTrigger           18
+//`define HaltDebugger          19
+//`define HaltStep              20
+//`define HaltReset             21
+//`define Resume_int            22
