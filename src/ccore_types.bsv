@@ -120,17 +120,17 @@ package ccore_types;
   typedef Tuple3#(Bit#(5), Bool, Bit#(XLEN)) OpFwding;
   typedef struct{
     Privilege_mode prv;
-    Bit#(`max_int_cause) csr_mip;
-    Bit#(`max_int_cause) csr_mie;
+    Bit#(TAdd#(`max_int_cause,1)) csr_mip;
+    Bit#(TAdd#(`max_int_cause,1)) csr_mie;
     Bit#(26) csr_misa;
     Bit#(3) frm;
     Bit#(XLEN) csr_mstatus;
   `ifdef non_m_traps
-    Bit#(`max_int_cause) csr_mideleg;
+    Bit#(TAdd#(`max_int_cause,1)) csr_mideleg;
   `endif
   `ifdef usertraps
     `ifdef supervisor
-    Bit#(`max_int_cause) csr_sideleg;
+    Bit#(TAdd#(`max_int_cause,1)) csr_sideleg;
     `endif
   `endif
   `ifdef debug

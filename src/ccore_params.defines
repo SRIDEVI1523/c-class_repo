@@ -150,9 +150,9 @@
 
 
 //------------ internal encodings --------------//
-`define Rerun                 23
-`define IcacheFence           24
-`define SFence                25
+`define Rerun                 `max_ex_cause+1
+`define IcacheFence           `max_ex_cause+2
+`define SFence                `max_ex_cause+3
 // --------------------------------------------//
 `define User_soft_int         0
 `define Supervisor_soft_int   1

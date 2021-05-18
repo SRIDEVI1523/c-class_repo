@@ -50,13 +50,13 @@ package decoder;
 	function Tuple2#(Bit#(`causesize), Bool) chk_interrupt(
 	                                                        Privilege_mode prv, 
 	                                                        Bit#(XLEN) mstatus,
-                                                          Bit#(`max_int_cause) mip, 
-                                                          Bit#(`max_int_cause) mie 
+                                                          Bit#(TAdd#(`max_int_cause,1)) mip, 
+                                                          Bit#(TAdd#(`max_int_cause,1)) mie 
                                                         `ifdef non_m_traps 
-                                                          ,Bit#(`max_int_cause) mideleg 
+                                                          ,Bit#(TAdd#(`max_int_cause,1)) mideleg 
                                                         `endif
                                                         `ifdef supervisor `ifdef usertraps
-                                                          ,Bit#(`max_int_cause) sideleg 
+                                                          ,Bit#(TAdd#(`max_int_cause,1)) sideleg 
                                                         `endif `endif
                                                         `ifdef debug
                                                           ,DebugStatus debug, Bool step_done
@@ -72,10 +72,10 @@ package decoder;
     Bool u_enabled = (mstatus[0]==1 && prv==User);
   `endif
     
-    Bit#(`max_int_cause) d_interrupts = 0;
-    Bit#(`max_int_cause) m_interrupts = 0;
-    Bit#(`max_int_cause) s_interrupts = 0;
-    Bit#(`max_int_cause) u_interrupts = 0;
+    Bit#(TAdd#(`max_int_cause,1)) d_interrupts = 0;
+    Bit#(TAdd#(`max_int_cause,1)) m_interrupts = 0;
+    Bit#(TAdd#(`max_int_cause,1)) s_interrupts = 0;
+    Bit#(TAdd#(`max_int_cause,1)) u_interrupts = 0;
 
 
   `ifdef debug
@@ -99,7 +99,7 @@ package decoder;
               `ifdef debug      & signExtend(pack(!debug.debug_mode)) `endif ;
   `endif
 
-    Bit#(`max_int_cause) pending_interrupts = d_interrupts | m_interrupts | s_interrupts | u_interrupts;
+    Bit#(TAdd#(`max_int_cause,1)) pending_interrupts = d_interrupts | m_interrupts | s_interrupts | u_interrupts;
 		// format pendingInterrupt value to return
     Bool taketrap=unpack(|pending_interrupts) `ifdef debug ||  (step_done && !debug.debug_mode) `endif ;
 
@@ -414,9 +414,10 @@ package decoder;
       'b001: if(funct3==0) inst_type=JALR; // JALR
       'b011: inst_type=JAL; // jal
       'b100: case(funct3)
-          'b000:  if(inst[31:7]==0) trapcause=(csrs.csr_misa[20]==1 && csrs.prv==User)?`Ecall_from_user:
-                  `ifdef supervisor (csrs.csr_misa[18]==1 && csrs.prv==Supervisor)?`Ecall_from_supervisor: `endif
-                                              `Ecall_from_machine;
+          'b000:  if(inst[31:7]==0) 
+                    trapcause=(csrs.csr_misa[20]==1 && csrs.prv==User)?`Ecall_from_user:
+            `ifdef supervisor (csrs.csr_misa[18]==1 && csrs.prv==Supervisor)?`Ecall_from_supervisor: `endif
+                                                                          `Ecall_from_machine;
                   else if(inst[31:7]=='h2000) begin
                   `ifdef debug
                     if(                   (ebreakm && csrs.prv == Machine) 
@@ -433,9 +434,14 @@ package decoder;
                  else if(inst[31:20]=='h002 && inst[19:15]==0 && inst[11:7]==0 && csrs.csr_misa[13]==1) inst_type=SYSTEM_INSTR;
               `ifdef supervisor
                 // SRET
-                 else if(inst[31:20]=='h102 && inst[19:15]==0 && inst[11:7]==0 && csrs.csr_misa[18]==1 &&
+                else if(inst[31:20]=='h102 && inst[19:15]==0 && inst[11:7]==0 && csrs.csr_misa[18]==1 &&
                         csrs.prv!=User && (csrs.prv==Machine || (csrs.prv==Supervisor &&
                         csrs.csr_mstatus[22]==0))) inst_type=SYSTEM_INSTR;
+              `endif
+              `ifdef debug
+                // DRET
+                else if (inst[31:20]=='h7b2 && inst[19:15]==0 && inst[11:7]==0 && debug.debug_mode)
+                  inst_type = SYSTEM_INSTR;
               `endif
                 // MRET
                 else if(inst[31:20]=='h302 && inst[19:15]==0 && inst[11:7]==0 && csrs.prv==Machine)
