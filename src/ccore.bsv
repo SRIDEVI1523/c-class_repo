@@ -74,6 +74,8 @@ interface Ifc_ccore_axi4;
   method Bit#(1) mv_core_debugenable;
   (*always_enabled*)
   method Action ma_debugger_available (Bit#(1) avail);
+  method Bit#(1) mv_stop_timer;
+  method Bit#(1) mv_stop_count;
 `endif
 endinterface : Ifc_ccore_axi4
 
@@ -410,6 +412,8 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   method mv_core_is_reset = riscv.mv_core_is_reset;
   method mv_core_debugenable = riscv.mv_core_debugenable;
   method ma_debugger_available = riscv.ma_debugger_available;
+  method mv_stop_timer = riscv.mv_stop_timer;
+  method mv_stop_count = riscv.mv_stop_count;
 `endif
 endmodule : mkccore_axi4
 

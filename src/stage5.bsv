@@ -17,6 +17,8 @@ package stage5;
 
   import FIFO::*;
   import FIFOF::*;
+  import GetPut :: * ;
+  import Connectable :: * ;
   
   import csrbox   :: * ;
   import csr_types :: * ;
@@ -81,6 +83,8 @@ package stage5;
     method Action ma_debug_interrupt (Bit#(1) _int);
     method Bit#(1) mv_debug_mode;
     method Bit#(1) mv_core_debugenable;
+    method Bit#(1) mv_stop_timer;
+    method Bit#(1) mv_stop_count;
   `endif
   `ifdef triggers
     method Vector#(`trigger_num, TriggerData) trigger_data1;
@@ -149,10 +153,13 @@ package stage5;
     Reg#(Bit#(ELEN)) rg_atomic_data <- mkReg(0);
     Wire#(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize))) wr_ioop_response <- mkDWire(tagged Invalid);
   `ifdef dcache
-//    Wire#(Tuple2#(Bool,Bool)) wr_commit_cacheop <- mkDWire(tuple2(False,False));
     Wire#(Bit#(1)) wr_commit_cacheop <- mkWire();
     Wire#(Bit#(1)) wr_commit_ioop <- mkWire();
   `endif    
+
+  `ifdef debug
+    mkConnection(csr.ma_stop_count, csr.mv_stop_count);
+  `endif
 
     let csr_resp = csr.mv_core_resp;
   `ifdef triggers
@@ -416,6 +423,7 @@ package stage5;
       `endif
         if(fl)begin
           rg_epoch <= ~rg_epoch;
+          `logLevel( stage5, 0, $format("STAGE5: Flush to PC:%h",jump_address))
         end
       end
       else begin
@@ -444,8 +452,10 @@ package stage5;
       return wr_commit;
     endmethod
     method flush=wr_flush;
-    method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, csr_mip: truncate(csr.sbread.mv_csr_mip), 
-      csr_mie: truncate(csr.sbread.mv_csr_mie), csr_mstatus: truncate(csr.sbread.mv_csr_mstatus), 
+    method mv_csrs_to_decode = CSRtoDecode{prv: csr.mv_prv, 
+      csr_mip: truncate(csr.sbread.mv_csr_mip), 
+      csr_mie: truncate(csr.sbread.mv_csr_mie), 
+      csr_mstatus: truncate(csr.sbread.mv_csr_mstatus) `ifdef debug & {'1,csr.mv_debug_mode,17'd0} `endif , 
       csr_misa: truncate(csr.sbread.mv_csr_misa), frm: truncate(csr.sbread.mv_csr_frm)
     `ifdef debug
       ,csr_dcsr: truncate(csr.sbread.mv_csr_dcsr)
@@ -492,6 +502,8 @@ package stage5;
     method ma_debug_interrupt= csr.ma_set_mip_debug_interrupt;
     method mv_debug_mode= csr.mv_debug_mode;
     method mv_core_debugenable = csr.sbread.mv_csr_customcontrol[4];
+    method mv_stop_timer = csr.mv_stop_timer;
+    method mv_stop_count = csr.mv_stop_count;
   `endif
 
     `ifdef arith_trap

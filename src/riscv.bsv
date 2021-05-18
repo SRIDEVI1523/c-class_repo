@@ -84,6 +84,8 @@ package riscv;
     method Bit#(1) mv_core_debugenable;
     (*always_enabled*)
     method Action ma_debugger_available (Bit#(1) avail);
+    method Bit#(1) mv_stop_timer;
+    method Bit#(1) mv_stop_count;
   `endif
 `ifdef perfmonitors
   `ifdef icache
@@ -472,6 +474,8 @@ package riscv;
     method Action ma_debugger_available (Bit#(1) avail);
       wr_debugger_available <= unpack(avail);
     endmethod
+    method mv_stop_timer = stage5.mv_stop_timer;
+    method mv_stop_count = stage5.mv_stop_count;
   `endif
   `ifdef perfmonitors
   `ifdef icache
