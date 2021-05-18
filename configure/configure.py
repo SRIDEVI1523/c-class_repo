@@ -300,9 +300,9 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         max_int_cause = max(max_int_cause,ci['cause_val'])
     for ci in isa_node['custom_exceptions']:
         max_ex_cause = max(max_ex_cause,ci['cause_val'])
-    print(max_ex_cause)
-    print(max_int_cause)
-    macros += ' max_int_cause='+str(max_int_cause+1)
+    max_ex_cause = max_ex_cause + 3
+    macros += ' max_int_cause='+str(max_int_cause)
+    macros += ' max_ex_cause='+str(max_ex_cause)
     macros += ' causesize='+str(math.ceil(math.log2(max(max_int_cause, max_ex_cause)))+1)
         
 
