@@ -241,6 +241,7 @@ package riscv;
       end
       else if (rg_reset_cycle < `reset_cycles) 
         rg_reset_cycle <= rg_reset_cycle + 1;
+      stage0.ma_reset_done(unpack(rg_reset_done));
     endrule:rl_assert_reset_done
 
     mkConnection(stage0.tx_to_stage1, pipe0);

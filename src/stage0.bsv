@@ -86,6 +86,9 @@ package stage0;
 
     /*doc:subifc: interface to send info to stage 1 about the next pc*/
     interface TXe#(Stage0PC#(`vaddr)) tx_to_stage1;
+
+    /*doc:method: Method indicates that the reset sequence is done*/
+    method Action ma_reset_done(Bool _done);
   endinterface: Ifc_stage0
 
   (*synthesize*)
@@ -114,6 +117,9 @@ package stage0;
     /*doc:reg: This register is used in the initializing the pc with reset-pc being driven by SoC.*/
     Reg#(Bool) rg_initialize <- mkReg(True);
 
+    /*doc:wire: captures the condition when the reset sequence is done*/
+    Wire#(Bool) wr_reset_sequence_done <- mkWire();
+
   `ifdef ifence
     /*doc:reg: When true indicates that the flush occurred due to a fence*/
     Reg#(Bool) rg_fence[2] <- mkCReg(2, False);
@@ -138,9 +144,10 @@ package stage0;
 
     /*doc:rule: This rule will fire only once immediately after reset is de-asserted. The rg_pc is
     initialized with the resetpc argument*/
-    rule rl_initialize (rg_initialize);
+    rule rl_initialize (rg_initialize && wr_reset_sequence_done);
       rg_initialize <= False;
       rg_pc[1] <= resetpc;
+      `logLevel( stage0, 0, $format("STAGE0: Setting PC:%h",resetpc))
     endrule
 
     /*doc:rule: This rule muxes between pc+4 and the prediction provided by the bpu.
@@ -167,7 +174,7 @@ package stage0;
     pc sequences are sent to the cache and stage1
 
     */
-    rule rl_gen_next_pc (tx_tostage1.u.notFull && !rg_initialize);
+    rule rl_gen_next_pc (tx_tostage1.u.notFull && !rg_initialize && wr_reset_sequence_done);
       `ifdef bpu
         PredictionResponse bpu_resp = ?;
       `endif
@@ -244,8 +251,11 @@ package stage0;
     method Action ma_update_wEpoch ();
       rg_wEpoch <= ~rg_wEpoch;
     endmethod
+    method Action ma_reset_done(Bool _done);
+      wr_reset_sequence_done <= _done;
+    endmethod:ma_reset_done
 
-    method Action ma_flush (Stage0Flush fl) if(!rg_initialize);
+    method Action ma_flush (Stage0Flush fl) if(!rg_initialize && wr_reset_sequence_done);
       `logLevel( stage0, 1, $format("[%2d]STAGE0: Recieved Flush:",hartid,fshow(fl)))
     `ifdef ifence
       rg_fence[1] <= fl.fence;
