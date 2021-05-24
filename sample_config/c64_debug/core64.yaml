@@ -41,7 +41,7 @@ dcache_configuration:
 reset_pc: 4096
 physical_addr_size: 32
 bus_protocol: AXI4
-debugger_support: false
+debugger_support: True
 no_of_triggers: 0
 bsc_compile_options:
   test_memory_size: 33554432
@@ -57,7 +57,7 @@ bsc_compile_options:
   top_module: mkTbSoc
   top_file: TbSoc.bsv
   top_dir: test_soc
-  open_ocd: False
+  open_ocd: True
 verilator_configuration:
   coverage: none
   trace: false

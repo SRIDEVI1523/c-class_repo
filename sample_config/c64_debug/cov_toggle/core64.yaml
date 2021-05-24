@@ -1,22 +1,16 @@
-num_harts: 1
+ISA: RV64IMAFDCSU
 s_extension:
   itlb_size: 4
   dtlb_size: 4
 total_events : 30
+#dtvec_base: 256
 iepoch_size: 2
 m_extension:
   mul_stages : 1
   div_stages : 32
-branch_predictor:
-  instantiate: True
-  predictor: gshare
-  btb_depth: 32
-  bht_depth: 512
-  history_len: 8
-  history_bits: 5
-  ras_depth: 8
 icache_configuration:
   instantiate: true
+  on_reset: enable
   sets: 64
   word_size: 4
   block_size: 16
@@ -27,13 +21,13 @@ icache_configuration:
   one_hot_select: false
 dcache_configuration:
   instantiate: true
+  on_reset: enable
   sets: 64
   word_size: 8
   block_size: 8
   ways: 4
   fb_size: 8
   sb_size: 2
-  ib_size: 2
   replacement: RR
   ecc_enable: false
   one_hot_select: false
@@ -46,9 +40,6 @@ no_of_triggers: 0
 bsc_compile_options:
   test_memory_size: 33554432
   assertions: true
-  ovl_assertions: False
-  sva_assertions: False
-  ovl_path: ""
   trace_dump: true
   compile_target: 'sim'
   suppress_warnings: ["none"]
@@ -59,7 +50,7 @@ bsc_compile_options:
   top_dir: test_soc
   open_ocd: False
 verilator_configuration:
-  coverage: none
+  coverage: toggle
   trace: false
   threads: 1
   verbosity: true
