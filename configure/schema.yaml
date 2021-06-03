@@ -11,6 +11,20 @@
 num_harts: {type: integer, default: 1, min: 1, max: 1024}
 
 ###
+#merged_rf: 
+# **Description**: Boolean field to indicate if the registerfiles of floating
+# and integer should be implemented as a single extended regfile in hw. This
+# field should be set to true only if 'F/D' support is enabled'
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   merged_rf: True
+
+merged_rf: {type: boolean, default: True}
+
+###
 #total_events
 # **Description**: Total number of events in the system
 #

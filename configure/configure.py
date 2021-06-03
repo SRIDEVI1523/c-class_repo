@@ -36,6 +36,11 @@ def specific_checks(foo):
         max_value = 2 ** 32
         xlen = 32
 
+    if foo['merged_rf']:
+        if 'F' not in foo['ISA']:
+            logger.error('merged_rf should be True only when F support is \
+                    available in hw')
+
     # check if default values are correctly assigned
     for field in length_check_fields:
         if foo[field] > (max_value-1):
@@ -192,6 +197,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' muldiv'
         macros += ' MULSTAGES='+str(m_mulstages)
         macros += ' DIVSTAGES='+str(m_divstages)
+    if 'Zicsr' in foo['ISA']:
+        macros += ' zicsr'
     if 'U' in foo['ISA']:
         macros += ' user'
     if 'N' in foo['ISA']:
@@ -202,6 +209,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' dtlbsize='+str(s_dtlbsize)
         macros += ' asidwidth='+str(asidlen)
         macros += ' ' + s_mode
+    if 'N' in foo['ISA'] or 'S' in foo['ISA']:
+        macros += ' non_m_traps'
     if foo['branch_predictor']['instantiate']:
         macros += ' bpu'
         macros += ' '+foo['branch_predictor']['predictor']
@@ -212,6 +221,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' rasdepth='+str(foo['branch_predictor']['ras_depth'])
         if foo['branch_predictor']['ras_depth'] > 0:
             macros += ' bpu_ras'
+    if foo['merged_rf']:
+        macros += ' merged_rf'
 
     macros += ' iwords='+str(foo['icache_configuration']['word_size'])
     macros += ' iblocks='+str(foo['icache_configuration']['block_size'])
