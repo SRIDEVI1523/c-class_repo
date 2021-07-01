@@ -19,15 +19,15 @@ package stage1;
   import Vector :: *;
 
   // -- project imports --//
-	import TxRx	::*;            // for interstage buffer connection
-  import ccore_types::*;     // for pipe - line types
+	import TxRx	          :: * ;            // for interstage buffer connection
+  import ccore_types    :: * ;     // for pipe - line types
+  import icache_types   :: * ;          // for global interface definitions
+  import pipe_ifcs      :: * ;
+`ifdef compressed
+  import decompress     :: * ;
+`endif
   `include "ccore_params.defines"// for core parameters
   `include "Logger.bsv"       // for logging display statements.
-  import icache_types::*;          // for global interface definitions
-`ifdef compressed
-  import decompress :: * ;
-`endif
-
 
   // Enum to define the action to be taken when an instruction arrives.
   typedef enum {CheckPrev, None} ActionType deriving(Bits, Eq, FShow);
@@ -42,37 +42,15 @@ package stage1;
   } PrevMeta deriving(Eq, Bits, FShow);
 
 	interface Ifc_stage1;
+    interface Ifc_s1_rx rx;
+    interface Ifc_s1_tx tx;
+    interface Ifc_s1_icache icache;
+    interface Ifc_s1_common common;
+	endinterface:Ifc_stage1
 
-    // instruction response from the memory subsytem or the memory bus
-    interface Put#(IMem_core_response#(32, `iesize)) inst_response;
-
-   // this interface receives the prediction response from the branch prediction unit
-    interface RXe#(Stage0PC#(`vaddr)) rx_from_stage0;
-
-    // instruction along with other results to be sent to the next stage
-    interface TXe#(PIPE1) tx_to_stage2;
-  `ifdef rtldump
-    interface TXe#(CommitLogPacket) tx_to_stage2_inst;
-  `endif
-
-    // method to update epochs on redirection from execute stage
-		method Action update_eEpoch;
-
-      // method to update epochs on redirection from writeback stage
-		method Action update_wEpoch;
-
-    // csrs from the csrfile.
-    method Action csr_misa_c (Bit#(1) c);
-
-  `ifdef triggers
-    method Action trigger_data1(Vector#(`trigger_num, TriggerData) t);
-    method Action trigger_data2(Vector#(`trigger_num, Bit#(XLEN)) t);
-    method Action trigger_enable(Vector#(`trigger_num, Bool) t);
-  `endif
-
-	endinterface
-
+`ifdef stage1_noinline
   (*synthesize*)
+`endif
   module mkstage1#(parameter Bit#(XLEN) hartid) (Ifc_stage1);
 
     String stage1=""; // defined for logger
@@ -109,7 +87,7 @@ package stage1;
 		TX#(PIPE1) tx_tostage2 <- mkTX;
 
   `ifdef rtldump
-		TX#(CommitLogPacket) tx_inst <- mkTX;
+		TX#(CommitLogPacket) tx_commitlog <- mkTX;
   `endif
 
     // This variable holds the current epoch values of the pipe
@@ -395,7 +373,7 @@ package stage1;
     `endif
       if(enque_instruction) begin
       `ifdef rtldump
-        tx_inst.u.enq(CommitLogPacket{instruction: inst, pc: stage0pc.address, mode: ?,
+        tx_commitlog.u.enq(CommitLogPacket{instruction: inst, pc: stage0pc.address, mode: ?,
             inst_type: tagged None});
       `endif
         tx_tostage2.u.enq(pipedata);
@@ -416,11 +394,13 @@ package stage1;
     // The former approach could work with compressed as well if : we process both the instructions
     // and enqueue them simultaneously into the next stage. Not sure what other dependencies would
     // be there?
-		interface inst_response = interface Put
-			method Action put (IMem_core_response#(32, `iesize) resp);
-        `logLevel( stage1, 3, $format("[%2d]STAGE1: ",hartid,fshow(resp)))
-        ff_memory_response.enq(resp);
-			endmethod
+    interface icache = interface Ifc_s1_icache
+  		interface inst_response = interface Put
+  			method Action put (IMem_core_response#(32, `iesize) resp);
+          `logLevel( stage1, 3, $format("[%2d]STAGE1: ",hartid,fshow(resp)))
+          ff_memory_response.enq(resp);
+  			endmethod
+      endinterface;
     endinterface;
 
     // Description : This interface will capture the prediction response from the BTB module. If
@@ -428,48 +408,55 @@ package stage1;
     // that have been fetched from the I - mem. If compressed is not supported then a single
     // prediction is only provided for the entire 32 - bit instruction has been received from the
     // I - cache.
-    interface rx_from_stage0 = rx_fromstage0.e;
+    interface rx = interface Ifc_s1_rx
+      interface rx_from_stage0 = rx_fromstage0.e;
+    endinterface;
 
     // MethodName : tx_to_stage2
     // Explicit Conditions : None
     // Implicit Conditions : tx is not empty.
     // Description : This method will transmit the instruction to the next stage.
-		interface tx_to_stage2 = tx_tostage2.e;
-  `ifdef rtldump
-		interface tx_to_stage2_inst = tx_inst.e;
-  `endif
-    // MethodName : update_eEpoch
-    // Explicit Conditions : None
-    // Implicit Conditions : None
-    method Action update_eEpoch;
-      rg_eEpoch<=~rg_eEpoch;
-    endmethod
+    interface tx = interface Ifc_s1_tx
+  		interface tx_to_stage2 = tx_tostage2.e;
+    `ifdef rtldump
+	  	interface tx_commitlog = tx_commitlog.e;
+    `endif
+    endinterface;
 
-    // MethodName : update_wEpoch
-    // Explicit Conditions : None
-    // Implicit Conditions : None
-    method Action update_wEpoch;
-      rg_wEpoch<=~rg_wEpoch;
-    endmethod
-
-    // This method captures the "c" of misa csr
-    method Action csr_misa_c (Bit#(1) c);
-      wr_csr_misa_c <= c;
-    endmethod
-  `ifdef triggers
-    method Action trigger_data1(Vector#(`trigger_num, TriggerData) t);
-      for(Integer i=0; i<`trigger_num; i=i+1)
-        v_trigger_data1[i] <= t[i];
-    endmethod
-    method Action trigger_data2(Vector#(`trigger_num, Bit#(XLEN)) t);
-      for(Integer i=0; i<`trigger_num; i=i+1)
-        v_trigger_data2[i] <= t[i];
-    endmethod
-    method Action trigger_enable(Vector#(`trigger_num, Bool) t);
-      for(Integer i=0; i<`trigger_num; i=i+1)
-        v_trigger_enable[i] <= t[i];
-    endmethod
-  `endif
+    interface common = interface Ifc_s1_common
+      // MethodName : update_eEpoch
+      // Explicit Conditions : None
+      // Implicit Conditions : None
+      method Action ma_update_eEpoch;
+        rg_eEpoch<=~rg_eEpoch;
+      endmethod
+  
+      // MethodName : update_wEpoch
+      // Explicit Conditions : None
+      // Implicit Conditions : None
+      method Action ma_update_wEpoch;
+        rg_wEpoch<=~rg_wEpoch;
+      endmethod
+  
+      // This method captures the "c" of misa csr
+      method Action ma_csr_misa_c (Bit#(1) c);
+        wr_csr_misa_c <= c;
+      endmethod
+    `ifdef triggers
+      method Action trigger_data1(Vector#(`trigger_num, TriggerData) t);
+        for(Integer i=0; i<`trigger_num; i=i+1)
+          v_trigger_data1[i] <= t[i];
+      endmethod
+      method Action trigger_data2(Vector#(`trigger_num, Bit#(XLEN)) t);
+        for(Integer i=0; i<`trigger_num; i=i+1)
+          v_trigger_data2[i] <= t[i];
+      endmethod
+      method Action trigger_enable(Vector#(`trigger_num, Bool) t);
+        for(Integer i=0; i<`trigger_num; i=i+1)
+          v_trigger_enable[i] <= t[i];
+      endmethod
+    `endif
+    endinterface;
   endmodule
 endpackage
 

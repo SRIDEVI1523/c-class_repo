@@ -72,8 +72,10 @@ package TbSoc;
   `else
     Ifc_Soc soc <- mkSoc();
   `endif
-
+  
+  `ifdef rtldump
     `include "csr_probe.bsv"
+  `endif
 
     UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5);
     Reg#(Bool) rg_read_rx<- mkDReg(False);
@@ -180,10 +182,12 @@ package TbSoc;
 
         if (idump.inst_type matches tagged MEM .d) begin
           let store_data = d.data;
+        `ifdef atomic
           if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
             store_data = fn_atomic_op(d.atomic_op,d.data, d.commit_data);
           end
-          if (d.access == Load || d.access == Atomic) begin
+        `endif
+          if (d.access == Load `ifdef atomic || d.access == Atomic `endif ) begin
             if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.commit_data);
             if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
@@ -199,14 +203,16 @@ package TbSoc;
           if(valueOf(XLEN) ==32&& d.access != Fence && d.access != FenceI)
             $fwrite(dump, " mem 0x%8h", d.address);
 
+        `ifdef atomic
           if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
             if(valueOf(XLEN) ==64)
               $fwrite(dump, " mem 0x%16h", d.address);
             if(valueOf(XLEN) ==32)
               $fwrite(dump, " mem 0x%8h", d.address);
           end
+        `endif
 
-          if (d.access == Store || (d.access == Atomic && d.atomic_op != 5)) begin
+          if (d.access == Store  `ifdef atomic || (d.access == Atomic && d.atomic_op != 5) `endif ) begin
             if (d.size == 0) begin
               if (store_data[7:4]==0)
                 $fwrite(dump, " 0x%1h", store_data[3:0]);

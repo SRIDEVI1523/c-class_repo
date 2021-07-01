@@ -29,92 +29,28 @@ package alu;
   import ccore_types::*;
   import BUtils :: * ;
   `include "ccore_params.defines"
-
-`ifdef triggers
-  function Tuple2#(Bool, Bit#(`causesize)) check_for_triggers(
-                                                        Vector#(`trigger_num, TriggerData) tdata1,
-                                                        Vector#(`trigger_num, Bit#(XLEN)) tdata2,
-                                                        Vector#(`trigger_num, Bool) tenable,
-                                                        Bit#(`vaddr) address, Bit#(XLEN) data,
-                                                        Access_type  memaccess, Bit#(2) size );
-
-    Bool trap = False;
-    Bool chain = False;
-    Bit#(`causesize) cause = `Breakpoint;
-    Bit#(XLEN) compare_value ;
-    for(Integer i=0; i<`trigger_num; i=i+1)begin
-      if(tenable[i] &&& ((!trap && !chain) || (chain && trap))
-                    &&& tdata1[i] matches tagged MCONTROL .mc
-                    &&& ((mc.load == 1 && memaccess == Load && mc.select == 0) ||
-                         (mc.store == 1 && memaccess == Store))
-                    &&& ( mc.size ==0 || (mc.size == 1 && size == 0)
-                        ||(mc.size == 2 && size == 1)
-                        ||(mc.size == 3 && size == 2)
-                      `ifdef RV64 || (mc.size == 5 && size == 3) `endif )
-                    ) begin
-        Bit#(XLEN) trigger_compare = tdata2[i];
-        if(mc.select == 0)
-          compare_value = address;
-        else
-          compare_value = data;
-        if(mc.matched == 0)begin
-          if(trigger_compare == compare_value)
-            trap = True;
-          else if(chain)
-            trap = False;
-        end
-        if(mc.matched == 2)begin
-          if(compare_value >= trigger_compare)
-            trap = True;
-          else if(chain)
-            trap = False;
-        end
-        if(mc.matched == 3)begin
-          if(compare_value < trigger_compare)
-            trap = True;
-          else if(chain)
-            trap = False;
-        end
-      `ifdef debug
-        if(trap && mc.action_ == 1)begin
-          cause = `HaltTrigger;
-          cause[`causesize - 1] = 1;
-        end
-      `endif
-        chain = unpack(mc.chain);
-      end
-    end
-
-    return tuple2(trap, cause);
-  endfunction
-`endif
-
+  `include "decoder.defines"
 
 	(*noinline*)
 	function ALU_OUT fn_alu (Bit#(4) fn, Bit#(XLEN) op1, Bit#(XLEN) op2, Bit#(`vaddr) op3,
                            Bit#(`vaddr) effective_address, Instruction_type inst_type, Bit#(2) funct3
-                           `ifdef RV64 , Bool word32 `endif  ,Bit#(1) misa_c
-                         `ifdef triggers
-                           ,Vector#(`trigger_num, TriggerData) tdata1
-                           ,Vector#(`trigger_num, Bit#(XLEN))  tdata2
-                           ,Vector#(`trigger_num, Bool)        tenable
-                         `endif
+                         `ifdef RV64 , Bool word32 `endif  ,Bit#(1) misa_c
                          `ifdef bpu , Bit#(`vaddr) nextpc, Bit#(1) prediction
-                            `ifdef compressed ,Bool comp `endif
+                         `ifdef compressed ,Bool comp `endif
                          `endif );
 
     /*---------------------------- Perform all the arithmetic --------------------------------*/
     // ADD * ADDI * SUB*
     Bit#(TAdd#(XLEN, 1)) inv = duplicate(pack(fn[1]));
     let inv_op2 = {op2,1'b0}^inv;
-    let op1_xor_op2 = op1^op2;
     Bit#(XLEN) adder_output = truncateLSB({op1,1'b1} + inv_op2);
-    Bit#(1) adder_z_flag = ~|op1_xor_op2;
     // ---------------------------------------------------------------------------------------- //
 
     // ------------------------------- comparison based operations ---------------------------- //
     // SLT SLTU
+    let op1_xor_op2 = op1^op2;
     Bit#(1) sign = ~fn[1];
+    Bit#(1) adder_z_flag = ~|op1_xor_op2;
     Int#(TAdd#(XLEN, 1)) a = unpack({sign & op1[valueOf(XLEN)-1], op1});
     Int#(TAdd#(XLEN, 1)) b = unpack({sign & op2[valueOf(XLEN)-1], op2});
     Bool less = a < b;
@@ -182,17 +118,6 @@ package alu;
     end
   `endif
     // --------------------------------------------------------------------------------------- //
-
-    // ------------------------ check for load/store triggers ---------------------------------//
-  `ifdef triggers
-    // TODO. This can be moved to stage3 itself.
-    let {trig_trap, trig_cause} = check_for_triggers(tdata1, tdata2, tenable, effective_address,
-                                                     op2, memaccess, funct3[1:0]);
-    if(inst_type == MEMORY && trig_trap)begin
-      trap = True;
-      cause = trig_cause;
-    end
-  `endif
 
     return ALU_OUT{trap           : trap,
                    aluresult      : zeroExtend(final_output),

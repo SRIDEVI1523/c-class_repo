@@ -1,0 +1,49 @@
+
+// -- spec defined exceptions
+`define Inst_addr_misaligned  0 
+`define Inst_access_fault     1 
+`define Illegal_inst          2 
+`define Breakpoint            3 
+`define Load_addr_misaligned  4 
+`define Load_access_fault     5 
+`define Store_addr_misaligned 6 
+`define Store_access_fault    7 
+`define Ecall_from_user       8 
+`define Ecall_from_supervisor 9 
+`define Ecall_from_machine    11
+`define Inst_pagefault        12
+`define Load_pagefault        13
+`define Store_pagefault       15
+
+
+// - spec defined interrupts
+`define User_soft_int         0
+`define Supervisor_soft_int   1
+`define Machine_soft_int      3
+`define User_timer_int        4
+`define Supervisor_timer_int  5
+`define Machine_timer_int     7
+`define User_external_int     8
+`define Supervisor_external_int 9
+`define Machine_external_int  11
+`define CounterInterrupt      16
+
+// - custom exceptions
+//`define Int_divide_by_zero    17
+//`define FP_invalid            18
+//`define FP_divide_by_zero     19
+//`define FP_overflow           20
+//`define FP_underflow          21
+//`define FP_inexact            22
+
+//------------ internal encodings --------------//
+`define Rerun                 `max_ex_cause+1
+`define IcacheFence           `max_ex_cause+2
+`define SFence                `max_ex_cause+3
+// --------------------------------------------//
+
+// --------------- micro-trap causes --------- //
+`define FenceI_rerun            1
+`define Sfence_rerun            2
+`define CSR_rerun               3
+// ------------------------------------------- //

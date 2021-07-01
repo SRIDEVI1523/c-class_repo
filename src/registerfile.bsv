@@ -4,6 +4,7 @@
 Author : Neel Gala
 Email id : neelgala@gmail.com
 Details:
+
 This module implements the integer and floating point register files. They are currently implemented
 as RegFile. The integer register file requires 2 read and 1 write ports.
 The floating point registerfile however will require 3 read ports and 1 write ports
@@ -11,23 +12,18 @@ The floating point registerfile however will require 3 read ports and 1 write po
 On system reset,  the register files are initialized to 0. This phase will take 32 cycles total.
 Only after the initialization phase can the
 
-the debug interface allows the debugger to read / write from / to either of the registerfiles.
-This interface should be made mutually exclusive with respect to the other rules accessing the
-register files,  otherwise they will require dedicated extra ports. This scheduling is done
-implicitly by bluespec owing to the sequence in which the methods have been written,  The debugger
-however cannot read the values in the initialization phase.
-
+compile params affecting this file:
+- merged_rf: indicate if frf and xrf should be merged into a single RF. Only enabled when F/D
+  support is there.
+- spfpu: to indicate if floating point support is available or not.
 --------------------------------------------------------------------------------------------------
 */
 package registerfile;
 	/*==== Project Imports === */
 	import ccore_types::*;
-	`include "ccore_params.defines"
 	/*======================== */
 	/*===== Package Imports ==== */
 	import RegFile::*;
-	import ConfigReg::*;
-  import GetPut::*;
   `include "Logger.bsv"
 	/*===========================*/
 
@@ -39,28 +35,39 @@ package registerfile;
   `endif
 		method Action commit_rd (CommitData c);
 	endinterface
-
+`ifdef registerfile_noinline
 	(*synthesize*)
+`endif
 	module mkregisterfile#(parameter Bit#(XLEN) hartid) (Ifc_registerfile);
-    String rf ="";
-		RegFile#(Bit#(5), Bit#(XLEN)) integer_rf <- mkRegFileWCF(0, 31);
-	`ifdef spfpu
-		RegFile#(Bit#(5), Bit#(FLEN)) floating_rf <- mkRegFileWCF(0, 31);
-	`endif
-		Reg#(Bool) initialize <- mkReg(True);
+    String regfile ="";
+`ifdef merged_rf
+    RegFile#(Bit#(6), Bit#(ELEN)) rf <- mkRegFileWCF(0,63);
+		Reg#(Bit#(6)) rg_index <- mkReg(0);
+`else
+    RegFile#(Bit#(5), Bit#(XLEN)) xrf <- mkRegFileWCF(0, 31);
 		Reg#(Bit#(5)) rg_index <- mkReg(0);
+  `ifdef spfpu
+    RegFile#(Bit#(5), Bit#(FLEN)) frf <- mkRegFileWCF(0, 31);
+  `endif
+`endif
+
+		Reg#(Bool) initialize <- mkReg(True);
 
     // The following rule is fired on system reset and writes all the register values to "0". This
     // rule will never fire otherwise
 		rule initialize_regfile(initialize);
-		`ifdef spfpu
-		  floating_rf.upd(rg_index, 0);
-		`endif
-			integer_rf.upd(rg_index, 0);
+    `ifdef merged_rf
+			rf.upd(rg_index,0);
+    `else
+      xrf.upd(rg_index, 0);
+      `ifdef spfpu
+        frf.upd(rg_index, 0);
+      `endif
+    `endif
 			rg_index <= rg_index + 1;
-			if(rg_index == 'd31)
+			if(rg_index == `ifdef merged_rf 'd63 `else 'd31 `endif )
 				initialize <= False;
-        `logLevel( rf, 1, $format("[%2d]RF : Initialization phase. Count: %d",hartid,rg_index))
+        `logLevel( regfile, 1, $format("[%2d]RF : Initialization phase. Count: %d",hartid,rg_index))
 		endrule
 
 
@@ -71,12 +78,14 @@ package registerfile;
     // Implicit Conditions : None
     method ActionValue#(Bit#(ELEN)) read_rs1(Bit#(5) addr `ifdef spfpu, RFType rs1type `endif )
                                                                                     if(!initialize);
-    `ifdef spfpu
-      if(rs1type == FRF)
-        return zeroExtend(floating_rf.sub(addr));
-      else
+    `ifdef merged_rf
+      return zeroExtend(rf.sub({pack(rs1type==FRF),addr}));
+    `else
+      `ifdef spfpu
+        if(rs1type == FRF) return zeroExtend(frf.sub(addr)); else
+      `endif
+      return zeroExtend(xrf.sub(addr)); // zero extend is required when XLEN<ELEN*/
     `endif
-        return zeroExtend(integer_rf.sub(addr)); // zero extend is required when XLEN<ELEN
     endmethod
     // This method will read operand2 using rs2addr from the decode stage. If there a commit in the
     // same cycle to rs2addr, then that value if bypassed else the value is read from the
@@ -85,12 +94,14 @@ package registerfile;
     // Implicit Conditions : None
     method ActionValue#(Bit#(ELEN)) read_rs2(Bit#(5) addr `ifdef spfpu, RFType rs2type `endif )
                                                                                     if(!initialize);
-    `ifdef spfpu
-      if(rs2type == FRF)
-        return zeroExtend(floating_rf.sub(addr));
-      else
+    `ifdef merged_rf
+      return zeroExtend(rf.sub({pack(rs2type==FRF),addr}));
+    `else
+      `ifdef spfpu
+        if(rs2type == FRF) return zeroExtend(frf.sub(addr)); else
+      `endif
+      return zeroExtend(xrf.sub(addr)); // zero extend is required when XLEN<ELEN*/
     `endif
-        return zeroExtend(integer_rf.sub(addr));// zero extend is required when XLEN<ELEN
     endmethod
   `ifdef spfpu
     // This method will read operand3 using rs3addr from the decode stage. If there a commit in the
@@ -99,7 +110,12 @@ package registerfile;
     // Explicit Conditions : fire only when initialize is False;
     // Implicit Conditions : None
     method ActionValue#(Bit#(FLEN)) read_rs3(Bit#(5) addr) if(!initialize);
-      return floating_rf.sub(addr);
+      /*return frf.sub(addr);*/
+      `ifdef merged_rf 
+         return rf.sub({1'b1,addr});
+      `else 
+         return frf.sub(addr);
+      `endif
     endmethod
   `endif
 
@@ -109,17 +125,17 @@ package registerfile;
     // Explicit Conditions : fire only when initialize is False;
     // Implicit Conditions : None
 		method Action commit_rd (CommitData c) if(!initialize);
-      `logLevel( rf, 1, $format("[%2d]RF : Writing Rd: %d(%h) ",hartid,c.addr, c.data
+     `logLevel( regfile, 1, $format("[%2d]RF : Writing Rd: %d(%h) ",hartid,c.addr, c.data
                                                   `ifdef spfpu, fshow(c.rdtype) `endif ))
-
+    `ifdef merged_rf 
+  	  if (c.rdtype != IRF || c.addr != 0)
+    	  rf.upd({pack(c.rdtype==FRF),c.addr},truncate(c.data));
+    `else
       `ifdef spfpu
-        if(c.rdtype == FRF)begin
-			  	floating_rf.upd(c.addr, truncate(c.data));
-        end else
+        if(c.rdtype == FRF) frf.upd(c.addr, truncate(c.data)); else
       `endif
-			  if(c.addr != 0)begin
-			  	integer_rf.upd(c.addr, truncate(c.data)); // truncate is required when XLEN<ELEN
-			  end
+        if(c.addr != 0) xrf.upd(c.addr, truncate(c.data)); // truncate is required when XLEN<ELEN
+    `endif
 		endmethod
 	endmodule
 endpackage

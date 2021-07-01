@@ -1,0 +1,45 @@
+// Copyright (c) 2020 InCore Semiconductors Pvt. Ltd. see LICENSE.incore for more details on licensing terms
+/*
+Author: Neel Gala, neelgala@incoresemi.com
+Created on: Tuesday 22 June 2021 01:48:12 PM
+
+*/
+/*doc:overview:
+This package includes a semi-parameterized function which can be used to performing bypass of
+operands from variable sources to a single sink
+
+compile-macros:
+- bypass_noinline: When set, causes each function to be synthesized as a separate verilog file.
+*/
+package bypass ;
+  import FIFOF        :: * ;
+  import Vector       :: * ;
+  import SpecialFIFOs :: * ;
+  import FIFOF        :: * ;
+
+  `include "Logger.bsv"
+
+  import ccore_types  :: * ;
+
+  `ifdef bypass_noinline
+  (*noinline*)
+  `endif
+  function Tuple2#(Bool, Bit#(ELEN)) fn_bypass (BypassReq req, 
+                                                Vector#(`bypass_sources, FwdType) fwd);
+    Bit#(`bypass_sources) choice = 0;
+    Bool inst_in_pipe = req.sb_lock == 1;
+    for (Integer i = 0; i<`bypass_sources; i = i + 1) begin
+      choice[i] = pack(fwd[i].valid && fwd[i].addr == req.rd && fwd[i].epochs == req.epochs
+                        `ifdef spfpu && fwd[i].rdtype == req.rdtype `endif );
+    end
+    Bool available = unpack(|choice) || !inst_in_pipe;
+    Bit#(ELEN) fwd_data = case(choice) matches
+      'b?1: fwd[0].data;
+      'b10: fwd[1].data;
+      default: req.rfval;
+    endcase;
+    
+    return tuple2(available, fwd_data);
+  endfunction:fn_bypass
+endpackage: bypass
+

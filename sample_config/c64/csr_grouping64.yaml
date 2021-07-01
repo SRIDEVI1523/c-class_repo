@@ -32,7 +32,6 @@ grp1:
     - SATP
     - MIDELEG
     - MEDELEG
-grp2:
     - PMPCFG0
     - PMPADDR0
     - PMPADDR1

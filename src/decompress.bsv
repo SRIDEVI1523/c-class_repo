@@ -214,7 +214,9 @@ package decompress;
   `define F7_AND      7'b0000000
 
 
+`ifdef decompress_noinline
   (*noinline*)
+`endif
   function Bit#(32) fn_decompress(Bit#(16) inst);
     case (inst) matches
       // ------------------------------ C0 space decode ---------------------------------------- //
@@ -362,7 +364,7 @@ package decompress;
   `else
       `CSDSP      : return {`IMM_MEMDSP_hi , `RS2  ,  `RS1_SP, `F3_SD  ,`IMM_MEMDSP_lo  , `OP_STORES  , 2'b11};
   `endif
-      default: return 0;
+      default: return zeroExtend(inst);
     endcase
   endfunction
 endpackage

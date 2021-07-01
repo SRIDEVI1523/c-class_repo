@@ -11,6 +11,19 @@
 num_harts: {type: integer, default: 1, min: 1, max: 1024}
 
 ###
+#fetchbuffer_sz
+# **Description**: Integer indicating the size of the buffer between the fetch stage and the decoder
+# stage
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   fetchbuffer_sz : 3
+
+fetchbuffer_sz: {type: integer, default: 3, min: 1}
+
+###
 #merged_rf: 
 # **Description**: Boolean field to indicate if the registerfiles of floating
 # and integer should be implemented as a single extended regfile in hw. This
@@ -157,7 +170,9 @@ a_extension:
 m_extension:
   type: dict
   schema:
-    mul_stages:
+    mul_stages_out:
+      type: integer
+    mul_stages_in:
       type: integer
     div_stages:
       type: integer
@@ -399,19 +414,6 @@ reset_pc:
   type: integer
   default: 4096
 
-###
-#physical_addr_size
-#  **Description**: Integer value indicating the number of physical address bits
-#
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    physical_addr_size: 32
-
-physical_addr_size:
-  type: integer
-  default: 32
 
 ###
 #bus_protocol
@@ -445,21 +447,6 @@ fpu_trap:
   default: False
 
 ###
-#debugger_support
-#  **Description**: A boolean field indicating if the core should be implemented
-#  with debugger support
-#
-#  **Examples**:
-#
-#  .. code-block: yaml
-#
-#    debugger_support : True
-
-debugger_support:
-  type: boolean
-  default: False
-
-###
 #no_of_triggers
 #  **Description**: An integer field indicating the number of triggers to be
 #  implemented
@@ -474,59 +461,6 @@ no_of_triggers:
   type: integer
   default: 0
 
-###
-#csr_configuration
-#  **Description**: Captures various parameters for the csr implementation
-#
-#    - ``structure``: should be fixed to "Daisy"
-#    - ``counters_grp4``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 7
-#    - ``counters_grp5``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 7
-#    - ``counters_grp6``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 7
-#    - ``counters_grp7``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 8
-#
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    csr_configuration:
-#      structure : "daisy"
-#      counters_in_grp4: 7
-#      counters_in_grp5: 7
-#      counters_in_grp6: 7
-#      counters_in_grp7: 8
-
-csr_configuration:
-    type: dict
-    schema:
-      structure:
-        type: string
-        allowed: ["daisy"]      
-      counters_in_grp4:
-        type: integer
-        max: 7
-        min: 0
-      counters_in_grp5:
-        type: integer
-        max: 7
-        min: 0
-      counters_in_grp6:
-        type: integer
-        max: 7
-        min: 0
-      counters_in_grp7:
-        type: integer
-        max: 8
-        min: 0
-    default:
-      structure : "daisy"
-      counters_in_grp4: 0
-      counters_in_grp5: 0
-      counters_in_grp6: 0
-      counters_in_grp7: 0
 
 ###
 #verilator_configuration
@@ -675,3 +609,55 @@ bsc_compile_options:
     open_ocd: False
     compile_target: 'sim'
 
+noinline_modules:
+  type: dict
+  schema:
+    stage0: 
+      type: boolean
+    stage1:
+      type: boolean
+    stage2:
+      type: boolean
+    stage3:
+      type: boolean
+    stage4:
+      type: boolean
+    stage5:
+      type: boolean
+    mbox:
+      type: boolean
+    mbox_mul:
+      type: boolean
+    mbox_div:
+      type: boolean
+    registerfile:
+      type: boolean
+    bpu:
+      type: boolean
+    riscv:
+      type: boolean
+    csrbox:
+      type: boolean
+    scoreboard:
+      type: boolean
+    bypass:
+      type: boolean
+    base_alu:
+      type: boolean
+  default:
+    stage0: False
+    stage1: False
+    stage2: False
+    stage3: False
+    stage4: False
+    stage5: False
+    mbox: False
+    mbox_mul: False
+    mbox_div: False
+    registerfile: False
+    bpu: False
+    riscv: False
+    csrbox: False
+    scoreboard: False
+    bypass: False
+    base_alu: False

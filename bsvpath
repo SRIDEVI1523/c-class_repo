@@ -1,9 +1,8 @@
 src/
 csrbox/
 src/predictors
-src/m_ext
+src/mbox
 src/fpu/
-src/m_ext/multiplier_designs
 test_soc/
 benchmarks/
 fabrics/axi4

@@ -1,5 +1,5 @@
 
-length_check_fields=['reset_pc', 'physical_addr_size']
+length_check_fields=['reset_pc']
 
 bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
 +RTS -K40000M -RTS -check-assert  -keep-fires \

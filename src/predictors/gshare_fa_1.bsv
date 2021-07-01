@@ -9,14 +9,13 @@ the respective methods describe their operations.
 
 --------------------------------------------------------------------------------------------------
 */
-package gshare_fa;
+package gshare_fa_1;
 
   // -- library imports
   import Assert :: *;
   import ConfigReg :: * ;
   import Vector :: * ;
   import OInt :: * ;
-  import RegFile :: * ;
 
   // -- project imports
   `include "Logger.bsv"
@@ -102,9 +101,7 @@ package gshare_fa;
     method Action ma_bpu_enable (Bool e);
   endinterface
 
-`ifdef bpu_noinline
   (*synthesize*)
-`endif
   module mkbpu#(parameter Bit#(XLEN) hartid) (Ifc_bpu);
 
     String bpu = "";
@@ -132,11 +129,9 @@ package gshare_fa;
     for(Integer i = 0; i < `bhtcols; i =  i + 1)
       for(Integer j = 0; j < `bhtdepth/`bhtcols ; j =  j + 1)
         rg_bht_arr[i][j] <- mkReg(1);*/
-    
-    RegFile#(Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))), Bit#(`statesize)) rg_bht_arr[`bhtcols];
-    for (Integer i = 0; i<`bhtcols; i = i + 1) begin
-      rg_bht_arr[i] <- mkRegFileWCF(0,fromInteger(valueOf(TDiv#(`bhtdepth,`bhtcols))-1));
-    end
+  
+    Vector#(`statesize, Reg#(Bit#(`bhtdepth))) rg_bht_arr <- replicateM(mkReg(0));
+
     /*doc : reg : This register points to the next entry in the Fully associative BTB that should
     be allocated for a new entry */
     Reg#(Bit#(TLog#(`btbdepth))) rg_allocate <- mkReg(0);
@@ -230,9 +225,9 @@ package gshare_fa;
         rg_initialize <= True;
     `endif
       let bht_index_ = fn_hash(rg_ghr[0], r.pc);
-      Bit#(`statesize) branch_state_ [`bhtcols];
-      for(Integer i = 0; i < `bhtcols ; i = i + 1)
-        branch_state_[i] = rg_bht_arr[i].sub(bht_index_);
+      Bit#(`statesize) branch_state_;
+      for(Integer i = 0; i < `statesize ; i = i + 1)
+        branch_state_[i] = rg_bht_arr[i][bht_index_];
 
       Bit#(`statesize) prediction_ = 1;
       Bit#(`vaddr) target_ = r.pc;
@@ -245,14 +240,19 @@ package gshare_fa;
 
       if(wr_bpu_enable) begin
         // a one - hot vector to store the hits of the btb
-        Bit#(`btbdepth) match_;
-        for(Integer i = 0; i < `btbdepth; i =  i + 1)
+        Bit#(`btbdepth) match_=?;
+        Bit#(TLog#(`btbdepth)) index = 0;
+        for(Integer i = 0; i < `btbdepth; i =  i + 1) begin
           match_[i] = pack(v_reg_btb_tag[i].tag == truncateLSB(r.pc) && v_reg_btb_tag[i].valid);
+          if (match_[i] == 1)
+            index = fromInteger(i);
+        end
 
         `logLevel( bpu, 1, $format("[%2d]BPU : Match:%h",hartid, match_))
 
         hit = unpack(|match_);
-        let hit_entry = select(readVReg(v_reg_btb_entry), unpack(match_));
+        //let hit_entry = select(readVReg(v_reg_btb_entry), unpack(match_));
+        let hit_entry = v_reg_btb_entry[index];
 
         if(|match_ == 1) begin
           `logLevel( bpu, 1, $format("[%2d]BPU : BTB Hit: ",hartid,fshow(hit_entry)))
@@ -293,7 +293,7 @@ package gshare_fa;
                prediction_ = 3;
 
             if(hit_entry.ci == Branch) begin
-              prediction_ = branch_state_[pack(hi)];
+              prediction_ = branch_state_;
               lv_ghr = {prediction_[`statesize - 1], truncateLSB(rg_ghr[0])};
               `logLevel( bpu, 0, $format("[%2d]BPU : New GHR:%h",hartid, lv_ghr))
             end
@@ -345,14 +345,14 @@ package gshare_fa;
         return  (a.tag == truncateLSB(d.pc) && a.valid);
       endfunction
 
-      let hit_index_ = findIndex(fn_tag_match, readVReg(v_reg_btb_tag));
+      /*let hit_index_ = findIndex(fn_tag_match, readVReg(v_reg_btb_tag));
 
       if(hit_index_ matches tagged Valid .h) begin
         v_reg_btb_entry[h] <= BTBEntry{ target : d.target, ci : d.ci
                             `ifdef compressed ,instr16: d.instr16, hi:unpack(d.pc[1]) `endif };
         `logLevel( bpu, 4, $format("[%2d]BPU : Training existing Entry index: %d",hartid,h))
       end
-      else begin
+      else begin*/
         `logLevel( bpu, 4, $format("[%2d]BPU : Allocating new index: %d",hartid,rg_allocate))
         v_reg_btb_entry[rg_allocate] <= BTBEntry{ target : d.target, ci : d.ci
                             `ifdef compressed ,instr16: d.instr16, hi:unpack(d.pc[1]) `endif };
@@ -360,12 +360,13 @@ package gshare_fa;
         rg_allocate <= rg_allocate + 1;
         if(v_reg_btb_tag[rg_allocate].valid)
           `logLevel( bpu, 4, $format("[%2d]BPU : Conflict Detected",hartid))
-      end
+//      end
 
       // we use the ghr version before the prediction to train the BHT
       let bht_index_ = fn_hash(d.history<<1, d.pc);
       if(d.ci == Branch && d.btbhit) begin
-        rg_bht_arr[d.pc[1]].upd(bht_index_, d.state);
+        rg_bht_arr[0][bht_index_] <= d.state[0];
+        rg_bht_arr[1][bht_index_] <= d.state[1];
         `logLevel( bpu, 4, $format("[%2d]BPU : Upd BHT entry: %d with state: %d",hartid,
                                                                               bht_index_, d.state))
       end
