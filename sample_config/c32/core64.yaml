@@ -1,0 +1,70 @@
+fetchbuffer_sz: 4
+num_harts: 1
+merged_rf: False
+s_extension:
+  itlb_size: 4
+  dtlb_size: 4
+total_events : 30
+iepoch_size: 2
+m_extension:
+  mul_stages_in : 1
+  mul_stages_out: 2
+  div_stages : 32
+branch_predictor:
+  instantiate: True
+  predictor: gshare
+  btb_depth: 32
+  bht_depth: 512
+  history_len: 8
+  history_bits: 5
+  ras_depth: 8
+icache_configuration:
+  instantiate: true
+  sets: 64
+  word_size: 4
+  block_size: 16
+  ways: 4
+  replacement: RANDOM
+  fb_size: 4
+  ecc_enable: false
+  one_hot_select: false
+dcache_configuration:
+  instantiate: true
+  sets: 64
+  word_size: 4
+  block_size: 16
+  ways: 4
+  fb_size: 8
+  sb_size: 2
+  ib_size: 2
+  replacement: RR
+  ecc_enable: false
+  one_hot_select: false
+  rwports: 1
+reset_pc: 4096
+physical_addr_size: 32
+bus_protocol: AXI4
+debugger_support: false
+no_of_triggers: 0
+bsc_compile_options:
+  test_memory_size: 33554432
+  assertions: true
+  ovl_assertions: False
+  sva_assertions: False
+  ovl_path: ""
+  trace_dump: False
+  compile_target: 'fpga'
+  suppress_warnings: ["none"]
+  verilog_dir: build/hw/verilog
+  build_dir: build/hw/intermediate
+  top_module: mktest_instances
+  top_file: test_instances.bsv
+  top_dir: src
+  open_ocd: False
+verilator_configuration:
+  coverage: none
+  trace: false
+  threads: 1
+  verbosity: true
+  sim_speed: fast
+  out_dir: bin

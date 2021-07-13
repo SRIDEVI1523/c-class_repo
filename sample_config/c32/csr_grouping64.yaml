@@ -18,7 +18,9 @@ grp1:
     - MTVAL
     - STVAL
     - MCYCLE
+    - MCYCLEH
     - MINSTRET
+    - MINSTRETH
     - MHARTID
     - MARCHID
     - MIMPID
@@ -26,12 +28,16 @@ grp1:
     - FFLAGS
     - FCSR
     - TIME
+    - TIMEH
     - CYCLE
+    - CYCLEH
     - MCOUNTINHIBIT
     - INSTRET
+    - INSTRETH
     - SATP
     - MIDELEG
     - MEDELEG
+grp2:
     - PMPCFG0
     - PMPADDR0
     - PMPADDR1
