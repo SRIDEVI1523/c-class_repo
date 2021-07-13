@@ -499,7 +499,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
                         };
     if((inst_type == JAL || inst_type == JALR) && meta.rd ==1)
       td.ci = Call;
-    else if(inst_type == JALR &&& wr_op1.addr matches 'b00?01) // TODO add x5 check
+    else if(inst_type == JALR &&& wr_op1.addr matches 'b00?01)
       td.ci = Ret;
     else if(inst_type == JAL || inst_type == JALR)
       td.ci = JAL;

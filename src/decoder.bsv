@@ -373,7 +373,6 @@ package decoder;
       `ATOMIC_op: return Atomic; 
     `endif
     `ifdef supervisor
-      // TODO: Get rid of if condition here
       `SYSTEM_op: if (funct7=='b0001001 && funct3==0) return SFence; else return Load;
     `endif
       default: return Load;
@@ -627,7 +626,6 @@ package decoder;
     if(inst_type==TRAP)
       temp1=zeroExtend(trapcause);
 
-    // TODO: Get rid of rerun when microtrap support implemented
     Bool microtrap = mem_access==Fence || mem_access==FenceI || inst_type==SYSTEM_INSTR
                 `ifdef supervisor || mem_access==SFence `endif ;
     let op_addr = OpAddr{rs1addr:rs1, rs2addr:rs2, rd:rd `ifdef spfpu ,rs3addr: rs3 `endif };
@@ -682,7 +680,6 @@ package decoder;
       Bit#(5) x_rs1addr = result_decode.op_addr.rs1addr;
       Bit#(5) x_rs2addr = result_decode.op_addr.rs2addr;
 
-      // TODO: Change this to microtrap
       if(is_microtrap_set)begin
         x_inst_type=TRAP;
         func_cause=microtrap_cause;

@@ -219,7 +219,7 @@ package ccore_types;
     RFType  rdtype;
   `endif
     Op1type rs1type;
-    Op2type rs2type; // TODO redundant to send in Stage3
+    Op2type rs2type; 
   } OpType deriving(Bits, Eq, FShow);
 
   // the final structure of the response from the decoder
