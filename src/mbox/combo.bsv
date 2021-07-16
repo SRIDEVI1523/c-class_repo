@@ -50,7 +50,7 @@ module mkcombo_mul(Ifc_combo_mul);
   Vector#(`MULSTAGES_OUT, Reg#(Bit#(`xlen)))           rg_output <- replicateM(mkReg(0));
 
   /*doc:wire: */
-  Wire#(Bit#(`xlen)) wr_output <- mkWire();
+  Wire#(Bit#(`xlen)) wr_output <- mkDWire(?);
   /*doc:wire: */
   Wire#(Bool) wr_valid <- mkDWire(False);
 
@@ -133,6 +133,7 @@ module mkcombo_mul(Ifc_combo_mul);
     `endif
       wr_output <= default_out;
       wr_valid <= True;
+      `logLevel( mul, 0, $format("MUL: product computed:%h",default_out))
     endrule:rl_perform_mul_2
   end
   else begin
