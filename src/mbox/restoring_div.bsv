@@ -104,9 +104,9 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
   rule single_step_div(rg_count != 0 && !rg_valid);
     let {upper, lower}=fn_single_div(truncateLSB(partial),truncate(partial), rg_op2);
     partial<= {upper, lower};
-    `logLevel( divider, 0, $format("core:%2d ",hartid,"DIV: RgCount:%d partial:%h QR:%b",rg_count, partial, quotient_remainder))
+    `logLevel( divider, 0, $format("[%2d]DIV: RgCount:%d partial:%h QR:%b",hartid, rg_count, partial, quotient_remainder))
     if(rg_op2 == 0)begin
-      `logLevel( divider, 0, $format("core:%2d ",hartid,"DIV: Divide by zero detected. RgCount:%d",rg_count))
+      `logLevel( divider, 0, $format("[%2d] DIV: Divide by zero detected. RgCount:%d",hartid, rg_count))
       rg_count <= 0;
       rg_valid <= True;
       Bit#(`xlen) reslt=quotient_remainder? truncate(rg_in1):'1;
@@ -121,6 +121,7 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
       reslt = ~reslt+ 1;
       Bit#(`xlen) product= `ifdef RV64 rg_wordop?signExtend(reslt[31:0]): `endif truncate(reslt);
       rg_result <= product;
+      `logLevel( divider, 0, $format("[%2d] DIV: Sending output:%h",hartid,product))
     end
     else
       rg_count <= rg_count +1;
@@ -128,7 +129,7 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
 
   method Action ma_inputs(Bit#(`xlen) in1, Bit#(`xlen) in2,  Bit#(3) funct3
                         `ifdef RV64 ,Bool wordop `endif );
-    `logLevel( divider, 0, $format("core:%2d ",hartid,"DIV: Got inputs rg_count: %d",rg_count))
+    `logLevel( divider, 0, $format("[%2d]DIV: Got inputs rg_count: %d",hartid, rg_count))
     let {op1, op2, complement, sign_op1} = fn_fix_inputs(in1, in2, funct3 `ifdef RV64 ,wordop `endif );
     partial<= zeroExtend(op1);
     rg_op2<= op2;
