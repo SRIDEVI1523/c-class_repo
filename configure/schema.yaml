@@ -11,6 +11,47 @@
 num_harts: {type: integer, default: 1, min: 1, max: 1024}
 
 ###
+#isb_sizes
+# **Description**: A dictionary of what the isbs between stages should be.
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   isb_sizes :
+#     isb_s0s1: 2
+#     isb_s1s2: 2
+#     isb_s2s3: 1
+#     isb_s3s4: 2
+#     isb_s4s5: 2
+
+isb_sizes:
+  type: dict
+  schema:
+    isb_s0s1:
+      type: integer
+      default: 2
+    isb_s1s2:
+      type: integer
+      default: 2
+    isb_s2s3:
+      type: integer
+      default: 1
+      allowed: [1]
+    isb_s3s4:
+      type: integer
+      default: 2
+    isb_s4s5:
+      type: integer
+      default: 2
+  default:
+    isb_s0s1: 2
+    isb_s1s2: 2
+    isb_s2s3: 1
+    isb_s3s4: 2
+    isb_s4s5: 2
+
+###
 #fetchbuffer_sz
 # **Description**: Integer indicating the size of the buffer between the fetch stage and the decoder
 # stage
@@ -48,6 +89,18 @@ merged_rf: {type: boolean, default: True}
 #   total_events: 28
 
 total_events: {type: integer, default: 0}
+
+###
+#waw_stalls
+# **Description**: Indicates if stalls must occur on a WAW hazard
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#   
+#   waw_stalls: False
+
+waw_stalls: {type: boolean, default: False}
 
 ###
 #iepoch_size

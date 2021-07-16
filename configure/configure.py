@@ -174,7 +174,9 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     if foo['bsc_compile_options']['sva_assertions']:
         macros += ' sva_assert'
 
-    macros += ' fetchbuffer_sz='+str(foo['fetchbuffer_sz'])
+    for isb,isb_val in foo['isb_sizes'].items():
+        macros += ' {0}={1}'.format(isb,isb_val)
+
     macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
     macros += ' dbuswidth='+str(xlen)
     macros += ' resetpc='+str(foo['reset_pc'])
@@ -185,6 +187,10 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     macros += ' desize='+str(foo['depoch_size'])
     macros += ' num_harts='+str(foo['num_harts'])
     macros += ' microtrap_support'
+
+    if not foo['waw_stalls']:
+        macros += ' no_wawstalls'
+        macros += ' wawid=3'
 
     if foo['bsc_compile_options']['compile_target'] == 'sim':
         macros += ' simulate'
@@ -315,7 +321,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     dsets = foo['dcache_configuration']['sets']
     isets = foo['dcache_configuration']['sets']
     rfset = 64 if foo['merged_rf'] else 32
-    macros += ' reset_cycles='+str(max(dsets, isets, rfset))
+    bhtsize = foo['branch_predictor']['bht_depth']
+    macros += ' reset_cycles='+str(max(dsets, isets, rfset, bhtsize))
 
     # find the size of interrupts
     max_int_cause = 11

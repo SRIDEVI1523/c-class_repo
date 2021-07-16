@@ -18,14 +18,14 @@ hart0:
         cause_name: debug_interrupt
         on_reset_enable: 1
         priv_mode : M
-    ISA: RV64IMACSUZicsr_Zifencei
+    ISA: RV64IMASUZicsr_Zifencei
     User_Spec_Version: '2.3'
     pmp_granularity: 1
     physical_addr_sz: 32
     supported_xlen:
       - 64
     misa:
-        reset-val: 0x8000000000141105
+        reset-val: 0x8000000000141101
         rv32:
             accessible: false
         rv64:
@@ -45,7 +45,7 @@ hart0:
                     warl:
                         dependency_fields: []
                         legal:
-                          - "extensions[25:0] bitmask [0x0141105, 0x0000000]"
+                          - "extensions[25:0] bitmask [0x0141101, 0x0000000]"
                         wr_illegal:
                           - "Unchanged"
     mvendorid:
