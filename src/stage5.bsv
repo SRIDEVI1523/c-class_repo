@@ -72,6 +72,13 @@ endinterface:Ifc_stage5
 /*doc:module: */
 (*synthesize*)
 `endif
+`ifdef simulate
+(*preempts = "rl_writeback_memop, rl_no_op"*)
+(*preempts = "rl_writeback_trap, rl_no_op"*)
+(*preempts = "rl_writeback_system, rl_no_op"*)
+(*preempts = "rl_writeback_baseout, rl_no_op"*)
+(*preempts = "rl_commit_drop, rl_no_op"*)
+`endif
 module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
 
   /*doc:submodules: The following instantiates all the RX virtual fifos*/
@@ -147,6 +154,12 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   let csr_response = csr.mv_core_resp;
   let epochs_match = rg_epoch == rx_fuid.u.first.epochs;
 
+`ifdef simulate
+  rule rl_no_op;
+    `logLevel( stage5, 0, $format("[%2d]STAGE5: No Instr to commit", hartid))
+  endrule: rl_no_op
+`endif
+
   /*doc:rule: This rule is basically to avoid commiting an instruction which was marked to be
   * dropped by any of the earlier stages. It is however, possible that the instruction that was
   * marked for drop, might have caused an lock on a register in the score-board. That lock needs to
@@ -155,8 +168,9 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     rx_fuid.u.deq;
     rx_drop.u.deq;
     let fuid = rx_fuid.u.first;
-    wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
-                           `ifdef spfpu rdtype: fuid.rdtype `endif };
+    /*wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
+                          `ifdef no_wawstalls , id: fuid.id `endif
+                           `ifdef spfpu rdtype: fuid.rdtype `endif };*/
   `ifdef rtldump
     rx_commitlog.u.deq;
   `endif
@@ -175,6 +189,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,fuid.pc))
     `logLevel( stage5, 0, $format("[%2d]STAGE5 : Trap: ",hartid, fshow(trapout)))
     wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
+                          `ifdef no_wawstalls , id: fuid.id `endif
                            `ifdef spfpu rdtype: fuid.rdtype `endif };
     if (epochs_match) begin
     `ifdef microtrap_support
@@ -259,6 +274,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
       if (exit) begin
         wr_increment_minstret <= True;
         wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(csr_response.data), unlock_only:False
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
         rx_systemout.u.deq;
         rx_fuid.u.deq;
@@ -286,6 +302,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     else begin
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping instruction",hartid))
       wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
       rx_systemout.u.deq;
       rx_fuid.u.deq;
@@ -307,6 +324,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
       wr_increment_minstret <= True;
       `ifdef spfpu csr.ma_set_fflags(baseout.fflags); `endif
       wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(baseout.rdvalue), unlock_only:False
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
       rx_fuid.u.deq;
       rx_baseout.u.deq;
@@ -320,6 +338,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     else begin
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping instruction",hartid))
       wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
       rx_baseout.u.deq;
       rx_fuid.u.deq;
@@ -348,7 +367,9 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   `endif
 
     if (epochs_match) begin
+      `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,rx_fuid.u.first.pc))
       if (!memop.io) begin // cacheable store/atomic op
+        `logLevel( stage5, 0, $format("[%2d]STAGE5 : Cached Store Op ",hartid, fshow(memop)))
         wr_commit_cacheop <= rg_epoch;
         wr_increment_minstret <= True;
         rx_fuid.u.deq;
@@ -357,6 +378,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
         let cache_resp = memop.atomic_rd_data;
         if (memop.memaccess == Atomic) 
           wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(cache_resp), unlock_only:False
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
       `else
         Bit#(ELEN) cache_resp = 0;
@@ -370,6 +392,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
       `endif
       end
       else begin 
+        `logLevel( stage5, 0, $format("[%2d]STAGE5 : Non-Cached Memory Op ",hartid, fshow(memop)))
         if (!rg_ioop_init) begin
           rg_ioop_init <= True;
           wr_commit_ioop <= rg_epoch;
@@ -390,6 +413,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
             let commit_data = ioresp.word;
             `ifdef spfpu if (memop.nanboxing) commit_data[63:32] = '1; `endif
             wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(commit_data), unlock_only:False
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
             rx_fuid.u.deq;
             rx_memio.u.deq;
@@ -410,6 +434,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     else begin
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping instruction",hartid))
       wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
+                                      `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
       rx_memio.u.deq;
       rx_fuid.u.deq;

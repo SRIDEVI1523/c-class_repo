@@ -225,7 +225,11 @@ package stage4;
           `ifdef dpfpu if (memop.nanboxing == 1 ) response.word[63:32] == '1; `endif
           fuid.insttype = BASE;
           let baseout = BaseOut {rd: rx_fuid.u.first.rd, rdvalue: mem_response.word, epochs: fuid.epochs
-            `ifdef spfpu ,fflags: 0, rdtype: fuid.rdtype `endif };
+                            `ifdef no_wawstalls ,id: ? `endif
+                            `ifdef spfpu        ,fflags: 0, rdtype: fuid.rdtype `endif };
+        `ifdef no_wawstalls
+          baseout.id = fuid.id;
+        `endif
           tx_baseout.u.enq(baseout);
           tx_fuid.u.enq(fuid);
           `logLevel( stage4, 0, $format("[%2d]STAGE4: Memory responded with data:",hartid, fshow(baseout)))
@@ -259,6 +263,7 @@ package stage4;
       let fuid = fn_fu2cu(rx_fuid.u.first);
       rx_mbox.u.deq;
       tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: mbox_result, epochs: fuid.epochs
+            `ifdef no_wawstalls ,id: fuid.id `endif
             `ifdef spfpu ,fflags: 0, rdtype: IRF `endif });
       fuid.insttype = BASE;
       tx_fuid.u.enq(fuid);

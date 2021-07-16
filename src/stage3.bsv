@@ -54,6 +54,7 @@ import bypass         :: * ;       // provides the operand bypassing logic
 import ccore_types    :: * ;       // for pipe - line types
 import dcache_types   :: * ;          // for dmem request types
 import pipe_ifcs      :: * ;
+import scoreboard     :: * ;
 `ifdef muldiv
   import mbox           :: * ;
 `endif
@@ -83,7 +84,6 @@ endinterface:Ifc_stage3
 `ifdef stage3_noinline
 (*synthesize*)
 `endif
-`ifdef perfmonitors
 // the following attributes is used to detect when a structural hazard occurs
 (*preempts="rl_exe_base_arith,rl_structural_stalls"*)
 (*preempts="rl_drop_instr, rl_structural_stalls"*)
@@ -93,12 +93,14 @@ endinterface:Ifc_stage3
 (*preempts="rl_exe_base_memory, rl_structural_stalls"*)
 (*preempts="rl_exe_base_control, rl_structural_stalls"*)
 (*preempts="rl_mbox, rl_structural_stalls"*)
-`endif
 module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 
   String stage3=""; // defined for logger
 
   // --------------------- Start instantiations ------------------------//
+
+  /*doc:submodule: instantiating the scoreboard module */
+  Ifc_scoreboard sboard <- mkscoreboard(hartid);
 
 `ifdef muldiv
   /*doc:wire: */
@@ -112,16 +114,14 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   RX#(Stage3Meta)         rx_meta   <- mkRX;
   RX#(Bit#(XLEN))         rx_mtval   <- mkRX;
   RX#(Instruction_type)   rx_instrtype   <- mkRX;
+  RX#(OpMeta)             rx_opmeta   <- mkRX;
 
   /*doc:wire: reads operand-1 from the registerfile which was indexed in the previous cycle*/
-  Wire#(RFOp1) wr_op1 <- mkWire();
+  Wire#(FwdType) wr_rf_op1 <- mkWire();
   /*doc:wire: reads operand-2 from the registerfile which was indexed in the previous cycle*/
-  Wire#(RFOp2) wr_op2 <- mkWire();
+  Wire#(FwdType) wr_rf_op2 <- mkWire();
   /*doc:wire: reads operand-3/immediate from the registerfile which was indexed in the previous cycle*/
   Wire#(RFOp3) wr_op3 <- mkWire();
-
-  /*doc:wire: holds the current scoreboard values*/
-  Wire#(SBD) wr_sboard <- mkWire();
 
   /*doc:wire: The vector of all bypass values coming from varios ISBs. The lower index indicates
   * bypass from the youngest instruction and the highest index indicates bypass from the oldest
@@ -152,7 +152,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   TX#(SystemOut)      tx_systemout <- mkTX;
   TX#(MemoryOut)      tx_memoryout <- mkTX;
   TX#(Bool)           tx_drop <- mkTX;
-  TX#(FUid)   tx_fuid <- mkTX;
+  TX#(FUid)           tx_fuid <- mkTX;
 
   /*doc:wire: holds the latest bypass values of the operands*/
   Wire#(Bit#(XLEN)) wr_fwd_op1 <- mkWire();
@@ -178,6 +178,9 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   // wire holding the compressed bit of the misa csr
   Wire#(Bit#(1)) wr_misa_c <- mkWire();
 
+  /*doc:wire: */
+  Wire#(Bool) wr_waw_stall <- mkDWire(False);
+
   // This variable holds the current epoch values of the pipe
   let curr_epochs = {rg_eEpoch, rg_wEpoch};
 
@@ -193,10 +196,15 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   // ---------------------- End Instatiations --------------------------//
   let meta = rx_meta.u.first;
   let mtval   = rx_mtval.u.first;
+  let opmeta = rx_opmeta.u.first;
+  let instr_type = rx_instrtype.u.first;
   let s4common = FUid{pc    : meta.pc,
                               rd    : meta.rd,
                               epochs : meta.epochs[0],
                               insttype : BASE
+                            `ifdef no_wawstalls 
+                              ,id: ? 
+                            `endif
                             `ifdef spfpu
                               ,rdtype : meta.rdtype
                             `endif } ;
@@ -211,42 +219,74 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     rx_meta.u.deq;
     rx_mtval.u.deq;
     rx_instrtype.u.deq;
+    rx_opmeta.u.deq;
   `ifdef rtldump
     rx_commitlog.u.deq;
   `endif
   endaction;
 
-`ifdef perfmonitors
   /*doc:rule: */
   rule rl_structural_stalls(rx_meta.u.notEmpty);
+  `ifdef perfmonitors
     wr_count_exestalls <= 1;
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: Structural stall in EXE", hartid))
+  `endif
+    `logLevel( stage3, stall, $format("[%2d]STAGE3: Structural stall in EXE", hartid))
   endrule:rl_structural_stalls
-`endif
 
   /*doc:rule: This rule performs the operand bypass for each operand. Here we ensure that
   * unnecessary stalls are not created when instructions have the same operand and destination
   * register. This is done by resetting the destination register bit in the scoreboard before
   * performing the bypass.*/
   rule rl_perform_fwding(rx_meta.u.notEmpty);
+    `logLevel( stage3, pc, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
+    
+    // ----------------------- check for WAW hazard ------------------------------------------- //
+    let sb_index = {`ifdef spfpu pack(meta.rdtype==FRF), `endif meta.rd };
+    let sb_rdlock = sboard.mv_board.rf_lock[sb_index];
+    Bool lv_waw_stall = unpack(sb_rdlock) 
+        `ifdef no_wawstalls && False `endif ;
+    wr_waw_stall <= lv_waw_stall ;
+    // ---------------------------------------------------------------------------------------- //
   `ifdef spfpu
-    RFType rf1type = `ifdef spfpu wr_op1.optype == FloatingRF ? FRF : `endif IRF;
-    RFType rf2type = `ifdef spfpu wr_op2.optype == FloatingRF ? FRF : `endif IRF;
+    RFType rf1type = `ifdef spfpu opmeta.rs1type == FloatingRF ? FRF : `endif IRF;
+    RFType rf2type = `ifdef spfpu opmeta.rs2type == FloatingRF ? FRF : `endif IRF;
   `endif
-    Bit#( `ifdef spfpu 64 `else 32 `endif ) sb_mask = meta.sb_mask & wr_sboard.rf_board;
-    BypassReq req_addr1 = BypassReq{rd:wr_op1.addr, rfval: wr_op1.data, epochs: curr_epochs[0]
-                    ,sb_lock: sb_mask[ { `ifdef spfpu pack(rf1type==FRF), `endif wr_op1.addr}] 
+  `ifdef no_wawstalls
+    let sb_rs1id = sboard.mv_board.v_id[{ `ifdef spfpu pack(rf1type==FRF), `endif opmeta.rs1addr}];
+    let sb_rs2id = sboard.mv_board.v_id[{ `ifdef spfpu pack(rf2type==FRF), `endif opmeta.rs2addr}];
+  `endif
+    Bit#( `ifdef spfpu 64 `else 32 `endif ) sb_mask =  sboard.mv_board.rf_lock;
+    BypassReq req_addr1 = BypassReq{rd:opmeta.rs1addr, epochs: curr_epochs[0]
+                    ,sb_lock: sb_mask[ { `ifdef spfpu pack(rf1type==FRF), `endif opmeta.rs1addr}] 
+                    `ifdef no_wawstalls ,id: sb_rs1id `endif
                     `ifdef spfpu ,rdtype: rf1type `endif };
-    BypassReq req_addr2 = BypassReq{rd:wr_op2.addr, rfval: wr_op2.data, epochs: curr_epochs[0]
-                    ,sb_lock: sb_mask[ { `ifdef spfpu pack(rf2type==FRF), `endif wr_op2.addr}] 
+    BypassReq req_addr2 = BypassReq{rd: opmeta.rs2addr, epochs: curr_epochs[0]
+                    ,sb_lock: sb_mask[ { `ifdef spfpu pack(rf2type==FRF), `endif opmeta.rs2addr}] 
+                    `ifdef no_wawstalls ,id: sb_rs2id `endif
                     `ifdef spfpu ,rdtype: rf2type `endif };
-    let {_op1_avail, _fwd_op1} = fn_bypass( req_addr1, wr_bypass);
-    let {_op2_avail, _fwd_op2} = fn_bypass( req_addr2, wr_bypass);
+    Vector#(TAdd#(`bypass_sources ,1), FwdType) byp1, byp2;
+    byp1[0] = wr_bypass[0];
+    byp2[0] = wr_bypass[0];
+    byp1[1] = wr_bypass[1];
+    byp2[1] = wr_bypass[1];
+    byp1[2] = wr_rf_op1;
+    byp2[2] = wr_rf_op2;
+    let {_op1_avail, _fwd_op1} = fn_bypass( req_addr1, byp1);
+    let {_op2_avail, _fwd_op2} = fn_bypass( req_addr2, byp2);
     wr_op1_avail <= _op1_avail; wr_fwd_op1 <= _fwd_op1;
     wr_op2_avail <= _op2_avail; wr_fwd_op2 <= _fwd_op2;
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: Bypass Op1:%2d Op1Avail:%b Op1Val:%h",hartid, wr_op1.addr, _op1_avail, _fwd_op1))
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: Bypass Op2:%2d Op2Avail:%b Op2Val:%h",hartid, wr_op2.addr, _op2_avail, _fwd_op2))
-    
+    if (lv_waw_stall)begin
+      `logLevel( stage3, stall, $format("[%2d]STAGE3: WAW Stall", hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: ",hartid, fshow(sboard.mv_board)))
+    end
+    else begin
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Bypass Op1:%2d Op1Avail:%b Op1Val:%h",
+          hartid, opmeta.rs1addr, _op1_avail, _fwd_op1))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Bypass Op2:%2d Op2Avail:%b Op2Val:%h",
+          hartid, opmeta.rs2addr, _op2_avail, _fwd_op2))
+//      `logLevel( stage3, 0, $format("[%2d]STAGE3: Fwd: ", hartid, fshow(byp1)))
+//      `logLevel( stage3, 0, $format("[%2d]STAGE3: ",hartid, fshow(sboard.mv_board)))
+    end
   endrule:rl_perform_fwding
 
   /*doc:rule: When epochs don't match the instruction is marked as DROP for all further pipeline
@@ -258,7 +298,6 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   */
   rule rl_drop_instr(!epochs_match);
     deq_rx;
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     `logLevel( stage3, 0, $format("[%2d]STAGE3: NOPing instruction - epochs-mismatch",hartid))
     tx_drop.u.enq(True);
     let common_pkt = s4common; common_pkt.insttype = DROP;
@@ -273,8 +312,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   /*doc:rule: This rule will fire when the epochs match the instruction has been decoded as a
   * system instruction from the previous stage. Only operand1 is required for these instructions
   * and thus a stall is created only if operand-1 is not available*/
-  rule rl_system_instr(epochs_match && rx_instrtype.u.first == SYSTEM_INSTR);
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
+  rule rl_system_instr(epochs_match && instr_type == SYSTEM_INSTR && !wr_waw_stall);
     `logLevel( stage3, 0, $format("[%2d]STAGE3: System Op received.",hartid))
     let systemout = SystemOut {funct3     : truncate(meta.funct),
                                lpc        : truncate(meta.pc),
@@ -283,6 +321,11 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
                                csr_address : truncate(wr_op3.data) };
     let common_pkt = s4common; common_pkt.insttype = SYSTEM;
     if (wr_op1_avail) begin
+      let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
+    `ifdef no_wawstalls
+      common_pkt.id = _id;
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
+    `endif
       tx_systemout.u.enq(systemout);
       tx_fuid.u.enq(common_pkt);
       deq_rx;
@@ -293,8 +336,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting of op1",hartid))
-      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(wr_sboard)))
+      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting of op1",hartid))
+      `logLevel( stage3, 4, $format("[%2d]STAGE3: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
     `endif
@@ -303,17 +346,21 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 
   /*doc:rule: This rule is fired if an instruction was tagged as trap by any of the previous
   * stages. No operand availability is required here*/
-  rule rl_trap_from_prev(epochs_match && rx_instrtype.u.first == TRAP);
+  rule rl_trap_from_prev(epochs_match && instr_type == TRAP);
     TrapOut trapout = TrapOut {cause   : truncate(meta.funct),
                                mtval : mtval 
                              `ifdef microtrap_support
                                 ,is_microtrap : meta.is_microtrap 
                              `endif };
     let common_pkt = s4common; common_pkt.insttype = TRAP;
+    let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
+  `ifdef no_wawstalls
+    common_pkt.id = _id;
+    `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
+  `endif
     tx_trapout.u.enq(trapout);
     tx_fuid.u.enq(common_pkt);
     deq_rx;
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     `logLevel( stage3, 0, $format("[%2d]STAGE3: Trap received and completed: ",hartid,fshow(trapout)))
   `ifdef rtldump
     let clogpkt = rx_commitlog.u.first;
@@ -324,21 +371,28 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   /*doc:rule: This rule is used to perform execution of base arithmetic ops. Both operands are
   * required to perform these operations. In case of 32-bit ops in RV64, the result is
   * sign-Extended version of the lower 32-bits results from the alu */
-  rule rl_exe_base_arith(rx_instrtype.u.first == ALU && epochs_match);
+  rule rl_exe_base_arith(instr_type == ALU && epochs_match && !wr_waw_stall);
     let {btaken, alu_result} = fn_base_alu(wr_fwd_op1, wr_fwd_op2, truncateLSB(meta.funct),
-                              meta.pc, wr_op1.optype==PC `ifdef RV64 ,meta.word32 `endif ); 
+                              meta.pc, opmeta.rs1type==PC `ifdef RV64 ,meta.word32 `endif ); 
 
   `ifdef RV64
     if (meta.word32)
       alu_result = signExtend(alu_result[31:0]);
   `endif
     BaseOut baseoutput = BaseOut{ rdvalue   : alu_result, rd: meta.rd , epochs: curr_epochs[0]
+                      `ifdef no_wawstalls ,id: ? `endif
                       `ifdef spfpu ,fflags    : 0 , rdtype: meta.rdtype `endif };
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     `logLevel( stage3, 0, $format("[%2d]STAGE3: Base ALU Op received",hartid))
     if (wr_op1_avail && wr_op2_avail) begin
+      let common_pkt = s4common; 
+      let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
+    `ifdef no_wawstalls
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
+      common_pkt.id = _id;
+      baseoutput.id = _id;
+    `endif
       tx_baseout.u.enq(baseoutput);
-      tx_fuid.u.enq(s4common);
+      tx_fuid.u.enq(common_pkt);
       deq_rx;
       `logLevel( stage3, 0, $format("[%2d]STAGE3: Base ALU Op completed: ",hartid,fshow(baseoutput)))
     `ifdef rtldump
@@ -347,8 +401,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting of operands",hartid))
-      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(wr_sboard)))
+      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting of operands",hartid))
+      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
     `endif
@@ -363,8 +417,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   * SFence instruction henceforth will be treated as a regular nop instruction and avoiding
   * polling on the data subsystem in the subsequent pipeline stages.
   */
-  rule rl_exe_base_memory(rx_instrtype.u.first == MEMORY && wr_cache_avail && epochs_match);
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
+  rule rl_exe_base_memory(instr_type == MEMORY && wr_cache_avail && epochs_match && !wr_waw_stall);
     `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Memory Op received",hartid))
     Bit#(`vaddr) memory_address = wr_fwd_op1 + truncate(wr_op3.data);
     Bit#(3) funct3  = truncate(meta.funct);
@@ -398,6 +451,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
       if (!trap)
         wr_memory_request <= req;
 
+      let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
       if (trap) begin
         tx_trapout.u.enq(trapout);
         common_pkt.insttype = TRAP;
@@ -405,7 +459,11 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
       end
       else if (meta.memaccess == SFence) begin
         BaseOut baseoutput = BaseOut { rdvalue   : ?, rd: 0, epochs: curr_epochs[0]
+                                 `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: IRF `endif };
+      `ifdef no_wawstalls
+        baseoutput.id = _id;
+      `endif
         tx_baseout.u.enq(baseoutput);
         `logLevel( stage3, 0, $format("[%2d]STAGE3: SFence goes as Nop", hartid))
       end
@@ -415,6 +473,10 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
         `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Memory Op initiated: ",hartid, fshow(memoryout)))
       end
 
+    `ifdef no_wawstalls
+      common_pkt.id = _id;
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
+    `endif
       tx_fuid.u.enq(common_pkt);
       deq_rx;
     `ifdef rtldump
@@ -432,8 +494,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting for operands",hartid))
-      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(wr_sboard)))
+      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting for operands",hartid))
+      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     end
   endrule:rl_exe_base_memory
 
@@ -447,17 +509,16 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
    * When the branch predictor is enabled, this rule will further send training informatino back
    * to the bpu for the control instruction.
   */
-  rule rl_exe_base_control(epochs_match && 
-                          (rx_instrtype.u.first == JALR || 
-                          rx_instrtype.u.first == JAL ||
-                          rx_instrtype.u.first == BRANCH )
+  rule rl_exe_base_control(epochs_match && !wr_waw_stall && 
+                          (instr_type == JALR || 
+                          instr_type == JAL ||
+                          instr_type == BRANCH )
                `ifdef bpu && (isValid(wr_next_pc)) `endif );
 
-    let inst_type = rx_instrtype.u.first;
+    let inst_type = instr_type;
     Bit#(`vaddr)  base = (inst_type == JALR) ? truncate(wr_fwd_op1) : meta.pc;
     Bit#(TMax#(`vaddr,FLEN))  offset = wr_op3.data;
     
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Control Op received: ",hartid,fshow(inst_type)))
 
     Bit#(`vaddr) jump_address = (base + truncate(offset)) & {'1, ~(pack(inst_type==JALR))};
@@ -499,7 +560,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
                         };
     if((inst_type == JAL || inst_type == JALR) && meta.rd ==1)
       td.ci = Call;
-    else if(inst_type == JALR &&& wr_op1.addr matches 'b00?01)
+    else if(inst_type == JALR &&& opmeta.rs1addr matches 'b00?01)
       td.ci = Ret;
     else if(inst_type == JAL || inst_type == JALR)
       td.ci = JAL;
@@ -530,9 +591,16 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False,
                                mtval : meta.pc};
     BaseOut baseoutput = BaseOut { rdvalue   : nlogical_pc, rd: meta.rd, epochs: curr_epochs[0]
+                                 `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: meta.rdtype `endif };
     let common_pkt = s4common; common_pkt.insttype = BASE;
     if (wr_op1_avail && wr_op2_avail) begin
+      let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
+    `ifdef no_wawstalls
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
+      common_pkt.id = _id;
+      baseoutput.id = _id;
+    `endif
       if (!trap) begin
         tx_baseout.u.enq(baseoutput);
         `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Control Op completed: ",hartid,fshow(baseoutput)))
@@ -553,12 +621,11 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `endif
       if(redirection)
         `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
-      if (!trap) begin
+    `ifdef bpu 
+      if (!trap && redirection)
         wr_mispredict_ghr <= tagged Valid tuple2(btbresponse.btbhit, btbresponse.history);
-      `ifdef bpu 
-        wr_training_data <= tagged Valid td;
-      `endif
-      end
+      wr_training_data <= tagged Valid td;
+    `endif
     `ifdef perfmonitors
       if (inst_type == BRANCH)
         wr_count_branches <= 1;
@@ -567,8 +634,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting for operands",hartid))
-      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(wr_sboard)))
+      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting for operands",hartid))
+      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
     `endif
@@ -576,22 +643,32 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   endrule:rl_exe_base_control
 
 `ifdef muldiv
+
+  /*doc:rule: */
+  rule rl_show_mbox_rdy;
+    `logLevel( mbox, 0, $format("[%2d]MBOX: MulRdy:%b DivRdy:%b",hartid, wr_mul_ready, wr_div_ready))
+  endrule
+
   /*doc:rule: This rule will fire when the epochs match and when the multiplier/divider are
   * avaialble based on the current instruction. Both the operands are required for execution to be
   * offloaded the mbox.*/
-  rule rl_mbox(rx_instrtype.u.first == MULDIV && epochs_match &&
-              ( (meta.funct[2]==1 && wr_mul_ready) || 
-                (meta.funct[2]==0 && wr_div_ready) ) );
+  rule rl_mbox(instr_type == MULDIV && epochs_match && !wr_waw_stall &&
+              ( (meta.funct[2]==0 && wr_mul_ready) || 
+                (meta.funct[2]==1 && wr_div_ready) ) );
     let common_pkt = s4common;
     common_pkt.insttype = MULDIV;
-    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     `logLevel( stage3, 0, $format("[%2d]STAGE3: MULDIV Op received",hartid))
     if (wr_op1_avail && wr_op2_avail) begin
-      tx_fuid.u.enq(common_pkt);
       wr_muldiv_inputs <= MBoxIn{in1: wr_fwd_op1, in2: wr_fwd_op2, funct3: truncate(meta.funct)
                                 `ifdef RV64 , wordop: meta.word32 `endif };
       `logLevel( stage3, 0, $format("[%2d]STAGE3: MULDIV op offloaded",hartid))
       deq_rx;
+      let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
+    `ifdef no_wawstalls
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
+      common_pkt.id = _id;
+    `endif
+      tx_fuid.u.enq(common_pkt);
     `ifdef perfmonitors
       wr_count_muldiv <= 1;
     `endif
@@ -601,8 +678,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting for operands",hartid))
-      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(wr_sboard)))
+      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting for operands",hartid))
+      `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
     `endif
@@ -614,6 +691,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     interface rx_meta_from_stage2   = rx_meta.e;
     interface rx_mtval_from_stage2  = rx_mtval.e;
     interface rx_instrtype_from_stage2 = rx_instrtype.e;
+    interface rx_opmeta_from_stage2= rx_opmeta.e;
   `ifdef rtldump
     interface rx_commitlog = rx_commitlog.e;
   `endif
@@ -635,20 +713,15 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   // -------------------------------------------------------------------------------------------//
   // ------------------ interfaces to receive RF operands from previous stage    --------------//
   interface rf = interface Ifc_s3_rf
-    method Action ma_op1 (RFOp1 i);
-      wr_op1 <= i;
+    method Action ma_op1 (FwdType i);
+      wr_rf_op1 <= i;
     endmethod
-    method Action ma_op2 (RFOp2 i);
-      wr_op2 <= i;
+    method Action ma_op2 (FwdType i);
+      wr_rf_op2 <= i;
     endmethod
     method Action ma_op3 (RFOp3 i);
       wr_op3 <= i;
     endmethod
-    //method ma_scoreboard = fwding.ma_scoreboard;
-    method Action ma_scoreboard (SBD sbd);
-      wr_sboard <= sbd;
-    endmethod:ma_scoreboard
-    /*doc:method: This method receives the current scoreboard datastructure */
   endinterface;
   // -------------------------------------------------------------------------------------------//
 
@@ -662,6 +735,12 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     // Description : captures the current setting of the "C" bit in the misa csr.
     method Action ma_csr_misa_c (Bit#(1) m);
       wr_misa_c <= m;
+    endmethod
+
+    method Action ma_sb_release(CommitData commit);
+      sboard.ma_release_rd(SBDUpd{rd: commit.addr 
+                  `ifdef no_wawstalls ,id: commit.id `endif
+                  `ifdef spfpu ,rdtype: commit.rdtype `endif });
     endmethod
  `ifdef arith_trap
     method  Action ma_arith_trap_en(Bit#(1) en);

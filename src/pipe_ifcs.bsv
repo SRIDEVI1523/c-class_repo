@@ -112,6 +112,8 @@ interface Ifc_s3_rx;
   interface RXe#(Bit#(XLEN))          rx_mtval_from_stage2;
   /*doc: subifc: interface to receive the mtval value from stage2 incase of a trap */
   interface RXe#(Instruction_type)    rx_instrtype_from_stage2;
+  /*doc: subifc: interface to receive the operand metadata value from stage2*/
+  interface RXe#(OpMeta)              rx_opmeta_from_stage2;
 `ifdef rtldump 
   // interface to receive the instruction sequence for the rtl dump feature
   interface RXe#(CommitLogPacket)     rx_commitlog;
@@ -140,16 +142,13 @@ endinterface: Ifc_s3_tx
 interface Ifc_s3_rf;
   /*doc:method: receive op1 and its meta info from previous stage (stage2/decode)*/
   (*always_enabled, always_ready*)
-  method Action ma_op1 (RFOp1 i);
+  method Action ma_op1 (FwdType i);
   /*doc:method: receive op2 and its meta info from previous stage (stage2/decode)*/
   (*always_enabled, always_ready*)
-  method Action ma_op2 (RFOp2 i);
+  method Action ma_op2 (FwdType i);
   /*doc:method: receive op2 and its meta info from previous stage (stage2/decode)*/
   (*always_enabled, always_ready*)
   method Action ma_op3 (RFOp3 i);
-  (*always_enabled, always_ready*)
-  /*doc:method: This method receives the current scoreboard datastructure */
-  method Action ma_scoreboard (SBD sbd);
 endinterface: Ifc_s3_rf
 
 interface Ifc_s3_cache;
@@ -223,6 +222,8 @@ interface Ifc_s3_common;
   // method to receive the current status of the misa_c bit
   (*always_enabled, always_ready*)
   method Action ma_csr_misa_c (Bit#(1) m);
+  
+  method Action ma_sb_release(CommitData commit);
 
 `ifdef arith_trap
   method  Action ma_arith_trap_en(Bit#(1) en);
@@ -250,6 +251,8 @@ interface Ifc_s2_tx;
   /*doc:subifc: send instruction type to stage3*/
   interface TXe#(Instruction_type) tx_instrtype_to_stage3;
 
+  interface TXe#(OpMeta) tx_opmeta_to_stage3;
+
 `ifdef rtldump
   /*doc:subifc: send instruction trace to next stage */
   interface TXe#(CommitLogPacket) tx_commitlog;
@@ -259,19 +262,15 @@ endinterface: Ifc_s2_tx
 interface Ifc_s2_rf;
   (*always_ready*)
   /*doc:method: Latest value of operand1 from rf*/
-  method RFOp1 mv_op1;
+  method FwdType mv_op1;
 
   (*always_ready*)
   /*doc:method: Latest value of operand2 from rf*/
-  method RFOp2 mv_op2;
+  method FwdType mv_op2;
 
   (*always_ready*)
   /*doc:method: Latest value of operand3 from rf*/
   method RFOp3 mv_op3;
-
-	(*always_ready*)
-	/*doc:method: method to expose the current sboard to all other pipeline stages*/
-  method SBD mv_scoreboard;
 
 endinterface:Ifc_s2_rf
 
@@ -436,7 +435,7 @@ endinterface:Ifc_s5_perfmonitors
 // -----------------------------------------------------------------------------------------------
 
   module mkPipe_s0_s1#(Ifc_s0_tx s0, Ifc_s1_rx s1)(Bool);
-    FIFOF#(Stage0PC#(`vaddr)) ff_pipe0 <- mkSizedFIFOF(3);
+    FIFOF#(Stage0PC#(`vaddr)) ff_pipe0 <- mkSizedFIFOF( `isb_s0s1 );
 
     mkConnection(s0.tx_to_stage1 , ff_pipe0);
     mkConnection(ff_pipe0, s1.rx_from_stage0);
@@ -444,9 +443,9 @@ endinterface:Ifc_s5_perfmonitors
   endmodule:mkPipe_s0_s1
 
   module mkPipe_s1_s2#(Ifc_s1_tx s1, Ifc_s2_rx s2)(Tuple2#(Bool,FIFOF#(PIPE1)));
-    FIFOF#(PIPE1) ff_pipe1 <- mkSizedFIFOF(`fetchbuffer_sz);
+    FIFOF#(PIPE1) ff_pipe1 <- mkSizedFIFOF( `isb_s1s2 );
   `ifdef rtldump 
-    FIFOF#(CommitLogPacket) ff_commitlog <- mkSizedFIFOF(`fetchbuffer_sz);
+    FIFOF#(CommitLogPacket) ff_commitlog <- mkSizedFIFOF( `isb_s1s2 );
   `endif
     Empty s1_pipe1 <- mkConnection(s1.tx_to_stage2, ff_pipe1);
     Empty s2_pipe1 <- mkConnection(ff_pipe1, s2.rx_from_stage1);
@@ -461,17 +460,20 @@ endinterface:Ifc_s5_perfmonitors
     FIFOF#(Stage3Meta) ff_meta <- mkLFIFOF();
     FIFOF#(Bit#(XLEN)) ff_mtval <- mkLFIFOF();
     FIFOF#(Instruction_type) ff_insttype <- mkLFIFOF();
+    FIFOF#(OpMeta) ff_opmeta <- mkLFIFOF();
   `ifdef rtldump
     FIFOF#(CommitLogPacket) ff_commitlog <- mkLFIFOF();
   `endif
-    mkConnection(s2.tx_meta_to_stage3, ff_meta);
-    mkConnection(ff_meta, s3.rx_meta_from_stage2);
+    let _x1 <- mkConnection(s2.tx_meta_to_stage3, ff_meta);
+    let _x2 <- mkConnection(ff_meta, s3.rx_meta_from_stage2);
 
-    mkConnection(s2.tx_mtval_to_stage3, ff_mtval);
-    mkConnection(ff_mtval, s3.rx_mtval_from_stage2);
+    let _x3 <- mkConnection(s2.tx_mtval_to_stage3, ff_mtval);
+    let _x4 <- mkConnection(ff_mtval, s3.rx_mtval_from_stage2);
 
-    mkConnection(s2.tx_instrtype_to_stage3, ff_insttype);
-    mkConnection(ff_insttype, s3.rx_instrtype_from_stage2);
+    let _x5 <- mkConnection(s2.tx_instrtype_to_stage3, ff_insttype);
+    let _x6 <- mkConnection(ff_insttype, s3.rx_instrtype_from_stage2);
+    let _x7 <- mkConnection(s2.tx_opmeta_to_stage3, ff_opmeta);
+    let _x8 <- mkConnection(ff_opmeta, s3.rx_opmeta_from_stage2);
   `ifdef rtldump
     mkConnection(s2.tx_commitlog, ff_commitlog);
     mkConnection(ff_commitlog, s3.rx_commitlog);
@@ -484,21 +486,21 @@ endinterface:Ifc_s5_perfmonitors
       mkConnection (s2.mv_op1, s3.ma_op1);
       mkConnection (s2.mv_op2, s3.ma_op2);
       mkConnection (s2.mv_op3, s3.ma_op3);
-      mkConnection (s2.mv_scoreboard, s3.ma_scoreboard);
     endmodule
   endinstance
 
   module mkPipe_s3_s4#(Ifc_s3_tx s3, Ifc_s4_rx s4)(Tuple2#(Bool, FwdType));
-    FIFOF#(BaseOut)             ff_baseout <- mkSizedFIFOF(2);
-    FIFOF#(TrapOut)             ff_trapout <- mkSizedFIFOF(2);
-    FIFOF#(SystemOut)           ff_systemout <- mkSizedFIFOF(2);
-    FIFOF#(MemoryOut)           ff_memoryout <- mkSizedFIFOF(2);
-  	FIFOF#(FUid)                ff_fuid <- mkSizedFIFOF(2);
-  	FIFOF#(Bool)                ff_drop <- mkSizedFIFOF(2);
+    FIFOF#(BaseOut)             ff_baseout <- mkSizedFIFOF( `isb_s3s4 );
+    FIFOF#(TrapOut)             ff_trapout <- mkSizedFIFOF( `isb_s3s4 );
+    FIFOF#(SystemOut)           ff_systemout <- mkSizedFIFOF( `isb_s3s4 );
+    FIFOF#(MemoryOut)           ff_memoryout <- mkSizedFIFOF( `isb_s3s4 );
+  	FIFOF#(FUid)                ff_fuid <- mkSizedFIFOF( `isb_s3s4 );
+  	FIFOF#(Bool)                ff_drop <- mkSizedFIFOF( `isb_s3s4 );
   `ifdef rtldump
-    FIFOF#(CommitLogPacket)     ff_commitlog <- mkSizedFIFOF(2);
+    FIFOF#(CommitLogPacket)     ff_commitlog <- mkSizedFIFOF( `isb_s3s4 );
   `endif
     Wire#(FwdType) wr_bypass <- mkDWire(FwdType{valid: False, addr: ?, data: ?, epochs: ?
+                                        `ifdef no_wawstalls ,id: ? `endif
                                         `ifdef spfpu , rdtype: ? `endif });
   
     /*doc:rule: */
@@ -508,7 +510,8 @@ endinterface:Ifc_s5_perfmonitors
       FwdType lv_bypass = FwdType{valid: valid , addr: ff_baseout.first.rd , 
                                   data: ff_baseout.first.rdvalue, 
                                   epochs: ff_baseout.first.epochs
-          `ifdef spfpu , rdtype: ff_baseout.first.rdtype `endif };
+                    `ifdef no_wawstalls ,id: ff_baseout.first.id `endif
+                    `ifdef spfpu , rdtype: ff_baseout.first.rdtype `endif };
       wr_bypass <= lv_bypass;
     endrule:rl_gen_bypass
   
@@ -538,16 +541,17 @@ endinterface:Ifc_s5_perfmonitors
   endmodule:mkPipe_s3_s4
 
   module mkPipe_s4_s5# (Ifc_s4_tx s4, Ifc_s5_rx s5)(Tuple2#(Bool, FwdType));
-    FIFOF#(SystemOut) ff_systemout <- mkSizedFIFOF(2);
-    FIFOF#(TrapOut) ff_trapout <- mkSizedFIFOF(2);
-    FIFOF#(BaseOut) ff_baseout <- mkSizedFIFOF(2);
-    FIFOF#(WBMemop) ff_wbmemop <- mkSizedFIFOF(2);
-    FIFOF#(CUid) ff_fuid <- mkSizedFIFOF(2);
-    FIFOF#(Bool) ff_drop <- mkSizedFIFOF(2);
+    FIFOF#(SystemOut) ff_systemout <- mkSizedFIFOF( `isb_s4s5 );
+    FIFOF#(TrapOut) ff_trapout <- mkSizedFIFOF( `isb_s4s5 );
+    FIFOF#(BaseOut) ff_baseout <- mkSizedFIFOF( `isb_s4s5 );
+    FIFOF#(WBMemop) ff_wbmemop <- mkSizedFIFOF( `isb_s4s5 );
+    FIFOF#(CUid) ff_fuid <- mkSizedFIFOF( `isb_s4s5 );
+    FIFOF#(Bool) ff_drop <- mkSizedFIFOF( `isb_s4s5 );
   `ifdef rtldump
-    FIFOF#(CommitLogPacket) ff_commitlog <- mkSizedFIFOF(2);
+    FIFOF#(CommitLogPacket) ff_commitlog <- mkSizedFIFOF( `isb_s4s5 );
   `endif
     Wire#(FwdType) wr_bypass <- mkDWire(FwdType{valid: False, addr: ?, data: ?, epochs: ?
+                                        `ifdef no_wawstalls ,id: ? `endif
                                         `ifdef spfpu , rdtype: ? `endif });
   
     /*doc:rule: */
@@ -557,6 +561,7 @@ endinterface:Ifc_s5_perfmonitors
       FwdType lv_bypass = FwdType{valid: valid , addr: ff_baseout.first.rd , 
                                   data: ff_baseout.first.rdvalue, 
                                   epochs: ff_baseout.first.epochs
+          `ifdef no_wawstalls ,id: ff_baseout.first.id `endif
           `ifdef spfpu , rdtype: ff_baseout.first.rdtype `endif };
       wr_bypass <= lv_bypass;
     endrule:rl_gen_bypass

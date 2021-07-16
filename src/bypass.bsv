@@ -25,18 +25,19 @@ package bypass ;
   (*noinline*)
   `endif
   function Tuple2#(Bool, Bit#(ELEN)) fn_bypass (BypassReq req, 
-                                                Vector#(`bypass_sources, FwdType) fwd);
+                  Vector#(TAdd#(`bypass_sources ,1), FwdType) fwd);
     Bit#(`bypass_sources) choice = 0;
     Bool inst_in_pipe = req.sb_lock == 1;
-    for (Integer i = 0; i<`bypass_sources; i = i + 1) begin
+    for (Integer i = 0; i<`bypass_sources ; i = i + 1) begin
       choice[i] = pack(fwd[i].valid && fwd[i].addr == req.rd && fwd[i].epochs == req.epochs
+                        `ifdef no_wawstalls && fwd[i].id == req.id `endif
                         `ifdef spfpu && fwd[i].rdtype == req.rdtype `endif );
     end
-    Bool available = unpack(|choice) || !inst_in_pipe;
+    Bool available = unpack(|choice[1:0]) || !inst_in_pipe;
     Bit#(ELEN) fwd_data = case(choice) matches
       'b?1: fwd[0].data;
       'b10: fwd[1].data;
-      default: req.rfval;
+      default: fwd[2].data;
     endcase;
     
     return tuple2(available, fwd_data);

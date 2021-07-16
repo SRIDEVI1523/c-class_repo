@@ -178,7 +178,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_riscv);
 
   `ifdef muldiv
     Ifc_mbox mbox <- mkmbox(0);
-    FIFOF#(Bit#(`xlen)) ff_mbox_out <- mkSizedBypassFIFOF(`MULSTAGES_TOTAL);
+    FIFOF#(Bit#(`xlen)) ff_mbox_out <- mkSizedBypassFIFOF(`isb_s3s4 );
   `endif
 
     let {pipe_s4s5_notEmpty, lv_bypass_1} <- mkPipe_s4_s5(stage4.tx, stage5.rx);
@@ -202,6 +202,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_riscv);
     mkConnection(stage1.common.ma_csr_misa_c, stage5.csrs.mv_csr_misa_c);
 
     mkConnection(stage2.common.ma_commit_rd, stage5.common.mv_commit_rd);
+    mkConnection(stage3.common.ma_sb_release,stage5.common.mv_commit_rd);
     mkConnection(stage2.common.ma_csrs , stage5.csrs.mv_csrs_to_decode);
     mkConnection(stage2.common.ma_resume_wfi, stage5.csrs.mv_resume_wfi);
     mkConnection(stage2.rf, stage3.rf);

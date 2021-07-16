@@ -15,6 +15,8 @@ package ccore_types;
   import csr_types      :: * ;
   import csrbox_decoder :: * ;
   import DefaultValue   :: * ;
+  import Vector         :: * ;
+
   `ifdef RV64
   	typedef 64 XLEN;
   `else
@@ -118,6 +120,9 @@ package ccore_types;
   /*doc:struct: struct indicates which entry of the scoreboard needs to be updated. Used for both
    * locking and releasing updates*/
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu 
     RFType rdtype;  // bits [5]
   `endif
@@ -137,24 +142,44 @@ package ccore_types;
     endfunction
   endinstance
 
+  typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
+    Bit#(1) lock;
+  } SBEntry deriving (Bits, FShow, Eq);
+
   /*doc:struct: This struct is used to read the scoreboard values*/
   typedef struct{
   `ifdef spfpu
-    Bit#(64) rf_board;   // bits [63:32]
+    Bit#(64) rf_lock;   // bits [63:32]
+    `ifdef no_wawstalls
+      Vector#(64, Bit#(`wawid)) v_id;
+    `endif
+  `else
+    Bit#(32) rf_lock;   // bits [31:0]
+    `ifdef no_wawstalls
+      Vector#(32, Bit#(`wawid)) v_id;
+    `endif
   `endif
-    Bit#(32) rf_board;   // bits [31:0]
   }SBD deriving (Bits, Eq);
 
   instance FShow#(SBD);
     function Fmt fshow(SBD val);
       Fmt result = $format("SBD: IRF:\n");
       for (Integer i = 0; i< `ifdef spfpu 64 `else 32 `endif ; i = i + 1) begin
-        result = result + $format("%2d ",i);
+        result = result + $format("%3d ",i);
       end
-      result = result + $format("\n");
+      result= result + $format("\n");
       for (Integer i = 0; i< `ifdef spfpu 64 `else 32 `endif ; i = i + 1) begin
-        result = result + $format("%2d ",val.rf_board[i]);
+        result = result + $format("%3d ",val.rf_lock[i]);
       end
+    `ifdef no_wawstalls
+      result= result + $format("\n");
+      for (Integer i = 0; i< `ifdef spfpu 64 `else 32 `endif ; i = i + 1) begin
+        result = result + $format("%3d ",val.v_id[i]);
+      end
+    `endif
       return result;
     endfunction
   endinstance
@@ -163,17 +188,22 @@ package ccore_types;
   // ---------------------structures used for operand bypass scheme-----------------------
   /*doc:struct: This struct is used by the EXE stage to indicate the operand required for execution*/
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu
     RFType rdtype;      // bits [ELEN+8]
   `endif
     Bit#(5) rd;         // bits [ELEN+7 : ELEN+3]
-    Bit#(ELEN) rfval;   // bits [ELEN+2:2]
     Bit#(1) sb_lock;    // bits [1]
     Bit#(1) epochs;     // bits [0]
   } BypassReq deriving (Bits, FShow, Eq);
 
   /*doc:struct: This struct carries the bypassed operand available at various stages of the pipeline*/
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu
     RFType rdtype;      // bits [ELEN+7]
   `endif
@@ -344,7 +374,6 @@ package ccore_types;
     `endif
     BTBResponse btbresponse;
   `endif
-    Bit#( `ifdef spfpu 64 `else 32 `endif ) sb_mask;
     Bool is_microtrap;
     Bit#(TMax#(`causesize, 7)) funct;
     Access_type memaccess;
@@ -365,6 +394,13 @@ package ccore_types;
     return result;
     endfunction
   endinstance
+
+  typedef struct {
+    Op1type rs1type;
+    Op2type rs2type;
+    Bit#(5) rs1addr;
+    Bit#(5) rs2addr;
+  } OpMeta deriving(Bits, FShow, Eq);
 
   // ----------------- structures of operand fetch from decode stage ------------------------------
   typedef struct{
@@ -391,6 +427,9 @@ package ccore_types;
 
   // ---------------------------------------Output types from stage3 --------------------------
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu
     Bit#(5)       fflags;
     RFType        rdtype;
@@ -404,7 +443,10 @@ package ccore_types;
     function Fmt fshow(BaseOut value);
       Fmt result = $format("rd:%2d rdval:%h",value.rd, value.rdvalue);
     `ifdef spfpu
-      result = result + $format("rdtype: ",fshow(value.rdtype));
+      result = result + $format(" rdtype: ",fshow(value.rdtype));
+    `endif
+    `ifdef no_wawstalls
+      result = result + $format(" id:%2d", value.id);
     `endif
       return result;
     endfunction
@@ -514,6 +556,9 @@ package ccore_types;
 
 
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu
     RFType        rdtype;
   `endif
@@ -530,11 +575,17 @@ package ccore_types;
     `ifdef spfpu
       result = result + $format(" rdtype: ",fshow(value.rdtype));
     `endif
+    `ifdef no_wawstalls
+      result = result + $format(" id:%2s",value.id);
+    `endif
       return result;
     endfunction
   endinstance
   
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu
     RFType        rdtype;
   `endif
@@ -551,12 +602,16 @@ package ccore_types;
     `ifdef spfpu
       result = result + $format(" rdtype: ",fshow(value.rdtype));
     `endif
+    `ifdef no_wawstalls
+      result = result + $format(" id:%2s",value.id);
+    `endif
       return result;
     endfunction
   endinstance
 
   function CUid fn_fu2cu(FUid f);
-    let c =  CUid{pc: f.pc, rd: f.rd, epochs: f.epochs
+    let c =  CUid{pc: f.pc, rd: f.rd, epochs: f.epochs, insttype : ?
+            `ifdef no_wawstalls ,id: f.id `endif 
             `ifdef spfpu ,rdtype: f.rdtype `endif };
     c.insttype = case (f.insttype) matches
       BASE: BASE;
@@ -581,13 +636,32 @@ package ccore_types;
   } Chmod deriving(Bits, Eq);
 
   typedef struct{
+  `ifdef no_wawstalls
+    Bit#(`wawid) id;
+  `endif
   `ifdef spfpu
     RFType      rdtype ;
   `endif
     Bool        unlock_only;
     Bit#(5)     addr;
     Bit#(ELEN)  data;
-  } CommitData deriving(Bits, FShow, Eq);
+  } CommitData deriving(Bits, Eq);
+
+  instance FShow#(CommitData);
+    function Fmt fshow(CommitData val);
+      Fmt result = $format("Committing :");
+      Fmt optype = $format("X");
+    `ifdef spfpu
+      if (val.rdtype == FRF)
+        optype = "F";
+    `endif
+      result = result + optype + $format("[%d] = %h unlock:%b",val.addr,val.data,val.unlock_only);
+    `ifdef no_wawstalls
+      result = result + $format(" id:%2d",val.id);
+    `endif
+      return result;
+    endfunction:fshow
+  endinstance
 
   typedef struct{
 		Bit#(width) final_result;					// the final result for the operation
