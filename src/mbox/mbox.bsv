@@ -8,6 +8,7 @@ import restoring_div  :: * ;
 import SpecialFIFOs   :: * ;
 import FIFOF          :: * ;
 import TxRx           :: * ;
+import Assert         :: * ;
 
 typedef struct{
 `ifdef RV64
@@ -38,8 +39,15 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   Ifc_combo_mul mul_ <- mkcombo_mul;
   Ifc_restoring_div div_ <- mkrestoring_div(hartid);
 
-  FIFOF#(Bool) ff_ordering <- mkSizedFIFOF(max(`MULSTAGES_TOTAL,1));
+  FIFOF#(Bool) ff_ordering <- mkSizedFIFOF(max(`MULSTAGES_TOTAL,2));
   TX#(Bit#(`xlen)) tx_mbox_out <- mkTX;
+
+  /*doc:rule: */
+  rule rl_fifo_full(!tx_mbox_out.u.notFull());
+    `logLevel( mbox, 0, $format("[%2d]MBOX: Buffer is FULL",hartid))
+    dynamicAssert(!mul_.mv_output_valid ,"MUL provided result when O/P FIFO is full");
+    dynamicAssert(!div_.mv_output_valid ,"DIV provided result when O/P FIFO is full");
+  endrule:rl_fifo_full
 
   /*doc:rule: */
   rule rl_capture_output;
@@ -48,6 +56,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
         let _x <- mul_.mv_output;
         tx_mbox_out.u.enq(_x);
         ff_ordering.deq;
+        `logLevel( mbox, 0, $format("MBOX: Collecting MUL o/p"))
       end
       else
         `logLevel( mbox, 0, $format("MBOX: Waiting for Mul o/p"))
@@ -57,6 +66,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
         let _x <- div_.mv_output;
         tx_mbox_out.u.enq(_x);
         ff_ordering.deq;
+        `logLevel( mbox, 0, $format("MBOX: Collecting DIV o/p"))
       end
       else
         `logLevel( mbox, 0, $format("MBOX: Waiting for Div o/p"))
