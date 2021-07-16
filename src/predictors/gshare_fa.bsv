@@ -137,6 +137,8 @@ package gshare_fa;
     for (Integer i = 0; i<`bhtcols; i = i + 1) begin
       rg_bht_arr[i] <- mkRegFileWCF(0,fromInteger(valueOf(TDiv#(`bhtdepth,`bhtcols))-1));
     end
+    /*doc:reg: */
+    Reg#(Bit#(TLog#(TDiv#(`bhtdepth, `bhtcols)))) rg_bht_index <- mkReg(0);
     /*doc : reg : This register points to the next entry in the Fully associative BTB that should
     be allocated for a new entry */
     Reg#(Bit#(TLog#(`btbdepth))) rg_allocate <- mkReg(0);
@@ -169,7 +171,11 @@ package gshare_fa;
     rule rl_initialize (rg_initialize);
       for(Integer i = 0; i < `btbdepth; i = i + 1)
         v_reg_btb_tag[i]<=unpack(0);
-      rg_initialize <= False;
+      for(Integer i = 0; i < `bhtcols ; i = i + 1)
+        rg_bht_arr[i].upd(rg_bht_index,1);
+      if (rg_bht_index == fromInteger(valueOf(TDiv#(`bhtdepth,`bhtcols))-1))
+        rg_initialize <= False;
+      rg_bht_index <= rg_bht_index + 1;
       rg_ghr[1] <= 0;
       rg_allocate <= 0;
     `ifdef bpu_ras
