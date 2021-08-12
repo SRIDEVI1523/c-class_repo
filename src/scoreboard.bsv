@@ -73,7 +73,9 @@ package scoreboard ;
     /*doc:method: This method provides a peek into the current score-board status */
     method SBD mv_board;
       Bit#(`ifdef spfpu 64 `else 32 `endif ) _rflock;
+    `ifdef no_wawstalls
       Vector#(`ifdef spfpu 64 `else 32 `endif , Bit#(`wawid)) _id;
+    `endif
       for (Integer i = 0; i< `ifdef spfpu 64 `else 32 `endif ; i = i + 1) begin
         _rflock[i] = rg_rf_board[i][0].lock;
       `ifdef no_wawstalls

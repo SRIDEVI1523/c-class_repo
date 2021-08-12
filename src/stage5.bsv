@@ -122,14 +122,14 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   /*doc:wire: This wire holds the response of an IO memory operation */
   Wire#(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize))) wr_ioop_response <- mkDWire(tagged Invalid);
 
+  /*doc:wire: this wire holds the epoch value of the IO memory store/atomic operation that is
+   * waiting to be committed/dropped. Writing a value to this wire triggers an IO operation*/
+  Wire#(Bit#(1)) wr_commit_ioop <- mkWire();
+
 `ifdef dcache
   /*doc:wire: this wire holds the epoch value of the cached memory store/atomic operation that is
    * waiting to be committed/dropped*/
   Wire#(Bit#(1)) wr_commit_cacheop <- mkWire();
-
-  /*doc:wire: this wire holds the epoch value of the IO memory store/atomic operation that is
-   * waiting to be committed/dropped. Writing a value to this wire triggers an IO operation*/
-  Wire#(Bit#(1)) wr_commit_ioop <- mkWire();
 `endif    
 `ifdef debug
   /*doc:submodules: connection back to the csrs to stop counters*/
@@ -357,6 +357,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   * sent will cause the respective entry in the caches to be dropped without any updates to cache/
   * memory*/
   rule rl_writeback_memop(rx_fuid.u.first.insttype == MEMORY );
+    `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,fuid.pc))
     let memop = rx_memio.u.first;
     let fuid = rx_fuid.u.first;
   `ifdef rtldump
@@ -368,6 +369,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
 
     if (epochs_match) begin
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,rx_fuid.u.first.pc))
+    `ifdef dcache
       if (!memop.io) begin // cacheable store/atomic op
         `logLevel( stage5, 0, $format("[%2d]STAGE5 : Cached Store Op ",hartid, fshow(memop)))
         wr_commit_cacheop <= rg_epoch;
@@ -391,7 +393,9 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
         rg_commitlog <= tagged Valid clogpkt;
       `endif
       end
-      else begin 
+      else 
+    `endif
+      begin 
         `logLevel( stage5, 0, $format("[%2d]STAGE5 : Non-Cached Memory Op ",hartid, fshow(memop)))
         if (!rg_ioop_init) begin
           rg_ioop_init <= True;
@@ -441,9 +445,11 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     `ifdef rtldump
       rx_commitlog.u.deq;
     `endif
+    `ifdef dcache
       if(!memop.io)
         wr_commit_cacheop <= rg_epoch;
       else
+    `endif
         wr_commit_ioop <= rg_epoch;
     end
   endrule:rl_writeback_memop

@@ -159,7 +159,7 @@ package stage0;
       `endif
 
         let nextpc = (rg_pc[0] & signExtend(3'b100)) + 4;
-        `logLevel( stage0, 0, $format("STAGE0: nextpc: %h rg_fence:%b",nextpc,rg_fence[0]))
+        `logLevel( stage0, 0, $format("STAGE0: nextpc: %h ",nextpc `ifdef ifence ," fencei:%b",rg_fence[0] `endif ))
 
       `ifdef bpu
         // bpu is flushed in case of ifence and not for sfence

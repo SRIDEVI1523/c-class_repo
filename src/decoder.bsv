@@ -682,7 +682,7 @@ package decoder;
 
       if(is_microtrap_set)begin
         x_inst_type=TRAP;
-        func_cause=microtrap_cause;
+        func_cause=extend(microtrap_cause);
         result_decode.meta.microtrap=False;
       end
       /* we given precedence to WFI over interrupt. As in the next cycle the interrupt will exit the

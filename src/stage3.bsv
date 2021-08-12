@@ -432,7 +432,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     TrapOut trapout = TrapOut {cause   : memory_cause, is_microtrap: False,
                                mtval : memory_address};
     let memoryout = MemoryOut{  memaccess   : meta.memaccess
-                `ifdef atomic ,atomicop    : {funct3[0], meta.funct[6:3]} `endif
+       `ifdef rtldump `ifdef atomic ,atomicop    : {funct3[0], meta.funct[6:3]} `endif `endif
                  `ifdef dpfpu ,nanboxing   : nanboxing `endif } ;
     if( wr_op1_avail && wr_op2_avail) begin
       let req = DMem_request{address      : memory_address,
@@ -457,6 +457,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
         common_pkt.insttype = TRAP;
         `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Memory Op created Trap: ", hartid,fshow(trapout)))
       end
+    `ifdef supervisor
       else if (meta.memaccess == SFence) begin
         BaseOut baseoutput = BaseOut { rdvalue   : ?, rd: 0, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
@@ -467,6 +468,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
         tx_baseout.u.enq(baseoutput);
         `logLevel( stage3, 0, $format("[%2d]STAGE3: SFence goes as Nop", hartid))
       end
+    `endif
       else begin
         common_pkt.insttype = MEMORY;
         tx_memoryout.u.enq(memoryout);
@@ -587,6 +589,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     else begin
       td.state = 3;
     end
+    if(redirection)
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
   `endif
     TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False,
                                mtval : meta.pc};
@@ -619,8 +623,6 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
       let clogpkt = rx_commitlog.u.first;
       tx_commitlog.u.enq(clogpkt);
     `endif
-      if(redirection)
-        `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
     `ifdef bpu 
       if (!trap && redirection)
         wr_mispredict_ghr <= tagged Valid tuple2(btbresponse.btbhit, btbresponse.history);

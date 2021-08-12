@@ -169,7 +169,7 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_ccor
 
 	/*doc:rule: This rule will initiate an IO read or write as indicated by the WB stage of the
 	* pipeline. If a burst write is on-going then this rule is stalled.*/
-	rule rl_initiate_io( `ifdef dcache rg_burst_count == 0 `endif );
+  rule rl_initiate_io `ifdef dcache (rg_burst_count == 0) `endif ;
 	  let req <- dmem.send_mem_io_req.get;
     `logLevel( core, 0, $format("CORE: Received io op: ",fshow(req)))
     if(req.size[1:0]== 0)
