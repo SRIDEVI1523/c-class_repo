@@ -191,6 +191,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     if not foo['waw_stalls']:
         macros += ' no_wawstalls'
         macros += ' wawid=3'
+    else:
+        macros += ' wawid=0'
 
     if foo['bsc_compile_options']['compile_target'] == 'sim':
         macros += ' simulate'

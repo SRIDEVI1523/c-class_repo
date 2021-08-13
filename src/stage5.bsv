@@ -357,9 +357,9 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   * sent will cause the respective entry in the caches to be dropped without any updates to cache/
   * memory*/
   rule rl_writeback_memop(rx_fuid.u.first.insttype == MEMORY );
-    `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,fuid.pc))
     let memop = rx_memio.u.first;
     let fuid = rx_fuid.u.first;
+    `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,fuid.pc))
   `ifdef rtldump
     let clogpkt = rx_commitlog.u.first;
     CommitLogMem _pkt = ?;
