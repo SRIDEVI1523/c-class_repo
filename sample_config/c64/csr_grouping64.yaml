@@ -22,9 +22,6 @@ grp1:
     - MHARTID
     - MARCHID
     - MIMPID
-    - FRM
-    - FFLAGS
-    - FCSR
     - TIME
     - CYCLE
     - MCOUNTINHIBIT

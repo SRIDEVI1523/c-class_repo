@@ -418,7 +418,7 @@ hart0:
         rv32:
             accessible: false
         rv64:
-            accessible: true
+            accessible: false
             type:
                 warl:
                     dependency_fields: []
@@ -431,7 +431,7 @@ hart0:
         rv32:
             accessible: false
         rv64:
-            accessible: true
+            accessible: false
             type:
                 warl:
                     dependency_fields: []
@@ -444,7 +444,7 @@ hart0:
         rv32:
             accessible: false
         rv64:
-            accessible: true
+            accessible: false
             type:
                 warl:
                     dependency_fields: []
