@@ -45,6 +45,11 @@ package ccore_types;
       `Inst_pagefault        : return "Instruction-Page-Fault-Trap";  
       `Load_pagefault        : return "Load-Page-Fault-Trap";  
       `Store_pagefault       : return "Store-Page-Fault-Trap";  
+      `Illegal_inst          : return "Illegal-Trap";
+      `Ecall_from_machine    : return "ECALL-Machine-Trap";
+      `Ecall_from_user       : return "ECALL-User-Trap";
+      `Ecall_from_supervisor : return "ECALL-Supervisor-Trap";
+      `Breakpoint            : return "Breakpoint-Trap";
       default: return "UNKNOWN EXCEPTION VALUE";
     endcase
   endfunction
