@@ -534,7 +534,10 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
         csr_mip: truncate(csr.sbread.mv_csr_mip), 
         csr_mie: truncate(csr.sbread.mv_csr_mie), 
         csr_mstatus: truncate(csr.sbread.mv_csr_mstatus) `ifdef debug & {'1,csr.mv_debug_mode,17'd0} `endif , 
-        csr_misa: truncate(csr.sbread.mv_csr_misa), frm: truncate(csr.sbread.mv_csr_frm)
+        csr_misa: truncate(csr.sbread.mv_csr_misa)
+      `ifdef spfpu
+        ,frm: truncate(csr.sbread.mv_csr_frm)
+      `endif
       `ifdef debug
         ,csr_dcsr: truncate(csr.sbread.mv_csr_dcsr)
       `endif

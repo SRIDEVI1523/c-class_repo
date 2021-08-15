@@ -284,7 +284,9 @@ package ccore_types;
     Bit#(TAdd#(`max_int_cause,1)) csr_mip;
     Bit#(TAdd#(`max_int_cause,1)) csr_mie;
     Bit#(26) csr_misa;
+  `ifdef spfpu
     Bit#(3) frm;
+  `endif
     Bit#(XLEN) csr_mstatus;
   } CSRtoDecode deriving(Bits, Eq, FShow);
 

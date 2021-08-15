@@ -426,10 +426,12 @@ package decoder;
   function Instruction_type fn_decode_insttype(Bit#(32) inst, CSRtoDecode csrs
                             `ifdef debuf DebugStatus debug `endif );
     Bit#(1) fs = |csrs.csr_mstatus[14:13];
-    Bit#(3) frm = csrs.frm;
 		Bit#(3) funct3= inst[14:12];
 		Bit#(7) funct7= inst[31:25];
+  `ifdef spfpu
+    Bit#(3) frm = csrs.frm;
     Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
+  `endif
 	  Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa);
   	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12], csrs.csr_mstatus[20], csrs.prv);
     case (inst) matches
