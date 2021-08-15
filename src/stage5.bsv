@@ -174,7 +174,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   `ifdef rtldump
     rx_commitlog.u.deq;
   `endif
-  `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping PC:%h",hartid,fuid.pc))
+    `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping PC:%h",hartid,fuid.pc))
   endrule:rl_commit_drop
 
   /*doc:rule: This rule handles all traps there were detected/raised in any of the previous stages
@@ -191,6 +191,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
                           `ifdef no_wawstalls , id: fuid.id `endif
                            `ifdef spfpu rdtype: fuid.rdtype `endif };
+
     if (epochs_match) begin
     `ifdef microtrap_support
       if (trapout.is_microtrap) begin
@@ -220,6 +221,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
         else
           wr_count_exceptions <= 1;
       `endif
+        `logLevel( stage5, 0, $format("[%2d]STAGE5 : Going to *TVEC:%h",hartid, tvec))
       end
         rx_trapout.u.deq;
         rx_fuid.u.deq;
@@ -368,7 +370,6 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   `endif
 
     if (epochs_match) begin
-      `logLevel( stage5, 0, $format("[%2d]STAGE5 : PC:%h",hartid,rx_fuid.u.first.pc))
     `ifdef dcache
       if (!memop.io) begin // cacheable store/atomic op
         `logLevel( stage5, 0, $format("[%2d]STAGE5 : Cached Store Op ",hartid, fshow(memop)))
@@ -411,6 +412,9 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
             rg_epoch <= ~rg_epoch;
             rx_fuid.u.deq;
             rx_memio.u.deq;
+          `ifdef rtldump
+            rx_commitlog.u.deq;
+          `endif
           end
           else begin
             wr_increment_minstret <= True;
