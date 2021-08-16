@@ -697,6 +697,8 @@ noinline_modules:
       type: boolean
     base_alu:
       type: boolean
+    decoder:
+      type: boolean
   default:
     stage0: False
     stage1: False
@@ -714,3 +716,4 @@ noinline_modules:
     scoreboard: False
     bypass: False
     base_alu: False
+    decoder: False
