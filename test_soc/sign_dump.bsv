@@ -95,9 +95,11 @@ package sign_dump;
         if(rg_start_address != truncate(w.wdata))
           rg_start<=True;
       end
+    `ifndef cocotb_sim
       else if (aw.awaddr[3:0]=='hc) begin
         $finish(0);        
       end
+    `endif
   	  s_xactor.i_wr_resp.enq (b);
     endrule
     

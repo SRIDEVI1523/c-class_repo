@@ -648,6 +648,8 @@ bsc_compile_options:
       type: string
     top_dir:
       type: string
+    cocotb_sim:
+      type: boolean
   default:
     test_memory_size: 33554432
     assertions: True
@@ -661,6 +663,7 @@ bsc_compile_options:
     top_dir: base_sim
     open_ocd: False
     compile_target: 'sim'
+    cocotb_sim: False
 
 noinline_modules:
   type: dict

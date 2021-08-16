@@ -139,11 +139,11 @@ package TbSoc;
 
       let generate_dump <- $test$plusargs("rtldump");
       if (soc.commitlog matches tagged Valid .idump) begin
-    `ifndef openocd
+    `ifndef openocd `ifndef cocotb_sim
       if(idump.instruction=='h00006f||idump.instruction =='h00a001)
         $finish(0);
       else
-    `endif
+    `endif `endif
       if(generate_dump) begin
         if (idump.instruction[1:0] == 'b11)
         	$fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%8h", idump.instruction, ")");
@@ -232,30 +232,6 @@ package TbSoc;
 
       end
     endrule
-    /*rule write_dump_file(rg_cnt>=5);
-      let generate_dump <- $test$plusargs("rtldump");
-      let {prv, pc, instruction, rd, data, rdtype}<- soc.io_dump.get;
-    `ifndef openocd
-      if(instruction=='h00006f||instruction =='h00a001)
-        $finish(0);
-      else
-    `endif
-      if(generate_dump)begin
-        if (instruction[1:0] == 'b11)
-        	$fwrite(dump, prv, " 0x%16h", pc, " (0x%8h", instruction, ")");
-        else
-          $fwrite(dump, prv, " 0x%16h", pc, " (0x%4h", instruction[15:0], ")");
-
-        if(rdtype == FRF && valueOf(FLEN) == 64)
-      	  $fwrite(dump, " f%d", rd, " 0x%16h", data[63:0], "\n");
-        else if(rdtype == FRF && valueOf(FLEN) == 32)
-      	  $fwrite(dump, " f%d", rd, " 0x%8h", data[31:0], "\n");
-        else if(rdtype == IRF && valueOf(XLEN) == 64)
-    	    $fwrite(dump, " x%d", rd, " 0x%16h", data[63:0], "\n");
-        else if(rdtype == IRF && valueOf(XLEN) == 32)
-    	    $fwrite(dump, " x%d", rd, " 0x%8h", data[31:0], "\n");
-      end
-    endrule*/
   `endif
 
   `ifdef debug

@@ -153,6 +153,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     macros = 'Addr_space='+str(int(test_memory_size))
     macros += ' xlen='+str(xlen)
     macros += ' bypass_sources=2'
+    if foo['bsc_compile_options']['cocotb_sim']:
+        macros += ' cocotb_sim'
     if "all" in foo['bsc_compile_options']['suppress_warnings']:
         suppress += ' -suppress-warnings\
  G0010:T0054:G0020:G0024:G0023:G0096:G0036:G0117:G0015'

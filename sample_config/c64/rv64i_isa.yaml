@@ -142,7 +142,7 @@ hart0:
                     wr_illegal:
                       - Unchanged
             fs:
-                implemented: false
+                implemented: true
                 type:
                   warl:
                     dependency_fields: []
@@ -195,7 +195,7 @@ hart0:
                 type: 
                   ro_constant: 2
             sd:
-                implemented: false
+                implemented: true
                 type:
                     ro_variable: true
         reset-val: 0xA00000000
