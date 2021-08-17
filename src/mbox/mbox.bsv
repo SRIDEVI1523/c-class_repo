@@ -39,7 +39,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   Ifc_combo_mul mul_ <- mkcombo_mul;
   Ifc_restoring_div div_ <- mkrestoring_div(hartid);
 
-  FIFOF#(Bool) ff_ordering <- mkSizedFIFOF(max(`MULSTAGES_TOTAL,2));
+  FIFOF#(Bool) ff_ordering <- mkUGSizedFIFOF(max(`MULSTAGES_TOTAL,2));
   TX#(Bit#(`xlen)) tx_mbox_out <- mkTX;
 
   /*doc:rule: */
@@ -50,7 +50,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   endrule:rl_fifo_full
 
   /*doc:rule: */
-  rule rl_capture_output;
+  rule rl_capture_output(ff_ordering.notEmpty);
     if (ff_ordering.first) begin // mul operation
       if (mul_.mv_output_valid) begin
         let _x <- mul_.mv_output;
@@ -74,7 +74,9 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   endrule: rl_capture_output
 
 	method Action ma_inputs(MBoxIn inputs);
-
+  `ifdef ASSERT
+    dynamicAssert(ff_ordering.notFull(), "Enquing MBOX inputs to full fifo");
+  `endif
     if( inputs.funct3[2] == 0 ) begin // Multiplication ops
       `logLevel( mbox, 0, $format("MBOX: To MUL. Op1:%h Op2:%h ", inputs.in1, inputs.in2 ))
       mul_.ma_inputs(inputs.in1, inputs.in2, inputs.funct3 `ifdef RV64 ,inputs.wordop `endif );
@@ -86,7 +88,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
       div_.ma_inputs( inputs.in1, inputs.in2, inputs.funct3 `ifdef RV64 ,inputs.wordop `endif ) ;
     end
   endmethod
-  method mv_ready= MBoxRdy{mul: mul_.mv_ready, div: div_.mv_ready};
+  method mv_ready= MBoxRdy{mul: mul_.mv_ready && ff_ordering.notFull, div: div_.mv_ready && ff_ordering.notFull()};
 
   method tx_output = tx_mbox_out.e;
 endmodule
