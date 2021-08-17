@@ -190,9 +190,12 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     macros += ' num_harts='+str(foo['num_harts'])
     macros += ' microtrap_support'
 
+    wawid = foo['isb_sizes']['isb_s3s4']+foo['isb_sizes']['isb_s4s5']
+    wawid = int(math.ceil(math.log2(wawid)))
+
     if not foo['waw_stalls']:
         macros += ' no_wawstalls'
-        macros += ' wawid=3'
+        macros += ' wawid='+str(wawid)
     else:
         macros += ' wawid=0'
 
