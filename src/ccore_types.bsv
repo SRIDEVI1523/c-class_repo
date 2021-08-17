@@ -541,6 +541,7 @@ package ccore_types;
   `ifdef dpfpu
     Bool       nanboxing;
   `endif
+    Bit#(TLog#(`dsbsize)) sb_id;
     Bool io;
     Access_type memaccess;
   } WBMemop deriving (Bits, Eq, FShow);

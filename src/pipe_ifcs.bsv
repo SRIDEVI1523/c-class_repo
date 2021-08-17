@@ -398,7 +398,7 @@ interface Ifc_s5_common;
 endinterface:Ifc_s5_common
 
 interface Ifc_s5_cache;
-  method Bit#(1) mv_initiate_store;
+  method Tuple2#(Bit#(1), Bit#(TLog#(`dsbsize))) mv_initiate_store;
   method Bit#(1) mv_initiate_ioop;
   method Action ma_io_response(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize)) r);
 endinterface:Ifc_s5_cache

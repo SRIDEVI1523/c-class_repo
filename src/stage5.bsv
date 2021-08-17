@@ -129,7 +129,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
 `ifdef dcache
   /*doc:wire: this wire holds the epoch value of the cached memory store/atomic operation that is
    * waiting to be committed/dropped*/
-  Wire#(Bit#(1)) wr_commit_cacheop <- mkWire();
+  Wire#(Tuple2#(Bit#(1), Bit#(TLog#(`dsbsize)))) wr_commit_cacheop <- mkWire();
 `endif    
 `ifdef debug
   /*doc:submodules: connection back to the csrs to stop counters*/
@@ -373,7 +373,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     `ifdef dcache
       if (!memop.io) begin // cacheable store/atomic op
         `logLevel( stage5, 0, $format("[%2d]STAGE5 : Cached Store Op ",hartid, fshow(memop)))
-        wr_commit_cacheop <= rg_epoch;
+        wr_commit_cacheop <= tuple2(rg_epoch, memop.sb_id);
         wr_increment_minstret <= True;
         rx_fuid.u.deq;
         rx_memio.u.deq;
@@ -451,7 +451,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     `endif
     `ifdef dcache
       if(!memop.io)
-        wr_commit_cacheop <= rg_epoch;
+        wr_commit_cacheop <= tuple2(rg_epoch, ?);
       else
     `endif
         wr_commit_ioop <= rg_epoch;
@@ -518,7 +518,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   endinterface;
   
   interface cache = interface Ifc_s5_cache
-    method Bit#(1) mv_initiate_store = wr_commit_cacheop;
+    method mv_initiate_store = wr_commit_cacheop;
     method Bit#(1) mv_initiate_ioop = wr_commit_ioop;
     method Action ma_io_response(Maybe#(DMem_core_response#(TMul#(`dwords,8),`desize)) r);
       wr_ioop_response <= r;

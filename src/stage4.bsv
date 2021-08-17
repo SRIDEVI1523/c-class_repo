@@ -210,7 +210,8 @@ package stage4;
         `endif
         end
         else if (mem_response.entry_alloc) begin
-          let lv_memop = WBMemop{ memaccess: memop.memaccess , io: mem_response.is_io
+          let lv_memop = WBMemop{ memaccess: memop.memaccess , io: mem_response.is_io,
+              sb_id : mem_response.sb_id
               `ifdef nanboxing ,nanboxing: memop.nanboxing `endif
               `ifdef atomic ,atomic_rd_data: mem_response.word `endif };
           tx_memio.u.enq(lv_memop);
