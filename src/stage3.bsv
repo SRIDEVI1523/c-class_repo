@@ -589,7 +589,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     else begin
       td.state = 3;
     end
-    if(redirection)
+    if(redirection && wr_op1_avail && wr_op2_avail)
       `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
   `endif
     TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False,
