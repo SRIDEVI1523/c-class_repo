@@ -439,7 +439,7 @@ package decoder;
       `AUIPC_INSTR		       :return ALU;
       `JAL_INSTR		         :return JAL;
       `JALR_INSTR		         :return JALR;
-      `BRANCH_INSTR          : if (funct3 != 'b011) return BRANCH; else return TRAP;
+      `BRANCH_INSTR          : if (funct3 != 'b011 && funct3 != 'b010) return BRANCH; else return TRAP;
       `LOAD_INSTR            :if (funct3 != 7 `ifdef RV32 && funct3 != 3 && funct3 !=6 `endif ) return MEMORY; else return TRAP;
       `STORE_INSTR           : `ifdef RV32 if (inst[13:12] != 3) return MEMORY; else return TRAP; `else return MEMORY; `endif
       `ARITHIMM_INSTR        :if (funct3 == 1)  // SLLI
