@@ -298,6 +298,8 @@ module mkstage2#(parameter Bit#(XLEN) hartid) (Ifc_stage2);
     Bit#(XLEN) mtval = 0;
     if(func_cause == `Illegal_inst )
       mtval = zeroExtend(inst); // for mtval
+    else if(func_cause == `Breakpoint )
+      mtval = zeroExtend(pc); // for mtval
 `ifdef supervisor
   `ifdef compressed
     else if(func_cause == `Inst_pagefault && highbyte_err)
