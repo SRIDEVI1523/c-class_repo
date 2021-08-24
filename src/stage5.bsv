@@ -412,6 +412,9 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
             rg_epoch <= ~rg_epoch;
             rx_fuid.u.deq;
             rx_memio.u.deq;
+            wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only: True
+                                      `ifdef no_wawstalls , id: fuid.id `endif
+                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
           `ifdef rtldump
             rx_commitlog.u.deq;
           `endif
