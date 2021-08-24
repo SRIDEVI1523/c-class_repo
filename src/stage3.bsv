@@ -55,6 +55,7 @@ import ccore_types    :: * ;       // for pipe - line types
 import dcache_types   :: * ;          // for dmem request types
 import pipe_ifcs      :: * ;
 import scoreboard     :: * ;
+import Probe          :: * ;
 `ifdef muldiv
   import mbox           :: * ;
 `endif
@@ -159,7 +160,10 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   Wire#(Bit#(XLEN)) wr_fwd_op2 <- mkWire();
   /*doc:wire: internal wire indicating if the operands are available for execution*/
   Wire#(Bool) wr_op1_avail <- mkWire();
+  Probe#(Bool) wr_op1_avail_probe <- mkProbe();
+
   Wire#(Bool) wr_op2_avail <- mkWire();
+  Probe#(Bool) wr_op2_avail_probe <- mkProbe();
 
   // The following registers are use to the maintain epochs from various pipeline stages:
   // writeback and execute stage.
@@ -274,7 +278,10 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     let {_op1_avail, _fwd_op1} = fn_bypass( req_addr1, byp1);
     let {_op2_avail, _fwd_op2} = fn_bypass( req_addr2, byp2);
     wr_op1_avail <= _op1_avail; wr_fwd_op1 <= _fwd_op1;
+    wr_op1_avail_probe <= _op1_avail;
+
     wr_op2_avail <= _op2_avail; wr_fwd_op2 <= _fwd_op2;
+    wr_op2_avail_probe <= _op1_avail;
     if (lv_waw_stall)begin
       `logLevel( stage3, stall, $format("[%2d]STAGE3: WAW Stall", hartid))
       `logLevel( stage3, 0, $format("[%2d]STAGE3: ",hartid, fshow(sboard.mv_board)))
