@@ -277,14 +277,14 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     macros += ' dsets='+str(foo['dcache_configuration']['sets'])
     macros += ' dfbsize='+str(foo['dcache_configuration']['fb_size'])
     macros += ' dsbsize='+str(foo['dcache_configuration']['sb_size'])
+    macros += ' dlbsize='+str(foo['dcache_configuration']['lb_size'])
     macros += ' dibsize='+str(foo['dcache_configuration']['ib_size'])
-    if foo['dcache_configuration']['rwports'] == 2:
-        macros += ' dcache_dualport'
+    macros += ' dcache_'+str(foo['dcache_configuration']['rwports'])
     if foo['dcache_configuration']['one_hot_select']:
         macros += ' dcache_onehot=1'
     else:
         macros += ' dcache_onehot=0'
-    if( foo['dcache_configuration']['ecc_enable']):
+    if(foo['dcache_configuration']['ecc_enable']):
         macros += ' dcache_ecc'
     if foo['dcache_configuration']['instantiate']:
         macros += ' dcache'

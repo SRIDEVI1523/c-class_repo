@@ -384,7 +384,7 @@ icache_configuration:
 #      funcion should be used of conventional for-loops to choose amongst
 #      lines/fb-lines. Choice of this has no affect on the functionality
 #    - ``rwports``: number of read-write ports available on the brams. Allowed
-#      values are 1 and 2. Default value is 1
+#      values are 1rw, 1r1w and 2rw
 #
 #  If supervisor is enabled then the max size of a single way should not exceed
 #  4Kilo Bytes
@@ -401,11 +401,12 @@ icache_configuration:
 #      ways: 4
 #      fb_size: 4
 #      sb_size: 2
+#      lb_size: 2
 #      ib_size: 2
 #      replacement: "PLRU"
 #      ecc_enable: false
 #      one_hot_select: false
-#      rwports: 1
+#      rwports: 1r1w
 
 dcache_configuration:
   type: dict
@@ -425,6 +426,8 @@ dcache_configuration:
     sb_size:
       type: integer
       allowed: [2]
+    lb_size:
+      type: integer
     ib_size:
       type: integer
     replacement:
@@ -435,8 +438,8 @@ dcache_configuration:
     one_hot_select:
       type: boolean
     rwports:
-      type: integer
-      allowed: [1,2]
+      type: string 
+      allowed: ['1rw', '1r1w', '2rw']
   default:
     instantiate: True
     sets: 4
@@ -445,13 +448,14 @@ dcache_configuration:
     ways: 4
     fb_size: 8
     sb_size: 2
+    lb_size: 2
     ib_size: 2
     replacement: "PLRU"
     tag_banks: 1
     data_banks: 1
     ecc_enable: false
     one_hot_select: false
-    rwports: 1
+    rwports: '1r1w'
 
 ###
 #reset_pc
