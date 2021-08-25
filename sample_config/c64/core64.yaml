@@ -41,7 +41,7 @@ dcache_configuration:
   ways: 4
   fb_size: 9
   sb_size: 2
-  lb_size: 2
+  lb_size: 4
   ib_size: 2
   replacement: RR
   ecc_enable: false
