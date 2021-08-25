@@ -65,7 +65,7 @@ bsc_compile_options:
   top_file: TbSoc.bsv
   top_dir: test_soc
   open_ocd: False
-  cocotb_sim: False
+  cocotb_sim: True
 verilator_configuration:
   coverage: none
   trace: false
