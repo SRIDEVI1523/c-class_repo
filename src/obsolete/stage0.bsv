@@ -43,13 +43,12 @@ needs to be handled and has explained in detail in the description of the rule: 
 package stage0;
 
   // -- library imports
-  import FIFO           :: * ;
-  import FIFOF          :: * ;
-  import SpecialFIFOs   :: * ;
-  import GetPut         :: * ;
-  import TxRx           :: * ;
-  import icache_types   :: * ;
-  import pipe_ifcs      :: * ;
+  import FIFO :: * ;
+  import FIFOF :: * ;
+  import SpecialFIFOs :: * ;
+  import GetPut :: * ;
+  import TxRx :: * ;
+  import icache_types :: * ;
 
   // -- project imports
   `include "Logger.bsv"
@@ -60,17 +59,39 @@ package stage0;
 `endif
 
   interface Ifc_stage0;
-    interface Ifc_s0_common common;
-    interface Ifc_s0_icache icache;
-    interface Ifc_s0_tx tx;
-  `ifdef bpu
-    interface Ifc_s0_bpu s0_bpu;
+
+    /*doc:method: this method will be enabled to indicate a flush from the execute stage*/
+    method Action ma_update_eEpoch ();
+
+    /*doc:method: this method will be enabled to indicate a flush from the write-back stage*/
+    method Action ma_update_wEpoch ();
+
+    /*doc:method: This method is fired either from a mis-prediction from the execute stage or a trap
+    from the write-back stage or due to an sfence or fence being committed. */
+    method Action ma_flush (Stage0Flush fl);
+
+`ifdef bpu
+    /*doc : method : method to training the BTB and BHT tables*/
+	  method Action ma_train_bpu (Training_data td);
+  `ifdef gshare
+    /*doc : method: This method is fired when there is a conditional misprediction */
+    method Action ma_mispredict (Tuple2#(Bool, Bit#(`histlen)) g);
   `endif
+    /*doc : method: This method captures if the bpu is enabled through csr or not*/
+    method Action ma_bpu_enable (Bool e);
+`endif
+
+    /*doc:subifc: This interface defines the request sent out from stage0 to the cache and stage1.*/
+    interface Get#(IMem_core_request#(`vaddr, `iesize)) to_icache;
+
+    /*doc:subifc: interface to send info to stage 1 about the next pc*/
+    interface TXe#(Stage0PC#(`vaddr)) tx_to_stage1;
+
+    /*doc:method: Method indicates that the reset sequence is done*/
+    method Action ma_reset_done(Bool _done);
   endinterface: Ifc_stage0
 
-`ifdef stage0_noinline
   (*synthesize*)
-`endif
   module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid) (Ifc_stage0);
     String stage0 = "";
   `ifdef bpu
@@ -159,7 +180,7 @@ package stage0;
       `endif
 
         let nextpc = (rg_pc[0] & signExtend(3'b100)) + 4;
-        `logLevel( stage0, 0, $format("STAGE0: nextpc: %h ",nextpc `ifdef ifence ," fencei:%b",rg_fence[0] `endif ))
+        `logLevel( stage0, 0, $format("STAGE0: nextpc: %h rg_fence:%b",nextpc,rg_fence[0]))
 
       `ifdef bpu
         // bpu is flushed in case of ifence and not for sfence
@@ -219,52 +240,44 @@ package stage0;
         end
     endrule
 
-    interface icache = interface Ifc_s0_icache
-      interface to_icache = toGet(ff_to_cache);
-    endinterface;
+    interface to_icache = toGet(ff_to_cache);
 
-    interface tx = interface Ifc_s0_tx
-      interface tx_to_stage1 = tx_tostage1.e;
-    endinterface;
+    interface tx_to_stage1 = tx_tostage1.e;
 
-    interface common = interface Ifc_s0_common
-      method Action ma_update_eEpoch ();
-        rg_eEpoch <= ~rg_eEpoch;
-      endmethod
-  
-      method Action ma_update_wEpoch ();
-        rg_wEpoch <= ~rg_wEpoch;
-      endmethod
-      method Action ma_reset_done(Bool _done);
-        wr_reset_sequence_done <= _done;
-      endmethod:ma_reset_done
+    method Action ma_update_eEpoch ();
+      rg_eEpoch <= ~rg_eEpoch;
+    endmethod
 
-      method Action ma_flush (Stage0Flush fl) if(!rg_initialize && wr_reset_sequence_done);
-        `logLevel( stage0, 1, $format("[%2d]STAGE0: Recieved Flush:",hartid,fshow(fl)))
-      `ifdef ifence
-        rg_fence[1] <= fl.fence;
-      `endif
-      `ifdef supervisor
-        rg_sfence[1] <= fl.sfence;
-      `endif
-        rg_pc[1] <= fl.pc;
-    `ifdef bpu
-      `ifdef compressed
-        // reset any delayed-redirect
-        rg_delayed_redirect[1] <= tagged Invalid;
-      `endif
+    method Action ma_update_wEpoch ();
+      rg_wEpoch <= ~rg_wEpoch;
+    endmethod
+    method Action ma_reset_done(Bool _done);
+      wr_reset_sequence_done <= _done;
+    endmethod:ma_reset_done
+
+    method Action ma_flush (Stage0Flush fl) if(!rg_initialize && wr_reset_sequence_done);
+      `logLevel( stage0, 1, $format("[%2d]STAGE0: Recieved Flush:",hartid,fshow(fl)))
+    `ifdef ifence
+      rg_fence[1] <= fl.fence;
     `endif
-      endmethod
-    endinterface;
+    `ifdef supervisor
+      rg_sfence[1] <= fl.sfence;
+    `endif
+      rg_pc[1] <= fl.pc;
+  `ifdef bpu
+    `ifdef compressed
+      // reset any delayed-redirect
+      rg_delayed_redirect[1] <= tagged Invalid;
+    `endif
+  `endif
+    endmethod
 
 `ifdef bpu
-    interface s0_bpu = interface Ifc_s0_bpu
-      method ma_train_bpu   = bpu.ma_train_bpu;
-    `ifdef gshare
-      method ma_mispredict  = bpu.ma_mispredict;
-    `endif
-      method ma_bpu_enable  = bpu.ma_bpu_enable;
-    endinterface;
+    method ma_train_bpu   = bpu.ma_train_bpu;
+  `ifdef gshare
+    method ma_mispredict  = bpu.ma_mispredict;
+  `endif
+    method ma_bpu_enable  = bpu.ma_bpu_enable;
 `endif
 
   endmodule: mkstage0

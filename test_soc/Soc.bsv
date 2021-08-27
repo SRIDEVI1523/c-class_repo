@@ -51,8 +51,10 @@ package Soc;
         slave_num = `Clint_slave_num;
       else if(addr>= `SignBase && addr<= `SignEnd)
         slave_num = `Sign_slave_num;
+    `ifdef debug
       else if(addr>= `DebugBase && addr<= `DebugEnd)
         slave_num = `Debug_slave_num;
+    `endif
       else
         slave_num = `Err_slave_num;
         

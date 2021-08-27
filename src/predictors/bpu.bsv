@@ -22,7 +22,9 @@ package bpu;
     import bimodal_nc :: *;
   `endif
 
+`ifdef bpu_noinline
   (*synthesize*)
+`endif
   module mkbpu(Ifc_bpu);
     let ifc();
   `ifdef gshare_nc

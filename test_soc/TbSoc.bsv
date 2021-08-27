@@ -72,8 +72,10 @@ package TbSoc;
   `else
     Ifc_Soc soc <- mkSoc();
   `endif
-
+  
+  `ifdef rtldump
     `include "csr_probe.bsv"
+  `endif
 
     UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5);
     Reg#(Bool) rg_read_rx<- mkDReg(False);
@@ -137,11 +139,11 @@ package TbSoc;
 
       let generate_dump <- $test$plusargs("rtldump");
       if (soc.commitlog matches tagged Valid .idump) begin
-    `ifndef openocd
+    `ifndef openocd `ifndef cocotb_sim
       if(idump.instruction=='h00006f||idump.instruction =='h00a001)
         $finish(0);
       else
-    `endif
+    `endif `endif
       if(generate_dump) begin
         if (idump.instruction[1:0] == 'b11)
         	$fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%8h", idump.instruction, ")");
@@ -180,10 +182,12 @@ package TbSoc;
 
         if (idump.inst_type matches tagged MEM .d) begin
           let store_data = d.data;
+        `ifdef atomic
           if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
             store_data = fn_atomic_op(d.atomic_op,d.data, d.commit_data);
           end
-          if (d.access == Load || d.access == Atomic) begin
+        `endif
+          if (d.access == Load `ifdef atomic || d.access == Atomic `endif ) begin
             if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.commit_data);
             if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
@@ -199,14 +203,16 @@ package TbSoc;
           if(valueOf(XLEN) ==32&& d.access != Fence && d.access != FenceI)
             $fwrite(dump, " mem 0x%8h", d.address);
 
+        `ifdef atomic
           if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
             if(valueOf(XLEN) ==64)
               $fwrite(dump, " mem 0x%16h", d.address);
             if(valueOf(XLEN) ==32)
               $fwrite(dump, " mem 0x%8h", d.address);
           end
+        `endif
 
-          if (d.access == Store || (d.access == Atomic && d.atomic_op != 5)) begin
+          if (d.access == Store  `ifdef atomic || (d.access == Atomic && d.atomic_op != 5) `endif ) begin
             if (d.size == 0) begin
               if (store_data[7:4]==0)
                 $fwrite(dump, " 0x%1h", store_data[3:0]);
@@ -226,30 +232,6 @@ package TbSoc;
 
       end
     endrule
-    /*rule write_dump_file(rg_cnt>=5);
-      let generate_dump <- $test$plusargs("rtldump");
-      let {prv, pc, instruction, rd, data, rdtype}<- soc.io_dump.get;
-    `ifndef openocd
-      if(instruction=='h00006f||instruction =='h00a001)
-        $finish(0);
-      else
-    `endif
-      if(generate_dump)begin
-        if (instruction[1:0] == 'b11)
-        	$fwrite(dump, prv, " 0x%16h", pc, " (0x%8h", instruction, ")");
-        else
-          $fwrite(dump, prv, " 0x%16h", pc, " (0x%4h", instruction[15:0], ")");
-
-        if(rdtype == FRF && valueOf(FLEN) == 64)
-      	  $fwrite(dump, " f%d", rd, " 0x%16h", data[63:0], "\n");
-        else if(rdtype == FRF && valueOf(FLEN) == 32)
-      	  $fwrite(dump, " f%d", rd, " 0x%8h", data[31:0], "\n");
-        else if(rdtype == IRF && valueOf(XLEN) == 64)
-    	    $fwrite(dump, " x%d", rd, " 0x%16h", data[63:0], "\n");
-        else if(rdtype == IRF && valueOf(XLEN) == 32)
-    	    $fwrite(dump, " x%d", rd, " 0x%8h", data[31:0], "\n");
-      end
-    endrule*/
   `endif
 
   `ifdef debug

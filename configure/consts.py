@@ -1,5 +1,5 @@
 
-length_check_fields=['reset_pc', 'physical_addr_size']
+length_check_fields=['reset_pc']
 
 bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
 +RTS -K40000M -RTS -check-assert  -keep-fires \
@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: 11.1.0
+  checkout: store-buffefixes
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: master

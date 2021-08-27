@@ -95,7 +95,9 @@ def main():
         sys.exit(0)
     elif args.clean is None:
         configure.validate_specs(os.path.abspath(args.cspec),
-                                 os.path.abspath(args.ispec), debugfile, True)
+                                 os.path.abspath(args.ispec), 
+                                 debugfile, 
+                                 os.path.abspath(args.gspec), True)
 
 if __name__ == "__main__":
     exit(main())

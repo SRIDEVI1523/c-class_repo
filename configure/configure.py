@@ -10,6 +10,7 @@ import sys
 import math
 from repomanager.rpm import repoman
 from riscv_config.warl import warl_interpreter
+from csrbox.csr_gen import find_group
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +37,18 @@ def specific_checks(foo):
         max_value = 2 ** 32
         xlen = 32
 
+    if foo['merged_rf']:
+        if 'F' not in foo['ISA']:
+            logger.error('merged_rf should be True only when F support is \
+                    available in hw')
+            raise SystemExit
+
     # check if default values are correctly assigned
     for field in length_check_fields:
         if foo[field] > (max_value-1):
             logger.error('Default Value of ' + field + ' exceeds the max\
  allowed value')
-            sys.exit(1)
+            raise SystemExit
 
     # check a_extension
     if 'A' in foo['ISA']:
@@ -51,15 +58,16 @@ def specific_checks(foo):
             raise SystemExit
 
     # check m_extension
-    m_mulstages = foo['m_extension']['mul_stages']
+    m_mulstages_in = foo['m_extension']['mul_stages_in']
+    m_mulstages_out = foo['m_extension']['mul_stages_out']
     m_divstages = foo['m_extension']['div_stages']
     if 'M' in foo['ISA']:
-        if m_mulstages > xlen:
+        if m_mulstages_in +m_mulstages_out> xlen:
             logger.error('Multiplication stages cannot exceed XLEN')
-            sys.exit(1)
+            raise SystemExit
         if m_divstages > xlen:
             logger.error('Division stages cannot exceed XLEN')
-            sys.exit(1)
+            raise SystemExit
 
     # check icache
     icache_enable = foo['icache_configuration']['instantiate']
@@ -83,14 +91,15 @@ def specific_checks(foo):
       if xlen != (d_words * 8):
         logger.error('D_WORDS for a '+str(xlen)+'-bit core should be '+
           str(xlen/8))
+        raise SystemExit
     if dcache_enable and 'S' in foo['ISA']:
         if i_words*i_sets*i_blocks > 4096:
             logger.error('Since Supervisor is enabled, each way of D-Cache\
  should be less than 4096 Bytes')
-            sys.exit(1)
+            raise SystemExit
         if d_words * 8 != xlen:
             logger.error('D-Cache d_words should be ' + str(xlen/8))
-            sys.exit(1)
+            raise SystemExit
 
     if foo['bsc_compile_options']['ovl_assertions']:
         if foo['bsc_compile_options']['ovl_path'] is None or \
@@ -98,7 +107,7 @@ def specific_checks(foo):
                     logger.error('Please set ovl_path in core spec')
                     raise SystemExit
 
-def capture_compile_cmd(foo, isa_node, debug_spec):
+def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     global bsc_cmd
     global bsc_defines
 
@@ -116,7 +125,7 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
             s_mode = 'sv48'
         elif satp_modewarl.islegal(8,[]):
             s_mode = 'sv39'
-        elif satp_modewarl.isa_node(1,[]):
+        elif satp_modewarl.islegal(1,[]):
             s_mode = 'sv32'
         else:
             logger.error('Cannot deduce supervisor mode from satp.mode')
@@ -133,7 +142,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
             else:
                 asid_mask = asid_mask >> 1
 
-    m_mulstages = foo['m_extension']['mul_stages']
+    m_mulstages_in = foo['m_extension']['mul_stages_in']
+    m_mulstages_out = foo['m_extension']['mul_stages_out']
     m_divstages = foo['m_extension']['div_stages']
     mhpm_eventcount = foo['total_events']
     suppress = ''
@@ -141,6 +151,10 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     test_memory_size = foo['bsc_compile_options']['test_memory_size']
     test_memory_size = math.log2(test_memory_size)
     macros = 'Addr_space='+str(int(test_memory_size))
+    macros += ' xlen='+str(xlen)
+    macros += ' bypass_sources=2'
+    if foo['bsc_compile_options']['cocotb_sim']:
+        macros += ' cocotb_sim'
     if "all" in foo['bsc_compile_options']['suppress_warnings']:
         suppress += ' -suppress-warnings\
  G0010:T0054:G0020:G0024:G0023:G0096:G0036:G0117:G0015'
@@ -162,6 +176,9 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     if foo['bsc_compile_options']['sva_assertions']:
         macros += ' sva_assert'
 
+    for isb,isb_val in foo['isb_sizes'].items():
+        macros += ' {0}={1}'.format(isb,isb_val)
+
     macros += ' RV'+str(xlen)+' ibuswidth='+str(xlen)
     macros += ' dbuswidth='+str(xlen)
     macros += ' resetpc='+str(foo['reset_pc'])
@@ -171,6 +188,16 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     macros += ' iesize='+str(foo['iepoch_size'])
     macros += ' desize='+str(foo['depoch_size'])
     macros += ' num_harts='+str(foo['num_harts'])
+    macros += ' microtrap_support'
+
+    wawid = foo['isb_sizes']['isb_s3s4']+foo['isb_sizes']['isb_s4s5']
+    wawid = int(math.ceil(math.log2(wawid)))
+
+    if not foo['waw_stalls']:
+        macros += ' no_wawstalls'
+        macros += ' wawid='+str(wawid)
+    else:
+        macros += ' wawid=0'
 
     if foo['bsc_compile_options']['compile_target'] == 'sim':
         macros += ' simulate'
@@ -190,8 +217,12 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' compressed'
     if 'M' in foo['ISA']:
         macros += ' muldiv'
-        macros += ' MULSTAGES='+str(m_mulstages)
+        macros += ' MULSTAGES_IN='+str(m_mulstages_in)
+        macros += ' MULSTAGES_OUT='+str(m_mulstages_out)
+        macros += ' MULSTAGES_TOTAL='+str(m_mulstages_out+m_mulstages_in)
         macros += ' DIVSTAGES='+str(m_divstages)
+    if 'Zicsr' in foo['ISA']:
+        macros += ' zicsr'
     if 'U' in foo['ISA']:
         macros += ' user'
     if 'N' in foo['ISA']:
@@ -202,6 +233,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' dtlbsize='+str(s_dtlbsize)
         macros += ' asidwidth='+str(asidlen)
         macros += ' ' + s_mode
+    if 'N' in foo['ISA'] or 'S' in foo['ISA']:
+        macros += ' non_m_traps'
     if foo['branch_predictor']['instantiate']:
         macros += ' bpu'
         macros += ' '+foo['branch_predictor']['predictor']
@@ -212,6 +245,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
         macros += ' rasdepth='+str(foo['branch_predictor']['ras_depth'])
         if foo['branch_predictor']['ras_depth'] > 0:
             macros += ' bpu_ras'
+    if foo['merged_rf']:
+        macros += ' merged_rf'
 
     macros += ' iwords='+str(foo['icache_configuration']['word_size'])
     macros += ' iblocks='+str(foo['icache_configuration']['block_size'])
@@ -242,14 +277,14 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     macros += ' dsets='+str(foo['dcache_configuration']['sets'])
     macros += ' dfbsize='+str(foo['dcache_configuration']['fb_size'])
     macros += ' dsbsize='+str(foo['dcache_configuration']['sb_size'])
+    macros += ' dlbsize='+str(foo['dcache_configuration']['lb_size'])
     macros += ' dibsize='+str(foo['dcache_configuration']['ib_size'])
-    if foo['dcache_configuration']['rwports'] == 2:
-        macros += ' dcache_dualport'
+    macros += ' dcache_'+str(foo['dcache_configuration']['rwports'])
     if foo['dcache_configuration']['one_hot_select']:
         macros += ' dcache_onehot=1'
     else:
         macros += ' dcache_onehot=0'
-    if( foo['dcache_configuration']['ecc_enable']):
+    if(foo['dcache_configuration']['ecc_enable']):
         macros += ' dcache_ecc'
     if foo['dcache_configuration']['instantiate']:
         macros += ' dcache'
@@ -269,10 +304,12 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     pmp_entries = 0
     for node in isa_node:
         if 'mhpmcounter' in node:
-            if isa_node[node]['rv'+str(xlen)]['accessible']:
+            if isa_node[node]['rv'+str(xlen)]['accessible'] and \
+                    find_group(grouping_spec, node) is not None:
                 total_counters += 1
         if 'pmpaddr' in node:
-            if isa_node[node]['rv'+str(xlen)]['accessible']:
+            if isa_node[node]['rv'+str(xlen)]['accessible'] and \
+                    find_group(grouping_spec, node) is not None:
                 pmp_entries += 1
 
     if total_counters > 0:
@@ -290,8 +327,9 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     # reset cycle latency
     dsets = foo['dcache_configuration']['sets']
     isets = foo['dcache_configuration']['sets']
-    rfset = 32
-    macros += ' reset_cycles='+str(max(dsets, isets, rfset))
+    rfset = 64 if foo['merged_rf'] else 32
+    bhtsize = foo['branch_predictor']['bht_depth']
+    macros += ' reset_cycles='+str(max(dsets, isets, rfset, bhtsize))
 
     # find the size of interrupts
     max_int_cause = 11
@@ -303,7 +341,12 @@ def capture_compile_cmd(foo, isa_node, debug_spec):
     max_ex_cause = max_ex_cause + 3
     macros += ' max_int_cause='+str(max_int_cause)
     macros += ' max_ex_cause='+str(max_ex_cause)
-    macros += ' causesize='+str(math.ceil(math.log2(max(max_int_cause, max_ex_cause)))+1)
+    macros += ' causesize='+str(math.ceil(math.log2(max(max_int_cause, max_ex_cause)+1))+1)
+
+    # noinlining modules
+    for module in foo['noinline_modules']:
+        if foo['noinline_modules'][module]:
+            macros += ' '+str(module)+'_noinline'
         
 
     bsc_cmd = bsc_cmd.format(foo['bsc_compile_options']['verilog_dir'],
@@ -373,7 +416,7 @@ def generate_makefile(foo, logging=False):
     if logging:
         logger.info('Dependency Graph Created')
     
-def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
+def validate_specs(core_spec, isa_spec, debug_spec, grouping_spec, logging=False):
 
     schema = 'configure/schema.yaml'
     # Load input YAML file
@@ -383,6 +426,13 @@ def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
     if logging:
         logger.info('Loading isa file: ' + str(isa_spec))
     isa_yaml = utils.load_yaml(isa_spec)
+
+    if debug_spec is not None:
+        debug_yaml = utils.load_yaml(debug_spec)
+    else:
+        debug_yaml = None
+
+    grouping_yaml = utils.load_yaml(grouping_spec)
     
     isa_string = isa_yaml['hart0']['ISA']
     if 64 in isa_yaml['hart0']['supported_xlen']:
@@ -428,7 +478,8 @@ def validate_specs(core_spec, isa_spec, debug_spec, logging=False):
         raise ValidationError("Error in " + core_spec + ".", error_list)
     normalized['ISA'] = isa_yaml['hart0']['ISA']
     specific_checks(normalized)
-    capture_compile_cmd(normalized, isa_yaml['hart0'], debug_spec)
+    capture_compile_cmd(normalized, isa_yaml['hart0'], debug_yaml,
+            grouping_yaml )
     generate_makefile(normalized, logging)
 
     logger.info('Configuring Boot-Code')

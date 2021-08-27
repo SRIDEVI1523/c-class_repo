@@ -11,6 +11,74 @@
 num_harts: {type: integer, default: 1, min: 1, max: 1024}
 
 ###
+#isb_sizes
+# **Description**: A dictionary of what the isbs between stages should be.
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   isb_sizes :
+#     isb_s0s1: 2
+#     isb_s1s2: 2
+#     isb_s2s3: 1
+#     isb_s3s4: 2
+#     isb_s4s5: 2
+
+isb_sizes:
+  type: dict
+  schema:
+    isb_s0s1:
+      type: integer
+      default: 2
+    isb_s1s2:
+      type: integer
+      default: 2
+    isb_s2s3:
+      type: integer
+      default: 1
+      allowed: [1]
+    isb_s3s4:
+      type: integer
+      default: 2
+    isb_s4s5:
+      type: integer
+      default: 2
+  default:
+    isb_s0s1: 2
+    isb_s1s2: 2
+    isb_s2s3: 1
+    isb_s3s4: 2
+    isb_s4s5: 2
+
+###
+#fetchbuffer_sz
+# **Description**: Integer indicating the size of the buffer between the fetch stage and the decoder
+# stage
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   fetchbuffer_sz : 3
+
+fetchbuffer_sz: {type: integer, default: 3, min: 1}
+
+###
+#merged_rf: 
+# **Description**: Boolean field to indicate if the registerfiles of floating
+# and integer should be implemented as a single extended regfile in hw. This
+# field should be set to true only if 'F/D' support is enabled'
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   merged_rf: True
+
+merged_rf: {type: boolean, default: True}
+
+###
 #total_events
 # **Description**: Total number of events in the system
 #
@@ -21,6 +89,18 @@ num_harts: {type: integer, default: 1, min: 1, max: 1024}
 #   total_events: 28
 
 total_events: {type: integer, default: 0}
+
+###
+#waw_stalls
+# **Description**: Indicates if stalls must occur on a WAW hazard
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#   
+#   waw_stalls: False
+
+waw_stalls: {type: boolean, default: False}
 
 ###
 #iepoch_size
@@ -143,7 +223,9 @@ a_extension:
 m_extension:
   type: dict
   schema:
-    mul_stages:
+    mul_stages_out:
+      type: integer
+    mul_stages_in:
       type: integer
     div_stages:
       type: integer
@@ -302,7 +384,7 @@ icache_configuration:
 #      funcion should be used of conventional for-loops to choose amongst
 #      lines/fb-lines. Choice of this has no affect on the functionality
 #    - ``rwports``: number of read-write ports available on the brams. Allowed
-#      values are 1 and 2. Default value is 1
+#      values are 1rw, 1r1w and 2rw
 #
 #  If supervisor is enabled then the max size of a single way should not exceed
 #  4Kilo Bytes
@@ -319,11 +401,12 @@ icache_configuration:
 #      ways: 4
 #      fb_size: 4
 #      sb_size: 2
+#      lb_size: 2
 #      ib_size: 2
 #      replacement: "PLRU"
 #      ecc_enable: false
 #      one_hot_select: false
-#      rwports: 1
+#      rwports: 1r1w
 
 dcache_configuration:
   type: dict
@@ -343,6 +426,8 @@ dcache_configuration:
     sb_size:
       type: integer
       allowed: [2]
+    lb_size:
+      type: integer
     ib_size:
       type: integer
     replacement:
@@ -353,8 +438,8 @@ dcache_configuration:
     one_hot_select:
       type: boolean
     rwports:
-      type: integer
-      allowed: [1,2]
+      type: string 
+      allowed: ['1rw', '1r1w', '2rw']
   default:
     instantiate: True
     sets: 4
@@ -363,13 +448,14 @@ dcache_configuration:
     ways: 4
     fb_size: 8
     sb_size: 2
+    lb_size: 2
     ib_size: 2
     replacement: "PLRU"
     tag_banks: 1
     data_banks: 1
     ecc_enable: false
     one_hot_select: false
-    rwports: 1
+    rwports: '1r1w'
 
 ###
 #reset_pc
@@ -385,19 +471,6 @@ reset_pc:
   type: integer
   default: 4096
 
-###
-#physical_addr_size
-#  **Description**: Integer value indicating the number of physical address bits
-#
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    physical_addr_size: 32
-
-physical_addr_size:
-  type: integer
-  default: 32
 
 ###
 #bus_protocol
@@ -431,21 +504,6 @@ fpu_trap:
   default: False
 
 ###
-#debugger_support
-#  **Description**: A boolean field indicating if the core should be implemented
-#  with debugger support
-#
-#  **Examples**:
-#
-#  .. code-block: yaml
-#
-#    debugger_support : True
-
-debugger_support:
-  type: boolean
-  default: False
-
-###
 #no_of_triggers
 #  **Description**: An integer field indicating the number of triggers to be
 #  implemented
@@ -460,59 +518,6 @@ no_of_triggers:
   type: integer
   default: 0
 
-###
-#csr_configuration
-#  **Description**: Captures various parameters for the csr implementation
-#
-#    - ``structure``: should be fixed to "Daisy"
-#    - ``counters_grp4``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 7
-#    - ``counters_grp5``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 7
-#    - ``counters_grp6``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 7
-#    - ``counters_grp7``: an integer field indicating the number of Counters
-#      implemented in this group. Max value is 8
-#
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    csr_configuration:
-#      structure : "daisy"
-#      counters_in_grp4: 7
-#      counters_in_grp5: 7
-#      counters_in_grp6: 7
-#      counters_in_grp7: 8
-
-csr_configuration:
-    type: dict
-    schema:
-      structure:
-        type: string
-        allowed: ["daisy"]      
-      counters_in_grp4:
-        type: integer
-        max: 7
-        min: 0
-      counters_in_grp5:
-        type: integer
-        max: 7
-        min: 0
-      counters_in_grp6:
-        type: integer
-        max: 7
-        min: 0
-      counters_in_grp7:
-        type: integer
-        max: 8
-        min: 0
-    default:
-      structure : "daisy"
-      counters_in_grp4: 0
-      counters_in_grp5: 0
-      counters_in_grp6: 0
-      counters_in_grp7: 0
 
 ###
 #verilator_configuration
@@ -647,6 +652,8 @@ bsc_compile_options:
       type: string
     top_dir:
       type: string
+    cocotb_sim:
+      type: boolean
   default:
     test_memory_size: 33554432
     assertions: True
@@ -660,4 +667,60 @@ bsc_compile_options:
     top_dir: base_sim
     open_ocd: False
     compile_target: 'sim'
+    cocotb_sim: False
 
+noinline_modules:
+  type: dict
+  schema:
+    stage0: 
+      type: boolean
+    stage1:
+      type: boolean
+    stage2:
+      type: boolean
+    stage3:
+      type: boolean
+    stage4:
+      type: boolean
+    stage5:
+      type: boolean
+    mbox:
+      type: boolean
+    mbox_mul:
+      type: boolean
+    mbox_div:
+      type: boolean
+    registerfile:
+      type: boolean
+    bpu:
+      type: boolean
+    riscv:
+      type: boolean
+    csrbox:
+      type: boolean
+    scoreboard:
+      type: boolean
+    bypass:
+      type: boolean
+    base_alu:
+      type: boolean
+    decoder:
+      type: boolean
+  default:
+    stage0: False
+    stage1: False
+    stage2: False
+    stage3: False
+    stage4: False
+    stage5: False
+    mbox: False
+    mbox_mul: False
+    mbox_div: False
+    registerfile: False
+    bpu: False
+    riscv: False
+    csrbox: False
+    scoreboard: False
+    bypass: False
+    base_alu: False
+    decoder: False
