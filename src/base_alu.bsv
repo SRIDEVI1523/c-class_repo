@@ -135,7 +135,7 @@ package base_alu ;
     let lv_logic = fn_logic(op1, op2, fn, op1_xor_op2);
     Bit#(XLEN) aluout = case (fn) 
       `FNADD, `FNSUB: lv_add;
-      `FNSLT, `FNSGE, `FNSLTU, `FNSGEU: zeroExtend(pack(less));
+      `FNSLT, `FNSLTU: zeroExtend(pack(less));
       `FNSR, `FNSRA, `FNSL: lv_shiftout;
       default: lv_logic;
     endcase;
