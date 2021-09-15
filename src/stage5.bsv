@@ -1,4 +1,4 @@
-// Copyright (c) 2020 InCore Semiconductors Pvt. Ltd. see LICENSE.incore for more details on licensing terms
+// Copyright (c) 2020 IIT Madras. see LICENSE.iitm for more details on licensing terms
 /*
 Author: Neel Gala, neelgala@incoresemi.com
 Created on: Monday 21 June 2021 09:07:59 PM
