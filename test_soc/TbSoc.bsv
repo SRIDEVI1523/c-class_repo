@@ -89,7 +89,7 @@ package TbSoc;
 
   `ifdef rtldump
  	  let dump <- mkReg(InvalidFile) ;
-    rule open_file_rtldump(rg_cnt<5);
+    rule open_file_rtldump(rg_cnt<1);
       let generate_dump <- $test$plusargs("rtldump");
       if(generate_dump) begin
         String dumpFile = "rtl.dump" ;
@@ -104,7 +104,7 @@ package TbSoc;
   `endif
 
  	  let dump1 <- mkReg(InvalidFile) ;
-    rule open_file_app(rg_cnt<5);
+    rule open_file_app(rg_cnt<1);
       String dumpFile1 = "app_log" ;
     	File lfh1 <- $fopen( dumpFile1, "w" ) ;
     	if (lfh1==InvalidFile )begin

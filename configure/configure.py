@@ -79,7 +79,7 @@ def specific_checks(foo):
         if i_words*i_sets*i_blocks > 4096:
             logger.error('Since Supervisor is enabled, each way of I-Cache\
  should be less than 4096 Bytes')
-            sys.exit(1)
+            raise SystemExit
     
     # check dcache
     dcache_enable = foo['dcache_configuration']['instantiate']
