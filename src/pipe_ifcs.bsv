@@ -92,7 +92,7 @@ interface Ifc_s1_common;
 
 `ifdef triggers
   method Action trigger_data1(Vector#(`trigger_num, TriggerData) t);
-  method Action trigger_data2(Vector#(`trigger_num, Bit#(XLEN)) t);
+  method Action trigger_data2(Vector#(`trigger_num, Bit#(`xlen)) t);
   method Action trigger_enable(Vector#(`trigger_num, Bool) t);
 `endif
 endinterface:Ifc_s1_common
@@ -109,7 +109,7 @@ interface Ifc_s3_rx;
   /*doc:subifc: interface to receive the meta information from the decode stage*/
   interface RXe#(Stage3Meta)          rx_meta_from_stage2;
   /*doc: subifc: interface to receive the mtval value from stage2 incase of a trap */
-  interface RXe#(Bit#(XLEN))          rx_mtval_from_stage2;
+  interface RXe#(Bit#(`xlen))          rx_mtval_from_stage2;
   /*doc: subifc: interface to receive the mtval value from stage2 incase of a trap */
   interface RXe#(Instruction_type)    rx_instrtype_from_stage2;
   /*doc: subifc: interface to receive the operand metadata value from stage2*/
@@ -131,8 +131,6 @@ interface Ifc_s3_tx;
   interface TXe#(MemoryOut)           tx_memoryout_to_stage4;
   /*doc:subifc: interface to send common meta information to the memory stage.*/
 	interface TXe#(FUid)        tx_fuid_to_stage4;
-
-	interface TXe#(Bool)        tx_drop_to_stage4;
 `ifdef rtldump
   // interface to send the instruction sequence for the rtl dump feature
   interface TXe#(CommitLogPacket)     tx_commitlog;
@@ -153,7 +151,7 @@ endinterface: Ifc_s3_rf
 
 interface Ifc_s3_cache;
   // interface to send memory requests to the dmem subsystem
-  interface Get#(DMem_request#(`vaddr, ELEN, 1)) mv_memory_request;
+  interface Get#(DMem_request#(`vaddr, `elen, 1)) mv_memory_request;
   (*always_enabled*)
   method Action ma_cache_is_available(Bool avail);
 endinterface:Ifc_s3_cache
@@ -246,7 +244,7 @@ interface Ifc_s2_tx;
   interface TXe#(Stage3Meta)    tx_meta_to_stage3;
 
   /*doc:subifc: send bad-address information to stage3 in case of TRAPs*/
-  interface TXe#(Bit#(XLEN))    tx_mtval_to_stage3;
+  interface TXe#(Bit#(`xlen))    tx_mtval_to_stage3;
 
   /*doc:subifc: send instruction type to stage3*/
   interface TXe#(Instruction_type) tx_instrtype_to_stage3;
@@ -321,8 +319,6 @@ endinterface:Ifc_s2_debug
     interface RXe#(MemoryOut)           rx_memoryout_from_stage3;
     /*doc:subifc: interface from send common meta information from the memory stage.*/
   	interface RXe#(FUid)        rx_fuid_from_stage3;
-
-  	interface RXe#(Bool)        rx_drop_from_stage3;
   `ifdef rtldump
     // interface to send the instruction sequence for the rtl dump feature
     interface RXe#(CommitLogPacket)     rx_commitlog;
@@ -335,7 +331,6 @@ endinterface:Ifc_s2_debug
     interface TXe#(BaseOut)         tx_baseout_to_stage5;
     interface TXe#(WBMemop)         tx_memio_to_stage5;
     interface TXe#(CUid)            tx_fuid_to_stage5;
-    interface TXe#(Bool)            tx_drop_to_stage5;
   `ifdef rtldump
     interface TXe#(CommitLogPacket) tx_commitlog;
   `endif
@@ -343,7 +338,7 @@ endinterface:Ifc_s2_debug
 
   interface Ifc_s4_cache;
     // interface to receive the response from dmem memory sub system
-    interface Put#(DMem_core_response#(ELEN,1)) memory_response;
+    interface Put#(DMem_core_response#(`elen,1)) memory_response;
   endinterface:Ifc_s4_cache
 
 `ifdef muldiv
@@ -359,7 +354,6 @@ interface Ifc_s5_rx;
   interface RXe#(BaseOut)         rx_baseout_from_stage4;
   interface RXe#(WBMemop)         rx_memio_from_stage4;
   interface RXe#(CUid)            rx_fuid_from_stage4;
-  interface RXe#(Bool)            rx_drop_from_stage4;
 `ifdef rtldump
   interface RXe#(CommitLogPacket) rx_commitlog;
 `endif
@@ -407,11 +401,11 @@ interface Ifc_s5_csrs;
   method Bit#(1) mv_csr_misa_c;
   method Bit#(3) mv_cacheenable;
   method Bit#(2) mv_curr_priv;
-  method Bit#(XLEN) mv_csr_mstatus;
+  method Bit#(`xlen) mv_csr_mstatus;
   method CSRtoDecode mv_csrs_to_decode;
   method Bool mv_resume_wfi;
 `ifdef supervisor
-	method Bit#(XLEN) mv_csr_satp;
+	method Bit#(`xlen) mv_csr_satp;
 `endif
 `ifdef pmp
   method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg;
@@ -458,7 +452,7 @@ endinterface:Ifc_s5_perfmonitors
 
   module mkPipe_s2_s3#(Ifc_s2_tx s2, Ifc_s3_rx s3)(Bool);
     FIFOF#(Stage3Meta) ff_meta <- mkLFIFOF();
-    FIFOF#(Bit#(XLEN)) ff_mtval <- mkLFIFOF();
+    FIFOF#(Bit#(`xlen)) ff_mtval <- mkLFIFOF();
     FIFOF#(Instruction_type) ff_insttype <- mkLFIFOF();
     FIFOF#(OpMeta) ff_opmeta <- mkLFIFOF();
   `ifdef rtldump
@@ -495,7 +489,6 @@ endinterface:Ifc_s5_perfmonitors
     FIFOF#(SystemOut)           ff_systemout <- mkSizedFIFOF( `isb_s3s4 );
     FIFOF#(MemoryOut)           ff_memoryout <- mkSizedFIFOF( `isb_s3s4 );
   	FIFOF#(FUid)                ff_fuid <- mkSizedFIFOF( `isb_s3s4 );
-  	FIFOF#(Bool)                ff_drop <- mkSizedFIFOF( `isb_s3s4 );
   `ifdef rtldump
     FIFOF#(CommitLogPacket)     ff_commitlog <- mkSizedFIFOF( `isb_s3s4 );
   `endif
@@ -530,8 +523,6 @@ endinterface:Ifc_s5_perfmonitors
     mkConnection(s3.tx_fuid_to_stage4, ff_fuid);
     mkConnection(ff_fuid, s4.rx_fuid_from_stage3);
     
-    mkConnection(s3.tx_drop_to_stage4, ff_drop);
-    mkConnection(ff_drop, s4.rx_drop_from_stage3);
 
   `ifdef rtldump
     mkConnection(s3.tx_commitlog, ff_commitlog);
@@ -546,7 +537,6 @@ endinterface:Ifc_s5_perfmonitors
     FIFOF#(BaseOut) ff_baseout <- mkSizedFIFOF( `isb_s4s5 );
     FIFOF#(WBMemop) ff_wbmemop <- mkSizedFIFOF( `isb_s4s5 );
     FIFOF#(CUid) ff_fuid <- mkSizedFIFOF( `isb_s4s5 );
-    FIFOF#(Bool) ff_drop <- mkSizedFIFOF( `isb_s4s5 );
   `ifdef rtldump
     FIFOF#(CommitLogPacket) ff_commitlog <- mkSizedFIFOF( `isb_s4s5 );
   `endif
@@ -580,9 +570,6 @@ endinterface:Ifc_s5_perfmonitors
 
     mkConnection(s4.tx_fuid_to_stage5, ff_fuid);
     mkConnection(ff_fuid, s5.rx_fuid_from_stage4);
-    
-    mkConnection(s4.tx_drop_to_stage5, ff_drop);
-    mkConnection(ff_drop, s5.rx_drop_from_stage4);
 
   `ifdef rtldump
     mkConnection(s4.tx_commitlog, ff_commitlog);

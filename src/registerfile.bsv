@@ -19,35 +19,31 @@ compile params affecting this file:
 --------------------------------------------------------------------------------------------------
 */
 package registerfile;
-	/*==== Project Imports === */
 	import ccore_types::*;
-	/*======================== */
-	/*===== Package Imports ==== */
 	import RegFile::*;
   `include "Logger.bsv"
-	/*===========================*/
 
 	interface Ifc_registerfile;
-    method ActionValue#(Bit#(ELEN)) read_rs1(Bit#(5) addr `ifdef spfpu, RFType rs1type `endif );
-    method ActionValue#(Bit#(ELEN)) read_rs2(Bit#(5) addr `ifdef spfpu, RFType rs2type `endif );
+    method ActionValue#(Bit#(`elen)) read_rs1(Bit#(5) addr `ifdef spfpu, RFType rs1type `endif );
+    method ActionValue#(Bit#(`elen)) read_rs2(Bit#(5) addr `ifdef spfpu, RFType rs2type `endif );
   `ifdef spfpu
-    method ActionValue#(Bit#(FLEN)) read_rs3(Bit#(5) addr);
+    method ActionValue#(Bit#(`flen)) read_rs3(Bit#(5) addr);
   `endif
 		method Action commit_rd (CommitData c);
 	endinterface
 `ifdef registerfile_noinline
 	(*synthesize*)
 `endif
-	module mkregisterfile#(parameter Bit#(XLEN) hartid) (Ifc_registerfile);
+	module mkregisterfile#(parameter Bit#(`xlen) hartid) (Ifc_registerfile);
     String regfile ="";
 `ifdef merged_rf
-    RegFile#(Bit#(6), Bit#(ELEN)) rf <- mkRegFileWCF(0,63);
+    RegFile#(Bit#(6), Bit#(`elen)) rf <- mkRegFileWCF(0,63);
 		Reg#(Bit#(6)) rg_index <- mkReg(0);
 `else
-    RegFile#(Bit#(5), Bit#(XLEN)) xrf <- mkRegFileWCF(0, 31);
+    RegFile#(Bit#(5), Bit#(`xlen)) xrf <- mkRegFileWCF(0, 31);
 		Reg#(Bit#(5)) rg_index <- mkReg(0);
   `ifdef spfpu
-    RegFile#(Bit#(5), Bit#(FLEN)) frf <- mkRegFileWCF(0, 31);
+    RegFile#(Bit#(5), Bit#(`flen)) frf <- mkRegFileWCF(0, 31);
   `endif
 `endif
 
@@ -76,7 +72,7 @@ package registerfile;
     // corresponding register file.
     // Explicit Conditions : fire only when initialize is False;
     // Implicit Conditions : None
-    method ActionValue#(Bit#(ELEN)) read_rs1(Bit#(5) addr `ifdef spfpu, RFType rs1type `endif )
+    method ActionValue#(Bit#(`elen)) read_rs1(Bit#(5) addr `ifdef spfpu, RFType rs1type `endif )
                                                                                     if(!initialize);
     `ifdef merged_rf
       return zeroExtend(rf.sub({pack(rs1type==FRF),addr}));
@@ -84,7 +80,7 @@ package registerfile;
       `ifdef spfpu
         if(rs1type == FRF) return zeroExtend(frf.sub(addr)); else
       `endif
-      return zeroExtend(xrf.sub(addr)); // zero extend is required when XLEN<ELEN*/
+      return zeroExtend(xrf.sub(addr)); // zero extend is required when `xlen<`elen*/
     `endif
     endmethod
     // This method will read operand2 using rs2addr from the decode stage. If there a commit in the
@@ -92,7 +88,7 @@ package registerfile;
     // corresponding register file.
     // Explicit Conditions : fire only when initialize is False;
     // Implicit Conditions : None
-    method ActionValue#(Bit#(ELEN)) read_rs2(Bit#(5) addr `ifdef spfpu, RFType rs2type `endif )
+    method ActionValue#(Bit#(`elen)) read_rs2(Bit#(5) addr `ifdef spfpu, RFType rs2type `endif )
                                                                                     if(!initialize);
     `ifdef merged_rf
       return zeroExtend(rf.sub({pack(rs2type==FRF),addr}));
@@ -109,7 +105,7 @@ package registerfile;
     // Floating register file. Integer RF is not looked - up for rs3 at all.
     // Explicit Conditions : fire only when initialize is False;
     // Implicit Conditions : None
-    method ActionValue#(Bit#(FLEN)) read_rs3(Bit#(5) addr) if(!initialize);
+    method ActionValue#(Bit#(`flen)) read_rs3(Bit#(5) addr) if(!initialize);
       /*return frf.sub(addr);*/
       `ifdef merged_rf 
          return rf.sub({1'b1,addr});

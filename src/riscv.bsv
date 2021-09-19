@@ -31,11 +31,11 @@ package riscv;
 `endif
 
   interface Ifc_riscv_csrs;
-    method Bit#(XLEN) mv_csr_mstatus;
+    method Bit#(`xlen) mv_csr_mstatus;
     method Bit#(3) mv_cacheenable;
     method Bit#(2) mv_curr_priv;
 	`ifdef supervisor
-		method Bit#(XLEN) mv_csr_satp;
+		method Bit#(`xlen) mv_csr_satp;
 	`endif
   `ifdef pmp
     method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg;
@@ -99,7 +99,7 @@ package riscv;
 `ifdef riscv_noinline
   (*synthesize*)
 `endif
-module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid)(Ifc_riscv);
+module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     Ifc_stage0  stage0 <- mkstage0(resetpc, hartid);
     Ifc_stage1  stage1 <- mkstage1(hartid);
     Ifc_stage2  stage2 <- mkstage2(hartid);

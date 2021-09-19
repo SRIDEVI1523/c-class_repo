@@ -105,7 +105,7 @@ package gshare_fa;
 `ifdef bpu_noinline
   (*synthesize*)
 `endif
-  module mkbpu#(parameter Bit#(XLEN) hartid) (Ifc_bpu);
+  module mkbpu#(parameter Bit#(`xlen) hartid) (Ifc_bpu);
 
     String bpu = "";
 

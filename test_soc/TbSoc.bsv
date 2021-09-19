@@ -33,17 +33,17 @@ package TbSoc;
   import "BDPI" function ActionValue #(Bit #(8))get_frame(int client_fd);
   import "BDPI" function Action send_tdo(Bit #(1) tdo , int client_fd);
 `endif
-    function Bit#(XLEN) fn_atomic_op (Bit#(5) op,  Bit#(XLEN) rs2,  Bit#(XLEN) loaded);
-      Bit#(XLEN) op1 = loaded;
-      Bit#(XLEN) op2 = rs2;
+    function Bit#(`xlen) fn_atomic_op (Bit#(5) op,  Bit#(`xlen) rs2,  Bit#(`xlen) loaded);
+      Bit#(`xlen) op1 = loaded;
+      Bit#(`xlen) op2 = rs2;
     `ifdef RV64
       if(op[4]==0)begin
 	  		op1=signExtend(loaded[31:0]);
         op2= signExtend(rs2[31:0]);
       end
     `endif
-      Int#(XLEN) s_op1 = unpack(op1);
-	  	Int#(XLEN) s_op2 = unpack(op2);
+      Int#(`xlen) s_op1 = unpack(op1);
+	  	Int#(`xlen) s_op2 = unpack(op2);
 
       case (op[3:0])
 	  			'b0011:return op2;
@@ -77,7 +77,7 @@ package TbSoc;
     `include "csr_probe.bsv"
   `endif
 
-    UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5);
+    UserInterface#(`paddr,`xlen,16) uart <- mkuart_user(5);
     Reg#(Bool) rg_read_rx<- mkDReg(False);
 
     Reg#(Bit#(5)) rg_cnt <-mkReg(0);
@@ -135,7 +135,7 @@ package TbSoc;
 
   `ifdef rtldump
 
-    rule write_dump_file(rg_cnt >= 5);
+    rule write_dump_file(rg_cnt >= 1);
 
       let generate_dump <- $test$plusargs("rtldump");
       if (soc.commitlog matches tagged Valid .idump) begin
@@ -152,13 +152,13 @@ package TbSoc;
 
         if (idump.inst_type matches tagged REG .d) begin
           if (!(idump.instruction[31:25] =='b0001001 && idump.instruction[14:0] == 'b000000001110011)) begin
-            if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
+            if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
-            if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
+            if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
-            if (!d.irf && valueOf(FLEN) == 64)
+            if (!d.irf && valueOf(`flen) == 64)
               $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
-            if (!d.irf && valueOf(FLEN) == 32)
+            if (!d.irf && valueOf(`flen) == 32)
               $fwrite(dump, " f%d", d.rd, " 0x%8h", d.wdata);
           end
         end
@@ -167,15 +167,15 @@ package TbSoc;
           let csr_address = d.csr_address;
           if (d.csr_address == 'h100)
             csr_address = 'h300;
-          if (valueOf(XLEN) == 64 && d.rd != 0)
+          if (valueOf(`xlen) == 64 && d.rd != 0)
             $fwrite(dump, " x%d", d.rd, " 0x%16h", d.rdata);
-          if (valueOf(XLEN) == 32 && d.rd != 0)
+          if (valueOf(`xlen) == 32 && d.rd != 0)
             $fwrite(dump, " x%d", d.rd, " 0x%8h", d.rdata);
-          Bit#(XLEN) wdata = fn_probe_csr(csr_address);
+          Bit#(`xlen) wdata = fn_probe_csr(csr_address);
           if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
-            if (valueOf(XLEN) == 64) 
+            if (valueOf(`xlen) == 64) 
               $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%16h", wdata);
-            if (valueOf(XLEN) == 32)
+            if (valueOf(`xlen) == 32)
               $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
           end
         end
@@ -188,26 +188,26 @@ package TbSoc;
           end
         `endif
           if (d.access == Load `ifdef atomic || d.access == Atomic `endif ) begin
-            if (d.irf && valueOf(XLEN) == 64 && d.rd != 0)
+            if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.commit_data);
-            if (d.irf && valueOf(XLEN) == 32 && d.rd != 0)
+            if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%8h", d.commit_data);
-            if (!d.irf && valueOf(FLEN) == 64 )
+            if (!d.irf && valueOf(`flen) == 64 )
               $fwrite(dump, " f%d", d.rd, " 0x%16h", d.commit_data);
-            if (!d.irf && valueOf(FLEN) == 32 )
+            if (!d.irf && valueOf(`flen) == 32 )
               $fwrite(dump, " f%d", d.rd, " 0x%8h", d.commit_data);
           end
 
-          if(valueOf(XLEN) ==64 && d.access != Fence && d.access != FenceI)
+          if(valueOf(`xlen) ==64 && d.access != Fence && d.access != FenceI)
             $fwrite(dump, " mem 0x%16h", d.address);
-          if(valueOf(XLEN) ==32&& d.access != Fence && d.access != FenceI)
+          if(valueOf(`xlen) ==32&& d.access != Fence && d.access != FenceI)
             $fwrite(dump, " mem 0x%8h", d.address);
 
         `ifdef atomic
           if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
-            if(valueOf(XLEN) ==64)
+            if(valueOf(`xlen) ==64)
               $fwrite(dump, " mem 0x%16h", d.address);
-            if(valueOf(XLEN) ==32)
+            if(valueOf(`xlen) ==32)
               $fwrite(dump, " mem 0x%8h", d.address);
           end
         `endif

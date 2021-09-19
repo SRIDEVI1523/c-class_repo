@@ -13,7 +13,6 @@ the following categories of operations that can be performed in this stage:
   - TRAP: The instruction has encountered a trap during its operation in one of the previous stages.
   - BASEOUT: The instruction retirement includes a simple update to the registerfile
   - MEMOP: The instruction is either a cached store/atomic operation or an non-cached/IO memory op.
-  - DROP: The instruction has been marked to be dropped by a previous stage for some reason.
 
 Each of the above have a unique ISB feeding in respective instructions to this module. This module
 uses the fuid from the previous stage,  which maintains the order of instructions to find out which
@@ -77,9 +76,8 @@ endinterface:Ifc_stage5
 (*preempts = "rl_writeback_trap, rl_no_op"*)
 (*preempts = "rl_writeback_system, rl_no_op"*)
 (*preempts = "rl_writeback_baseout, rl_no_op"*)
-(*preempts = "rl_commit_drop, rl_no_op"*)
 `endif
-module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
+module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
 
   /*doc:submodules: The following instantiates all the RX virtual fifos*/
   RX#(SystemOut) rx_systemout <- mkRX;
@@ -87,7 +85,6 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
   RX#(BaseOut)   rx_baseout <- mkRX;
   RX#(WBMemop)   rx_memio <- mkRX;
   RX#(CUid)      rx_fuid <- mkRX;
-  RX#(Bool)      rx_drop <- mkRX;
 `ifdef rtldump
   RX#(CommitLogPacket) rx_commitlog <- mkRX;
 `endif
@@ -159,23 +156,6 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     `logLevel( stage5, 0, $format("[%2d]STAGE5: No Instr to commit", hartid))
   endrule: rl_no_op
 `endif
-
-  /*doc:rule: This rule is basically to avoid commiting an instruction which was marked to be
-  * dropped by any of the earlier stages. It is however, possible that the instruction that was
-  * marked for drop, might have caused an lock on a register in the score-board. That lock needs to
-  * be released without any update to the registerfile. Hence the assignment to wr_commit wire.*/
-  rule rl_commit_drop(rx_fuid.u.first.insttype == DROP);
-    rx_fuid.u.deq;
-    rx_drop.u.deq;
-    let fuid = rx_fuid.u.first;
-    /*wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
-                          `ifdef no_wawstalls , id: fuid.id `endif
-                           `ifdef spfpu rdtype: fuid.rdtype `endif };*/
-  `ifdef rtldump
-    rx_commitlog.u.deq;
-  `endif
-    `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping PC:%h",hartid,fuid.pc))
-  endrule:rl_commit_drop
 
   /*doc:rule: This rule handles all traps there were detected/raised in any of the previous stages
   * for any given instruction. The rule also checks if the micro-trap is generated and acts
@@ -384,7 +364,7 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
                                       `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu rdtype: fuid.rdtype `endif };
       `else
-        Bit#(ELEN) cache_resp = 0;
+        Bit#(`elen) cache_resp = 0;
       `endif
       `ifdef rtldump
         rx_commitlog.u.deq;
@@ -473,7 +453,6 @@ module mkstage5#(parameter Bit#(XLEN) hartid) (Ifc_stage5);
     interface rx_baseout_from_stage4 = rx_baseout.e;
     interface rx_memio_from_stage4 = rx_memio.e;
     interface rx_fuid_from_stage4 = rx_fuid.e;
-    interface rx_drop_from_stage4 = rx_drop.e;
   `ifdef rtldump
     interface rx_commitlog = rx_commitlog.e;
   `endif

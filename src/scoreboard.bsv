@@ -29,7 +29,7 @@ package scoreboard ;
 `ifdef scoreboard_noinline
   (*synthesize*)
 `endif
-  module mkscoreboard#(parameter Bit#(XLEN) hartid)(Ifc_scoreboard);
+  module mkscoreboard#(parameter Bit#(`xlen) hartid)(Ifc_scoreboard);
 
   `ifdef spfpu
     Vector#(64, Array#(Reg#(SBEntry))) rg_rf_board <- replicateM(mkCReg(2,unpack(0)));

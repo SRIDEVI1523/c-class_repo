@@ -72,7 +72,7 @@ package decoder;
   `endif
 	function Tuple2#(Bit#(`causesize), Bool) chk_interrupt(
 	                                                        Privilege_mode prv,
-	                                                        Bit#(XLEN) mstatus,
+	                                                        Bit#(`xlen) mstatus,
                                                           Bit#(TAdd#(`max_int_cause,1)) mip,
                                                           Bit#(TAdd#(`max_int_cause,1)) mie
                                                         `ifdef non_m_traps

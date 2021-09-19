@@ -1,6 +1,10 @@
 ###
 #num_harts
-# **Description**: Total number of harts to be instantiated
+#^^^^^^^^^
+#
+# **Description**: Total number of harts to be instantiated in the dummy
+# test-soc. Note that these will non-coherent cores simply acting as masters on
+# the fast-bus.
 #
 #  **Examples**:
 #
@@ -11,8 +15,29 @@
 num_harts: {type: integer, default: 1, min: 1, max: 1024}
 
 ###
+#
 #isb_sizes
-# **Description**: A dictionary of what the isbs between stages should be.
+#^^^^^^^^^
+#
+# **Description**: A dictionary controlling the size of the inter-stage buffers
+# of the pipeline. The variable isb_s0s1 controls the size of the isb between stage0 and stage1. 
+# Similarly isb_s1s2 dictates the size of the isb between stage1 and stage2 and
+# so on. By increasing isb_s0s1 and isb_s1s2 one can shadow the stalls or
+# latencies in the backend stages of the pipeline by fetching more instructions
+# into the front-end stages of the pipeline.
+#
+# There is a restriction however that isb_s2s3 should always be 1. This is
+# because the outputs of register file accessed in stage2 are not buffered and
+# niether is the bypass scheme implemented to handle this scenario.
+#
+# One can however increase the number of in-flight instructions by increasing
+# the sizes of isb_s3s4 and isb_s4s5 (increasing isb_s3s4 has a larger impact).
+#
+# Also note that if write-after-write stalls are disabled , the size of the
+# wawid is defined by the sum of isb_s3s4 and isb_s4s5. Therefore, increasing
+# in-flight instructions caused a logarithmic increase in the wawid used for
+# maintaining bypass of operands.
+#
 #
 # **Examples**:
 #
@@ -52,23 +77,15 @@ isb_sizes:
     isb_s4s5: 2
 
 ###
-#fetchbuffer_sz
-# **Description**: Integer indicating the size of the buffer between the fetch stage and the decoder
-# stage
 #
-# **Examples**:
+#merged_rf
+#^^^^^^^^^
 #
-# .. code-block:: yaml
-#
-#   fetchbuffer_sz : 3
-
-fetchbuffer_sz: {type: integer, default: 3, min: 1}
-
-###
-#merged_rf: 
-# **Description**: Boolean field to indicate if the registerfiles of floating
-# and integer should be implemented as a single extended regfile in hw. This
-# field should be set to true only if 'F/D' support is enabled'
+# **Description**: Boolean field to indicate if the architectural registerfiles for floating
+# and integer should be implemented as a single extended regfile in hw or as
+# separate. This field only makes sense 'F' support is enabled in the ISA string
+# of the input isa yaml. Under certain targets like FPGA or certain technologies
+# maintaining a single registerfile might lead to better area and timing savings.
 #
 # **Examples**:
 #
@@ -79,8 +96,13 @@ fetchbuffer_sz: {type: integer, default: 3, min: 1}
 merged_rf: {type: boolean, default: True}
 
 ###
+#
 #total_events
-# **Description**: Total number of events in the system
+#^^^^^^^^^^^^
+#
+# **Description**: This field indicates the total number of events that can be used to program the mhpm
+# counters. This field is used to capture the size of the events signals that
+# drives the counters.
 #
 # **Examples**:
 #
@@ -91,8 +113,19 @@ merged_rf: {type: boolean, default: True}
 total_events: {type: integer, default: 0}
 
 ###
+#
 #waw_stalls
-# **Description**: Indicates if stalls must occur on a WAW hazard
+#^^^^^^^^^^
+#
+# **Description**: Indicates if stalls must occur on a WAW hazard. If you are
+# looking for higher performance set this to False. Setting this to true would
+# lead to instructions stalling in stage3 due to a WAW hazard. 
+#
+# Setting this to false also means the scoreboad will not allocate a unique id
+# to the destination register of every instruction that is offloaded for
+# execution. The size of this id depends on the numbr of in-flight instructions
+# after the execution stage, which in turn depends on the size of the isb_s3s4
+# and isb_s4s5 as defined above.
 #
 # **Examples**:
 #
@@ -103,7 +136,10 @@ total_events: {type: integer, default: 0}
 waw_stalls: {type: boolean, default: False}
 
 ###
+#
 #iepoch_size
+#^^^^^^^^^^^
+#
 # **Description**: integer value indicating the size of the epochs for the
 # instruction memory subsystem. Allowed value is 2 only
 #
@@ -118,7 +154,10 @@ iepoch_size:
   allowed: [2]
   default: 2
 ###
+#
 #depoch_size
+#^^^^^^^^^^^
+#
 # **Description**: integer value indicating the size of the epochs for the
 # data memory subsystem. Allowed value is 1 only
 #
@@ -134,28 +173,15 @@ depoch_size:
   default: 1
 
 ###
-#dtvec_base
-#  **Description**: An integer address indicating where the self-loop for the
-#  debug module sits
 #
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    dtvec_base: 0x0
-
-dtvec_base:
-  type: integer
-  default: 0
-
-
-###
 #s_extension
+#^^^^^^^^^^^
+#
 #  **Description**: Describes various supervisor and MMU related parameters.
 #  These parameters only take effect when "S" is present in the ISA field.
 #
-#    - ``itlb_size``: integer indicating the size of entries in the Instruction TLB
-#    - ``dtlb_size``: integer indicating the size of entries in the Data TLB
+#    - ``itlb_size``: integer indicating the size of entries in the fully-associative Instruction TLB
+#    - ``dtlb_size``: integer indicating the size of entries in the fully-associative Data TLB
 #
 #  **Examples**:
 #
@@ -177,12 +203,15 @@ s_extension:
     dtlb_size: 4
 
 ###
+#
 #a_extension
+#^^^^^^^^^^^
+#
 #  **Description**: Describes various A-extension related parameters. These params take effect only
 #  when the "A" extension is enabled in the riscv_config ISA
 #
 #     - ``reservation_size``: integer indicate the size of the reservation in terms of bytes.
-#       Minimum value is 4 and must be a power of 2.
+#       Minimum value is 4 and must be a power of 2. For RV64 system minimum should be 8 bytes.
 #
 #  **Examples**:
 #
@@ -202,12 +231,19 @@ a_extension:
 
 
 ###
+#
 #m_extension
+#^^^^^^^^^^^
+#
 #  **Description**: Describes various M-extension related parameters. These
 #  parameters take effect only is "M" is present in the ISA field.
+#  The multiplier used in the core is a retimed one. The parameters below indicate the number of
+#  input and output registers around the combo block to enable retiming.
 #
-#    - ``mul_stages``: an integer indicating the number of pipeline stages for the
-#      integer multiplier. Max value is limited to the XLEN defined in the ISA.
+#    - ``mul_stages_out``: Number of stages to be inserted after the multiplier combinational block.
+#      Minimum value is 1.
+#    - ``mul_stages_in``: Number of stages to be inserted before the multiplier combinational block.
+#      Minimum value is 0
 #    - ``div_stages``: an integer indicating the number of cycles for a single
 #      division operation. Max value is limited to the XLEN defined in the ISA.
 #
@@ -216,8 +252,9 @@ a_extension:
 #  .. code-block:: yaml
 #
 #    m_extension:
-#      mul_stages : 2
-#      div_stages: 64
+#      mul_stages_in  : 2
+#      mul_stages_out : 2
+#      div_stages: 32
 #
 
 m_extension:
@@ -225,6 +262,7 @@ m_extension:
   schema:
     mul_stages_out:
       type: integer
+      min: 1
     mul_stages_in:
       type: integer
     div_stages:
@@ -234,14 +272,16 @@ m_extension:
     div_stages: 32
 
 ###
+#
 #branch_predictor
+#^^^^^^^^^^^^^^^^
+#
 #  **Description**: Describes various branch predictor related parameters. 
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
 #      instantiated
 #    - ``predictor``: string indicating the type of predictor to be implemented. Valid
-#      values are: 'gshare'
-#      not. Valid values are : ['enable','disable']
+#      values are: 'gshare' not. Valid values are : ['enable','disable']
 #    - ``btb_depth``: integer indicating the size of the branch target buffer
 #    - ``bht_depth``: integer indicating the size of the bracnh history buffer
 #    - ``history_len``: integer indicating the size of the global history register
@@ -290,7 +330,10 @@ branch_predictor:
     ras_depth: 8
 
 ###
+#
 #icache_configuration
+#^^^^^^^^^^^^^^^^^^^^
+#
 #  **Description**: Describes the various instruction cache related features.
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
@@ -363,7 +406,10 @@ icache_configuration:
 
 
 ###
+#
 #dcache_configuration
+#^^^^^^^^^^^^^^^^^^^^
+#
 #  **Description**: Describes the various instruction cache related features.
 #
 #    - ``instantiate``: boolean value indicating if the predictor needs to be
@@ -375,6 +421,8 @@ icache_configuration:
 #    - ``ways``: integer indicating the number of the ways in the cache
 #    - ``fb_size``: integer indicating the number of fill-buffer entries in the cache
 #    - ``sb_size``: integer indicating the number of store-buffer entries in the cache. Fixed to 2
+#    - ``lb_size``: integer indicating the number lines to be stored in the store buffer. Applicable
+#      only when rwports == 1r1w
 #    - ``ib_Size``: integer indicating the number of io-buffer entries in the cache. Default to 2
 #    - ``replacement``: strings indicating the replacement policy. Valid values are:
 #      ["PLRU", "RR", "Random"]
@@ -458,7 +506,10 @@ dcache_configuration:
     rwports: '1r1w'
 
 ###
+#
 #reset_pc
+#^^^^^^^^
+#
 #  **Description**: Integer value indicating the reset value of program counter
 #
 #  **Example**:
@@ -473,7 +524,10 @@ reset_pc:
 
 
 ###
+#
 #bus_protocol
+#^^^^^^^^^^^^
+#
 #  **Description**: bus protocol for the master interfaces of the core. Fixed to
 #  "AXI4"
 #
@@ -504,23 +558,9 @@ fpu_trap:
   default: False
 
 ###
-#no_of_triggers
-#  **Description**: An integer field indicating the number of triggers to be
-#  implemented
-#
-#  **Examples**:
-#
-#  .. code-block:: yaml
-#
-#    no_of_triggers: 4
-
-no_of_triggers:
-  type: integer
-  default: 0
-
-
-###
 #verilator_configuration
+#^^^^^^^^^^^^^^^^^^^^^^^
+#
 #  **Description**: describes the various configurations for verilator compilation.
 #
 #    - ``coverage``: indicates the type of coverage that the user would like to
@@ -576,7 +616,10 @@ verilator_configuration:
 
 
 ###
+#
 #bsc_compile_options
+#^^^^^^^^^^^^^^^^^^^
+#
 #  **Description**: Describes the various bluespec compile options
 #
 #    - ``test_memory_size``: size of the BRAM memory in the test-SoC in bytes.
@@ -601,6 +644,9 @@ verilator_configuration:
 #    - ``top_module``: name of the top-level bluespec module to be compiled.
 #    - ``top_file``: file containing the top-level module.
 #    - ``top_dir``: directory containing the top_file.
+#   - ``cocotb_sim``: boolean variable. When set the terminating conditions in the test-bench
+#     environments are disabled, as the cocotb environment is meant to handle that. When set to
+#     false, the bluespect test-bench holds the terminating conditions.
 #
 #  **Examples**:
 #
@@ -669,6 +715,27 @@ bsc_compile_options:
     compile_target: 'sim'
     cocotb_sim: False
 
+
+###
+#
+#noinline_modules
+#^^^^^^^^^^^^^^^^
+#
+# **Description**: This node contains multiple module names which take a boolean value. Setting a
+# module to True would generate a separate verilog file for that module during bluespec compilation.
+# If set to False, then that particular module will be in lined the module  above it in hierarchy in
+# the generated verilog.
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   noinline_modules:
+#     stage0: False
+#     stage1: True
+#     stage2: False
+#     stage3: False
+
 noinline_modules:
   type: dict
   schema:
@@ -706,6 +773,8 @@ noinline_modules:
       type: boolean
     decoder:
       type: boolean
+    decompress: 
+      type: boolean
   default:
     stage0: False
     stage1: False
@@ -724,3 +793,4 @@ noinline_modules:
     bypass: False
     base_alu: False
     decoder: False
+    decompress: False

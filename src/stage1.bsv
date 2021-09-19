@@ -51,7 +51,7 @@ package stage1;
 `ifdef stage1_noinline
   (*synthesize*)
 `endif
-  module mkstage1#(parameter Bit#(XLEN) hartid) (Ifc_stage1);
+  module mkstage1#(parameter Bit#(`xlen) hartid) (Ifc_stage1);
 
     String stage1=""; // defined for logger
 
@@ -95,7 +95,7 @@ package stage1;
 
   `ifdef triggers
     Vector#(`trigger_num, Wire#(TriggerData)) v_trigger_data1 <- replicateM(mkWire());
-    Vector#(`trigger_num, Wire#(Bit#(XLEN))) v_trigger_data2 <- replicateM(mkWire());
+    Vector#(`trigger_num, Wire#(Bit#(`xlen))) v_trigger_data2 <- replicateM(mkWire());
     Vector#(`trigger_num, Wire#(Bool)) v_trigger_enable <- replicateM(mkWire());
   `endif
 
@@ -116,7 +116,7 @@ package stage1;
                            Bit#(32) instr `ifdef compressed , Bool compressed `endif ) = actionvalue
       Bool trap = False;
       Bit#(`causesize) cause = `Breakpoint;
-      Bit#(XLEN) compare_value ;
+      Bit#(`xlen) compare_value ;
       Bool chain = False;
       for(Integer i=0; i < `trigger_num; i=i+1)begin
         `logLevel( stage1, 3, $format("[%2d]STAGE1: Trigger[%2d] Data1: ",hartid, i, 
@@ -127,7 +127,7 @@ package stage1;
                                                                         fshow(v_trigger_enable[i])))
         if(v_trigger_enable[i] &&& v_trigger_data1[i] matches tagged MCONTROL .mc &&&
                               ((!trap && !chain) || (chain && trap)) &&& mc.execute == 1)begin
-          Bit#(XLEN) trigger_compare = `ifdef compressed
+          Bit#(`xlen) trigger_compare = `ifdef compressed
                      (compressed && mc.size == 2)? zeroExtend(v_trigger_data2[i][15:0]): `endif
                                                    v_trigger_data2[i];
           if(mc.select == 0)
@@ -447,7 +447,7 @@ package stage1;
         for(Integer i=0; i<`trigger_num; i=i+1)
           v_trigger_data1[i] <= t[i];
       endmethod
-      method Action trigger_data2(Vector#(`trigger_num, Bit#(XLEN)) t);
+      method Action trigger_data2(Vector#(`trigger_num, Bit#(`xlen)) t);
         for(Integer i=0; i<`trigger_num; i=i+1)
           v_trigger_data2[i] <= t[i];
       endmethod

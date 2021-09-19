@@ -61,7 +61,6 @@ import OInt         :: * ;
 import registerfile :: * ;        // for instantiating the registerfile
 import decoder      :: * ;        // for the decode functions.
 import ccore_types  :: * ;        // for pipe - line types
-import scoreboard   :: * ;        // to lock rd 
 import pipe_ifcs    :: * ;
 `include "ccore_params.defines"   // for core parameters
 `include "trap.defines"
@@ -79,8 +78,8 @@ interface Ifc_stage2;
   method Bool mv_wfi_detected;
 endinterface : Ifc_stage2
 
-function Fmt fstage2(Bit#(XLEN) hartid, FwdType op1, Op1type op1type, FwdType op2, Op2type op2type, 
-                     RFOp3 op3, Instruction_type insttype, Stage3Meta meta, Bit#(XLEN) mtval );
+function Fmt fstage2(Bit#(`xlen) hartid, FwdType op1, Op1type op1type, FwdType op2, Op2type op2type, 
+                     RFOp3 op3, Instruction_type insttype, Stage3Meta meta, Bit#(`xlen) mtval );
   Fmt result = $format("[%2d]STAGE2 : ",hartid);
   Fmt op1_addr = ?;
   if (op1type == IntegerRF)
@@ -157,7 +156,7 @@ endfunction:fstage2
 `ifdef stage2_noinline
 (*synthesize*)
 `endif
-module mkstage2#(parameter Bit#(XLEN) hartid) (Ifc_stage2);
+module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
 
   String stage2=""; // defined for logger
 
@@ -173,7 +172,7 @@ module mkstage2#(parameter Bit#(XLEN) hartid) (Ifc_stage2);
   TX#(Stage3Meta)   tx_meta   <- mkTX;
 
   /*doc:mod FIFO interface to send the bad-address information to the next stage.*/
-  TX#(Bit#(XLEN))   tx_mtval   <- mkTX;
+  TX#(Bit#(`xlen))   tx_mtval   <- mkTX;
 
   /*doc:mod FIFO interface to send the bad-address information to the next stage.*/
   TX#(Instruction_type)   tx_instrtype <- mkTX;
@@ -295,7 +294,7 @@ module mkstage2#(parameter Bit#(XLEN) hartid) (Ifc_stage2);
     `logLevel( stage2, 0, $format("[%2d]STAGE2 : PC:%h Instruction:%h",hartid,pc, inst))
     // ---------------------------------------------------------------------------------------- //
     // ---------------------- generate bad-address value in case of traps --------------------- //
-    Bit#(XLEN) mtval = 0;
+    Bit#(`xlen) mtval = 0;
     if(func_cause == `Illegal_inst )
       mtval = zeroExtend(inst); // for mtval
     else if(func_cause == `Breakpoint )
@@ -320,19 +319,16 @@ module mkstage2#(parameter Bit#(XLEN) hartid) (Ifc_stage2);
     // -------------------------------------------------------------------------------------- //
     
     // ------------------------ modify operand values before enquing to next stage -----------//
-    Bit#(ELEN) op1 =  rs1_from_rf;
-    Bit#(ELEN) op2 =  (decoded.op_type.rs2type == Constant2) ? 'd2: // constant2 only is C enabled.
+    Bit#(`elen) op1 =  rs1_from_rf;
+    Bit#(`elen) op2 =  (decoded.op_type.rs2type == Constant2) ? 'd2: // constant2 only is C enabled.
                       (decoded.op_type.rs2type == Constant4) ? 'd4:
                       (decoded.op_type.rs2type == Immediate) ? signExtend(imm) : rs2_from_rf;
   `ifdef spfpu
-    Bit#(FLEN) op4 = (decoded.op_type.rs3type == FRF) ? rs3 : signExtend(imm);
+    Bit#(`flen) op4 = (decoded.op_type.rs3type == FRF) ? rs3 : signExtend(imm);
   `else
-    Bit#(FLEN) op4 = signExtend(imm);
+    Bit#(`flen) op4 = signExtend(imm);
   `endif
     // -------------------------------------------------------------------------------------- //
-    // The following creates a scoreboard mask. This mask will basically reset the lock on an rd if
-    // the the instruction is the only one in the pipe with this rd value. This prevents the
-    // instruction from stalling on a bypass on itself in the next stage.
     let stage3meta = Stage3Meta{funct : func_cause, memaccess : decoded.meta.memaccess,
                                 pc : pc, epochs : epochs, rd: decoded.op_addr.rd,
                                 is_microtrap: rg_microtrap

@@ -11,7 +11,7 @@ happens.
 Operand Bypass
 ^^^^^^^^^^^^^^
 The module receives the operands from the registerfile (always holding the latest values as the
-registerfile acts as a bypass-registerfile. The module also has access to the current scoreboard
+registerfile acts as a bypass-registerfile). The module also has access to the current scoreboard
 which indicates if there exists a an instruction in the further stages of the pipeline with a
 potential new value of the operand.
 
@@ -21,6 +21,20 @@ MEM-WB. The third source of the bypass is the registerfile itself.
 The Bypass is done for rs1 and rs2. It is also done for rs3 when the F/D extensions are enabled.
 
 The bypass module will indicate if the respective operand is available to initiate execution or not.
+When waw stalls are disabled, then checks on the bypass packets from the ISB will also include
+checking if the bypass register id matches the corresponding id from the scoreboard.
+
+Scoreboard
+^^^^^^^^^^
+
+The scoreboard is also maintained in this module. Whenever there is an instruction with a valid
+destination register (i.e. rd != x0), then the corresponding bit in the scoreboard is locked by
+setting the lock bit to one. If waw-stalls are disabled, then a new id is allocated to the
+destination register in the scoreboard. This id will be used for comparison in the above Operand
+Bypass phase.
+
+If waw-stalls are not disabled, then the instructions whose destination register is already locked
+in the scoreboard will stall untill an unlock happens.
 
 
 Execution Units
@@ -35,8 +49,22 @@ instructions:
 - memory: This will offload the memory operations to the cache/data subsystem.
 
 the functional units are provided the inputs only when the the FUs are free and the operands are
-available, else the respective rules will not fire.
+available, else the respective rules maye fire, but may not perform any action.
 
+compile-macros:
+  - muldiv : if set, then the muldive instructions are offloaded from this module and respective
+    interfaces are also instantiated
+  - bpu: if set then misprediction is detected and interfaces to send the training data to the
+    branch predictor are also instantiated
+  - perfmonitors: when set, the performance monitoring event signals are instantiated to track
+    specific events
+  - stage3_noinline: when set, a separate verilog file is created for the mkstage3 module
+  - rtldump: when set, logic to generate the instruction trace dump is enabled.
+  - no_wawstalls: when set, no stalls are generated due to a WAW hazard. 
+  - RV64: used to enable 32-bit wordops in 64-bit mode. Also detect misaligned traps
+  - compressed : used to increment the pc by +2 or +4 depending on the instruction. This is required
+    for jump instructinos to calculate the next logical pc value to be stored in the destination reg.
+  -
 */
 package stage3 ;
 // -- package imports --//
@@ -47,34 +75,50 @@ import DReg           :: * ;
 import TxRx           :: * ;
 import Vector         :: * ;
 import ConfigReg      :: * ;
+import Probe          :: * ;      // used to retain some signals for simulation purposes
 
 // -- project imports --//
 import base_alu       :: * ;                // implements the ALU function
 import bypass         :: * ;       // provides the operand bypassing logic
 import ccore_types    :: * ;       // for pipe - line types
 import dcache_types   :: * ;          // for dmem request types
-import pipe_ifcs      :: * ;
-import scoreboard     :: * ;
-import Probe          :: * ;
+import pipe_ifcs      :: * ;      // implements the pipeline stage interfaces
+import scoreboard     :: * ;      // implements the scoreboard
 `ifdef muldiv
   import mbox           :: * ;
 `endif
 
 `include "ccore_params.defines"  // for core parameters
 `include "Logger.bsv"         // for logging display statements.
-`include "trap.defines"
+`include "trap.defines"           // for cause values of traps captured in this stage
+
 
 interface Ifc_stage3;
+  /*doc:subifc: This interface contains generic methods like epoch updates, flush from this stage,
+   * csr value reads, etc*/
   interface Ifc_s3_common common;
+
+  /*doc:subifc: Contains the decoded meta information from the previous stage*/
   interface Ifc_s3_rx rx;
+
+  /*doc:subifc: interface to send information to the next stage*/
   interface Ifc_s3_tx tx;
+
+  /*doc:subifc: interface to accepts the registerfile values*/
   interface Ifc_s3_rf rf;
+
+  /*doc:subifc: Interface to send request to data cache and also another method to check if data
+   * cache is free*/
   interface Ifc_s3_cache cache;
+
+  /*doc:subifc: interface to accept the bypass signals from various downstream ISBs*/
   interface Ifc_s3_bypass bypass;
 `ifdef bpu
+  /*doc:subifc: interface to train the branch predictor on branch or jump instruction */
   interface Ifc_s3_bpu bpu;
 `endif
 `ifdef muldiv
+  /*doc:subifc: interface to the multiplication and division unit*/
   interface Ifc_s3_muldiv muldiv;
 `endif
 `ifdef perfmonitors
@@ -85,7 +129,9 @@ endinterface:Ifc_stage3
 `ifdef stage3_noinline
 (*synthesize*)
 `endif
-// the following attributes is used to detect when a structural hazard occurs
+// the following attributes is used to detect when a structural hazard occurs. This is useful only
+// when perfmonitors is enabled or simulate is enabled at compile time. If neither is implemented
+// then the rule will be empty and the compiler should be removing it thereby causing no harm.
 (*preempts="rl_exe_base_arith,rl_structural_stalls"*)
 (*preempts="rl_drop_instr, rl_structural_stalls"*)
 (*preempts="rl_system_instr, rl_structural_stalls"*)
@@ -94,7 +140,7 @@ endinterface:Ifc_stage3
 (*preempts="rl_exe_base_memory, rl_structural_stalls"*)
 (*preempts="rl_exe_base_control, rl_structural_stalls"*)
 (*preempts="rl_mbox, rl_structural_stalls"*)
-module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
+module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
 
   String stage3=""; // defined for logger
 
@@ -104,16 +150,17 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   Ifc_scoreboard sboard <- mkscoreboard(hartid);
 
 `ifdef muldiv
-  /*doc:wire: */
+  /*doc:wire: wire to drive the inputs to the mul-div unit*/
   Wire#(MBoxIn) wr_muldiv_inputs <- mkWire();
-  /*doc:wire: */
+  /*doc:wire: wire to check if the multiplier is ready to accept new inputs*/
   Wire#(Bool) wr_mul_ready<- mkWire();
-  /*doc:wire: */
+  /*doc:wire: wire to check if the divider is ready to accept new inputs*/
   Wire#(Bool) wr_div_ready<- mkWire();
 `endif
+
   // rx fifos to receive the decoded information and the operands from the RF.
   RX#(Stage3Meta)         rx_meta   <- mkRX;
-  RX#(Bit#(XLEN))         rx_mtval   <- mkRX;
+  RX#(Bit#(`xlen))         rx_mtval   <- mkRX;
   RX#(Instruction_type)   rx_instrtype   <- mkRX;
   RX#(OpMeta)             rx_opmeta   <- mkRX;
 
@@ -132,6 +179,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 `ifdef rtldump
   // rx fifo to receive the instruction sequence for rtl.dump feature.
   RX#(CommitLogPacket) rx_commitlog <- mkRX;
+  // tx fifo to send the instructino sequence for rtl.dump feature.
   TX#(CommitLogPacket) tx_commitlog <- mkTX;
 `endif
 
@@ -143,6 +191,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   Reg#(Maybe#(Training_data)) wr_training_data <- mkDReg(tagged Invalid);
   // Wire to send the return - address on the stack.
 `ifdef gshare
+  // on a misprediction, this register contains the reset global history value and whethr the btb
+  // was a hit or miss during prediction.
   Reg#(Maybe#(Tuple2#(Bool, Bit#(`histlen)))) wr_mispredict_ghr <- mkDReg( tagged Invalid);
 `endif
 `endif
@@ -152,16 +202,26 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   TX#(TrapOut)        tx_trapout <- mkTX;
   TX#(SystemOut)      tx_systemout <- mkTX;
   TX#(MemoryOut)      tx_memoryout <- mkTX;
-  TX#(Bool)           tx_drop <- mkTX;
   TX#(FUid)           tx_fuid <- mkTX;
 
-  /*doc:wire: holds the latest bypass values of the operands*/
-  Wire#(Bit#(XLEN)) wr_fwd_op1 <- mkWire();
-  Wire#(Bit#(XLEN)) wr_fwd_op2 <- mkWire();
-  /*doc:wire: internal wire indicating if the operands are available for execution*/
+  /*doc:wire: holds value of operand1 after checking the bypass signals from downstream isbs and
+  * regfile*/
+  Wire#(Bit#(`xlen)) wr_fwd_op1 <- mkWire();
+
+  /*doc:wire: holds value of operand2 after checking the bypass signals from downstream isbs and
+  * regfile*/
+  Wire#(Bit#(`xlen)) wr_fwd_op2 <- mkWire();
+
+  /*doc:wire: after checking the bypass signals from downstream ISBs, this wire indicates if the
+  * latest value of operand1 is available or not. If not then we need stall on instructions waiting
+  * for this value.*/
   Wire#(Bool) wr_op1_avail <- mkWire();
   Probe#(Bool) wr_op1_avail_probe <- mkProbe();
 
+
+  /*doc:wire: after checking the bypass signals from downstream ISBs, this wire indicates if the
+  * latest value of operand2 is available or not. If not then we need stall on instructions waiting
+  * for this value.*/
   Wire#(Bool) wr_op2_avail <- mkWire();
   Probe#(Bool) wr_op2_avail_probe <- mkProbe();
 
@@ -176,7 +236,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   // Wire holding the new pc to be redirected to due to branches / jumps
   Reg#(Bit#(`vaddr)) wr_redirect_pc <- mkDWire(0);
 
-  Wire#(DMem_request#(`vaddr, ELEN, 1)) wr_memory_request <- mkWire;
+  Wire#(DMem_request#(`vaddr, `elen, 1)) wr_memory_request <- mkWire;
   Wire#(Bool) wr_cache_avail <- mkWire;
 
   // wire holding the compressed bit of the misa csr
@@ -189,12 +249,17 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   let curr_epochs = {rg_eEpoch, rg_wEpoch};
 
 `ifdef perfmonitors
-  /*doc:wire: */
+  /*doc:wire: set to one when a float operation has been offloaded for execution*/
   Wire#(Bit#(1)) wr_count_floats <- mkDWire(0);
+  /*doc:wire: set to one when a muldiv operation has been offloaded for execution*/
   Wire#(Bit#(1)) wr_count_muldiv <- mkDWire(0);
+  /*doc:wire: set to one when a branch operation has been executed*/
   Wire#(Bit#(1)) wr_count_branches <- mkDWire(0);
+  /*doc:wire: set to one when a jump operation has been executed*/
   Wire#(Bit#(1)) wr_count_jumps <- mkDWire(0);
+  /*doc:wire: set to one when a stall occurs because of RAW hazard*/
   Wire#(Bit#(1)) wr_count_rawstalls <- mkDWire(0);
+  /*doc:wire: set to one when a stall occurs because of a structural hazard*/
   Wire#(Bit#(1)) wr_count_exestalls <- mkDWire(0);
 `endif
   // ---------------------- End Instatiations --------------------------//
@@ -202,6 +267,9 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   let mtval   = rx_mtval.u.first;
   let opmeta = rx_opmeta.u.first;
   let instr_type = rx_instrtype.u.first;
+
+  // create a generic variable for the common params. The id is what will be assigned when execution
+  // happens
   let s4common = FUid{pc    : meta.pc,
                               rd    : meta.rd,
                               epochs : meta.epochs[0],
@@ -218,7 +286,8 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 `endif
   // ---------------------- Start local function definitions ----------------//
 
-  // this function will deque the response received from the previous stage
+  // this function will deque the response received from the previous stage. Instead of replicating
+  // this code all over, best to have it as an in lined function called at relevant places.
   function Action deq_rx = action
     rx_meta.u.deq;
     rx_mtval.u.deq;
@@ -229,7 +298,9 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   `endif
   endaction;
 
-  /*doc:rule: */
+  /*doc:rule: This rule will only fire when there is a pending instruction to be executed by the
+  * corresponding unit rule is unable to fire due to structural hazards (cache not available,
+  * downstream ISB is full, mul-div unit is busy, etc.*/
   rule rl_structural_stalls(rx_meta.u.notEmpty);
   `ifdef perfmonitors
     wr_count_exestalls <= 1;
@@ -237,10 +308,16 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     `logLevel( stage3, stall, $format("[%2d]STAGE3: Structural stall in EXE", hartid))
   endrule:rl_structural_stalls
 
-  /*doc:rule: This rule performs the operand bypass for each operand. Here we ensure that
-  * unnecessary stalls are not created when instructions have the same operand and destination
-  * register. This is done by resetting the destination register bit in the scoreboard before
-  * performing the bypass.*/
+  /*doc:rule: This rule performs the operand bypass for each operand. For each operand, this rule
+  * will read all the values from the downstream FIFOs, feed them to the bypass module and check if
+  * the operand is available or not. 
+  * If the head of downstream ISBs don't have the latest operand,
+  * but the scoreboard indicates that an instruction in the pipeline will soon update the operand,
+  * then a stall is created. 
+  * If the scoreboard indicates that the operand is not going to be updated be previous executed
+  * instructions, then the bypass module will use the values from the registerfile as is and
+  * initiate execution.
+  */
   rule rl_perform_fwding(rx_meta.u.notEmpty);
     `logLevel( stage3, pc, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     
@@ -291,8 +368,6 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
           hartid, opmeta.rs1addr, _op1_avail, _fwd_op1))
       `logLevel( stage3, 0, $format("[%2d]STAGE3: Bypass Op2:%2d Op2Avail:%b Op2Val:%h",
           hartid, opmeta.rs2addr, _op2_avail, _fwd_op2))
-//      `logLevel( stage3, 0, $format("[%2d]STAGE3: Fwd: ", hartid, fshow(byp1)))
-//      `logLevel( stage3, 0, $format("[%2d]STAGE3: ",hartid, fshow(sboard.mv_board)))
     end
   endrule:rl_perform_fwding
 
@@ -306,14 +381,6 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   rule rl_drop_instr(!epochs_match);
     deq_rx;
     `logLevel( stage3, 0, $format("[%2d]STAGE3: NOPing instruction - epochs-mismatch",hartid))
-    tx_drop.u.enq(True);
-    let common_pkt = s4common; common_pkt.insttype = DROP;
-    tx_fuid.u.enq(common_pkt);
-  `ifdef rtldump
-    let clogpkt = rx_commitlog.u.first;
-    tx_commitlog.u.enq(clogpkt);
-  `endif
-
   endrule:rl_drop_instr
 
   /*doc:rule: This rule will fire when the epochs match the instruction has been decoded as a
@@ -379,7 +446,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   * required to perform these operations. In case of 32-bit ops in RV64, the result is
   * sign-Extended version of the lower 32-bits results from the alu */
   rule rl_exe_base_arith(instr_type == ALU && epochs_match && !wr_waw_stall);
-    let {btaken, alu_result} = fn_base_alu(wr_fwd_op1, wr_fwd_op2, truncateLSB(meta.funct),
+    let alu_result = fn_base_alu(wr_fwd_op1, wr_fwd_op2, truncateLSB(meta.funct),
                               meta.pc, opmeta.rs1type==PC `ifdef RV64 ,meta.word32 `endif ); 
 
   `ifdef RV64
@@ -390,10 +457,13 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
                       `ifdef no_wawstalls ,id: ? `endif
                       `ifdef spfpu ,fflags    : 0 , rdtype: meta.rdtype `endif };
     `logLevel( stage3, 0, $format("[%2d]STAGE3: Base ALU Op received",hartid))
+
+    // proceed further only if both the operands are available.
     if (wr_op1_avail && wr_op2_avail) begin
       let common_pkt = s4common; 
       let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
     `ifdef no_wawstalls
+      // allocate scoreboard-id to the destination register.
       `logLevel( stage3, 0, $format("[%2d]STAGE3: issuing ID:%2d",hartid,_id))
       common_pkt.id = _id;
       baseoutput.id = _id;
@@ -407,6 +477,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
       tx_commitlog.u.enq(clogpkt);
     `endif
     end
+    // stall until operands are available.
     else begin
       `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting of operands",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
@@ -436,11 +507,17 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   `ifdef dpfpu
     Bit#(1) nanboxing = pack( funct3[1 : 0] == 2 && meta.rdtype == FRF);
   `endif
+
+    // create a trap template
     TrapOut trapout = TrapOut {cause   : memory_cause, is_microtrap: False,
                                mtval : memory_address};
+
+    // craete the memory output response template
     let memoryout = MemoryOut{  memaccess   : meta.memaccess
        `ifdef rtldump `ifdef atomic ,atomicop    : {funct3[0], meta.funct[6:3]} `endif `endif
                  `ifdef dpfpu ,nanboxing   : nanboxing `endif } ;
+
+    // wait until all operands are available.
     if( wr_op1_avail && wr_op2_avail) begin
       let req = DMem_request{address      : memory_address,
                              epochs       : meta.epochs[0],
@@ -455,16 +532,22 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
                              ,ptwalk_trap : False
                           `endif } ;
       let common_pkt = s4common; 
+
+      // if no trap offload instruction to cache.
       if (!trap)
         wr_memory_request <= req;
 
+      // lock the destination register in the scoreboard
       let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
+
+      // if trap then forward the cause
       if (trap) begin
         tx_trapout.u.enq(trapout);
         common_pkt.insttype = TRAP;
         `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Memory Op created Trap: ", hartid,fshow(trapout)))
       end
     `ifdef supervisor
+      // convert SFence as a nop hence forth in the pipeline.
       else if (meta.memaccess == SFence) begin
         BaseOut baseoutput = BaseOut { rdvalue   : ?, rd: 0, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
@@ -476,6 +559,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
         `logLevel( stage3, 0, $format("[%2d]STAGE3: SFence goes as Nop", hartid))
       end
     `endif
+      // tag the instruction as memory so it waits for cache response in the next stage.
       else begin
         common_pkt.insttype = MEMORY;
         tx_memoryout.u.enq(memoryout);
@@ -526,13 +610,13 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 
     let inst_type = instr_type;
     Bit#(`vaddr)  base = (inst_type == JALR) ? truncate(wr_fwd_op1) : meta.pc;
-    Bit#(TMax#(`vaddr,FLEN))  offset = wr_op3.data;
+    Bit#(TMax#(`vaddr,`flen))  offset = wr_op3.data;
     
     `logLevel( stage3, 0, $format("[%2d]STAGE3: Base Control Op received: ",hartid,fshow(inst_type)))
 
     Bit#(`vaddr) jump_address = (base + truncate(offset)) & {'1, ~(pack(inst_type==JALR))};
-    Bit#(XLEN) incr = `ifdef compressed (meta.compressed)?2 : `endif 4;
-    Bit#(XLEN) nlogical_pc = meta.pc + incr;
+    Bit#(`xlen) incr = `ifdef compressed (meta.compressed)?2 : `endif 4;
+    Bit#(`xlen) nlogical_pc = meta.pc + incr;
 
     let btaken = fn_bru(wr_fwd_op1, wr_fwd_op2, truncateLSB(meta.funct));
 
@@ -599,8 +683,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
     if(redirection && wr_op1_avail && wr_op2_avail)
       `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
   `endif
-    TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False,
-                               mtval : meta.pc};
+    TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False, mtval : meta.pc};
     BaseOut baseoutput = BaseOut { rdvalue   : nlogical_pc, rd: meta.rd, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: meta.rdtype `endif };
@@ -653,10 +736,11 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 
 `ifdef muldiv
 
-  /*doc:rule: */
+  /*doc:rule: dummy rule to simply display the ready signals of the multiplication and division
+    * submodules*/
   rule rl_show_mbox_rdy;
     `logLevel( mbox, 0, $format("[%2d]MBOX: MulRdy:%b DivRdy:%b",hartid, wr_mul_ready, wr_div_ready))
-  endrule
+  endrule:rl_show_mbox_rdy
 
   /*doc:rule: This rule will fire when the epochs match and when the multiplier/divider are
   * avaialble based on the current instruction. Both the operands are required for execution to be
@@ -714,7 +798,6 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
   	interface tx_trapout_to_stage4= tx_trapout.e;
   	interface tx_systemout_to_stage4 = tx_systemout.e;
   	interface tx_memoryout_to_stage4 = tx_memoryout.e;
-  	interface tx_drop_to_stage4 = tx_drop.e;
   `ifdef rtldump
     interface tx_commitlog = tx_commitlog.e;
   `endif
@@ -766,7 +849,7 @@ module mkstage3#(parameter Bit#(XLEN) hartid) (Ifc_stage3);
 
     // Description : interface to send memory requests.
     interface mv_memory_request = interface Get
-      method ActionValue#(DMem_request#(`vaddr, ELEN, 1)) get;
+      method ActionValue#(DMem_request#(`vaddr, `elen, 1)) get;
         return wr_memory_request;
       endmethod
     endinterface;

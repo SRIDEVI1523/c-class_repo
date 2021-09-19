@@ -194,7 +194,7 @@ module mkcombo_mul(Ifc_combo_mul);
       rg_valid_out[0].enq(True);
 
   endmethod
-  method ActionValue#(Bit#(ELEN)) mv_output;
+  method ActionValue#(Bit#(`elen)) mv_output;
     if (`MULSTAGES_OUT > 0 ) rg_valid_out[`MULSTAGES_OUT - 1].deq;
     return (`MULSTAGES_OUT> 0)?rg_output[`MULSTAGES_OUT - 1]: wr_output;
   endmethod

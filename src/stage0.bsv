@@ -71,7 +71,7 @@ package stage0;
 `ifdef stage0_noinline
   (*synthesize*)
 `endif
-  module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid) (Ifc_stage0);
+  module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid) (Ifc_stage0);
     String stage0 = "";
   `ifdef bpu
     Ifc_bpu bpu <- mkbpu(hartid);

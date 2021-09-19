@@ -56,6 +56,9 @@ def specific_checks(foo):
         if not (res_sz and (not(res_sz & (res_sz - 1)))):
             logger.error('reservation_size must be power of 2')
             raise SystemExit
+        if xlen == 64 and res_sz < 8:
+            logger.error('For RV64 reservation size must be minimum 8 bytes')
+            raise SystemExit
 
     # check m_extension
     m_mulstages_in = foo['m_extension']['mul_stages_in']
@@ -142,6 +145,12 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
             else:
                 asid_mask = asid_mask >> 1
 
+    flen = xlen
+    if 'D' in isa_node['ISA']:
+        flen = 64
+    elif 'F' in isa_node['ISA']:
+        flen = 32
+    
     m_mulstages_in = foo['m_extension']['mul_stages_in']
     m_mulstages_out = foo['m_extension']['mul_stages_out']
     m_divstages = foo['m_extension']['div_stages']
@@ -152,6 +161,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     test_memory_size = math.log2(test_memory_size)
     macros = 'Addr_space='+str(int(test_memory_size))
     macros += ' xlen='+str(xlen)
+    macros += ' flen='+str(flen)
+    macros += ' elen='+str(max(xlen, flen))
     macros += ' bypass_sources=2'
     if foo['bsc_compile_options']['cocotb_sim']:
         macros += ' cocotb_sim'
@@ -320,10 +331,6 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
         macros += ' pmp_grainbits='+str(isa_node['pmp_granularity']+2)
 
 
-    if foo['no_of_triggers'] > 0:
-        macros += ' triggers  trigger_num='+str(foo['no_of_triggers'])
-        macros += ' mcontext=0  scontext=0'
-
     # reset cycle latency
     dsets = foo['dcache_configuration']['sets']
     isets = foo['dcache_configuration']['sets']
@@ -416,13 +423,13 @@ def generate_makefile(foo, logging=False):
     if logging:
         logger.info('Dependency Graph Created')
     
-def validate_specs(core_spec, isa_spec, debug_spec, grouping_spec, logging=False):
+def validate_specs(uarch_spec, isa_spec, debug_spec, grouping_spec, logging=False):
 
     schema = 'configure/schema.yaml'
     # Load input YAML file
     if logging:
-        logger.info('Loading core file: ' + str(core_spec))
-    inp_yaml = utils.load_yaml(core_spec)
+        logger.info('Loading core file: ' + str(uarch_spec))
+    uarch_yaml = utils.load_yaml(uarch_spec)
     if logging:
         logger.info('Loading isa file: ' + str(isa_spec))
     isa_yaml = utils.load_yaml(isa_spec)
@@ -462,12 +469,12 @@ def validate_specs(core_spec, isa_spec, debug_spec, grouping_spec, logging=False
     validator = Validator(schema_yaml)
     validator.allow_unknown = False
     validator.purge_readonly = True
-    normalized = validator.normalized(inp_yaml, schema_yaml)
+    uarch_normalized = validator.normalized(uarch_yaml, schema_yaml)
 
     # Perform Validation
     if logging:
         logger.info('Initiating Validation')
-    valid = validator.validate(normalized)
+    valid = validator.validate(uarch_normalized)
 
     # Print out errors
     if valid:
@@ -475,12 +482,16 @@ def validate_specs(core_spec, isa_spec, debug_spec, grouping_spec, logging=False
             logger.info('No Syntax errors in Input Yaml.')
     else:
         error_list = validator.errors
-        raise ValidationError("Error in " + core_spec + ".", error_list)
-    normalized['ISA'] = isa_yaml['hart0']['ISA']
-    specific_checks(normalized)
-    capture_compile_cmd(normalized, isa_yaml['hart0'], debug_yaml,
+        raise ValidationError("Error in " + uarch_spec + ".", error_list)
+    uarch_normalized['ISA'] = isa_yaml['hart0']['ISA']
+    checked_filename = os.path.split(uarch_spec)[1].split('.')[0]+'_checked.yaml'
+    checked_file = open('build/'+checked_filename,'w')
+    utils.dump_yaml(uarch_normalized,checked_file,False) 
+    checked_file.close()
+    specific_checks(uarch_normalized)
+    capture_compile_cmd(uarch_normalized, isa_yaml['hart0'], debug_yaml,
             grouping_yaml )
-    generate_makefile(normalized, logging)
+    generate_makefile(uarch_normalized, logging)
 
     logger.info('Configuring Boot-Code')
     ofile = open('boot/Makefile.inc','w')

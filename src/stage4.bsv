@@ -16,6 +16,7 @@ There can be multiple functional units which can be polled in this stage whose w
 is quite similar. Thus, this stage also tries to converge the various FUids to Commit Unit ids.
 */
 package stage4;
+
   import FIFOF        :: * ;
   import Vector       :: * ;
   import SpecialFIFOs :: * ;
@@ -46,21 +47,19 @@ package stage4;
 // fire which indicates that a stall is observed.
 `ifdef simulate
   (*preempts="rl_capture_muldiv, rl_polling_check"*)
-  (*preempts="rl_drop_bypass, rl_polling_check"*)
   (*preempts="rl_fwd_baseout, rl_polling_check"*)
   (*preempts="rl_fwd_systemout, rl_polling_check"*)
   (*preempts="rl_fwd_trapout, rl_polling_check"*)
   (*preempts="rl_handle_memory, rl_polling_check"*)
 `endif
   /*doc:module:*/
-  module mkstage4#(parameter Bit#(XLEN) hartid)(Ifc_stage4);
+module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     /*doc:submodule: The following are the virtual FIFOs connected to the ISBs from the EXE stage*/
     RX#(BaseOut) rx_baseout <- mkRX; 
     RX#(TrapOut) rx_trapout <- mkRX;
     RX#(SystemOut) rx_systemout <- mkRX;
     RX#(MemoryOut) rx_memoryout <- mkRX;
     RX#(FUid) rx_fuid <- mkRX;
-    RX#(Bool) rx_drop <- mkRX;
   `ifdef rtldump
     RX#(CommitLogPacket) rx_commitlog <- mkRX;
   `endif
@@ -75,12 +74,12 @@ package stage4;
     TX#(BaseOut)   tx_baseout <- mkTX;
     TX#(WBMemop)   tx_memio <- mkTX;
     TX#(CUid)      tx_fuid <- mkTX;
-    TX#(Bool)      tx_drop <- mkTX;
   `ifdef rtldump
     TX#(CommitLogPacket) tx_commitlog <- mkTX;
   `endif
     // fifo to capture the response from the dmem subsystem
-    FIFOF#(DMem_core_response#(ELEN,1)) ff_memory_response <- mkBypassFIFOF();
+  FIFOF#(DMem_core_response#(`elen,1)) ff_memory_response <- mkBypassFIFOF();
+
   `ifdef simulate
     /*doc:rule: This rule is only available in simulation mode. If the FUid is available but the
      * respective functional unit's output is not available, then this rule will fire and print a stall
@@ -90,22 +89,6 @@ package stage4;
       `logLevel( stage4, 0, $format("[%2d]STAGE4: Waiting for FUnit:",hartid,fshow(rx_fuid.u.first.insttype)))
     endrule:rl_polling_check
   `endif
-
-    /*doc:rule: This rule will simply bypass the instruction to the write-back stage which was
-     * previously tagged to be dropped for various reasons.*/
-    rule rl_drop_bypass(rx_fuid.u.first.insttype == DROP);
-      tx_drop.u.enq(rx_drop.u.first);
-      tx_fuid.u.enq(fn_fu2cu(rx_fuid.u.first));
-      rx_drop.u.deq;
-      rx_fuid.u.deq;
-    `ifdef rtldump
-      let clogpkt = rx_commitlog.u.first;
-      tx_commitlog.u.enq(clogpkt);
-      rx_commitlog.u.deq;
-    `endif
-      `logLevel( stage4, 0, $format("[%2d]STAGE4: PC:%h",hartid,rx_fuid.u.first.pc))
-      `logLevel( stage4, 0, $format("[%2d]STAGE4: Buffering DROP",hartid))
-    endrule:rl_drop_bypass
 
     /*doc:rule: This rule will simply bypass the results of instructinos which were executed in the
     * previous stage without any alteration*/
@@ -290,7 +273,6 @@ package stage4;
       interface rx_systemout_from_stage3  = rx_systemout.e;
       interface rx_memoryout_from_stage3 = rx_memoryout.e;
       interface rx_fuid_from_stage3 = rx_fuid.e;
-      interface rx_drop_from_stage3 = rx_drop.e;
     `ifdef rtldump
       interface rx_commitlog = rx_commitlog.e;
     `endif
@@ -302,14 +284,13 @@ package stage4;
       interface tx_baseout_to_stage5 = tx_baseout.e;
       interface tx_memio_to_stage5 = tx_memio.e;
       interface tx_fuid_to_stage5 = tx_fuid.e;
-      interface tx_drop_to_stage5 = tx_drop.e;
     `ifdef rtldump
       interface tx_commitlog = tx_commitlog.e;
     `endif
     endinterface;
     interface cache = interface Ifc_s4_cache
       interface  memory_response= interface Put
-        method Action put (DMem_core_response#(ELEN,1) response)if(ff_memory_response.notFull);
+      method Action put (DMem_core_response#(`elen,1) response)if(ff_memory_response.notFull);
           ff_memory_response.enq(response);
         endmethod
       endinterface;

@@ -49,7 +49,6 @@ dcache_configuration:
   rwports: '1r1w'
 reset_pc: 4096
 bus_protocol: AXI4
-no_of_triggers: 0
 bsc_compile_options:
   test_memory_size: 33554432
   assertions: true
@@ -91,3 +90,4 @@ noinline_modules:
   bypass: True
   base_alu: True
   decoder: True
+  decompress: True
