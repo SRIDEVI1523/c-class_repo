@@ -99,7 +99,7 @@ package Soc;
     end
 
     Ifc_sign_dump signature<- mksign_dump();
-	  Ifc_uart_axi4#(`paddr,`elen,0, 16) uart <- mkuart_axi4(curr_clk,curr_reset, 5);
+	  Ifc_uart_axi4#(`paddr,`elen,0, 16) uart <- mkuart_axi4(curr_clk,curr_reset, 5, 0, 0);
     Ifc_clint_axi4#(`paddr, `elen, 0, `num_harts, 2) clint <- mkclint_axi4();
     Ifc_err_slave_axi4#(`paddr,`elen,0) err_slave <- mkerr_slave_axi4;
     Ifc_bram_axi4#(`paddr, `elen, USERSPACE, `Addr_space) main_memory <- mkbram_axi4(`MemoryBase,
