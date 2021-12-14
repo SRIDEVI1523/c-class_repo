@@ -336,7 +336,6 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     method ma_debug_interrupt= stage5.debug.ma_debug_interrupt;
     method mv_core_debugenable = stage5.debug.mv_core_debugenable;
     method mv_core_is_reset = rg_reset_event;
-    (*always_enabled*)
     method Action ma_debugger_available (Bit#(1) avail);
       wr_debugger_available <= avail;
     endmethod:ma_debugger_available

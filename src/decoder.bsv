@@ -42,6 +42,7 @@ package decoder;
   import csrbox_decoder :: * ;
   `include "decoder.defines"
   `include "trap.defines"
+  `include "csrbox.defines"
 
   `ifdef decoder_noinline
   (*noinline*)
@@ -635,7 +636,7 @@ package decoder;
   (*noinline*)
   `endif
   function Bit#(`causesize) fn_decode_trapcause(Bit#(32) inst, CSRtoDecode csrs
-                                    `ifdef debug DebugStatus debug `endif );
+                                    `ifdef debug ,DebugStatus debug `endif );
   `ifdef debug
     Bool ebreakm = unpack(csrs.csr_dcsr[15]) && !debug.debug_mode;
     Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif ) && !debug.debug_mode;
@@ -654,7 +655,7 @@ package decoder;
           if(                   (ebreakm && csrs.prv == Machine)
             `ifdef supervisor || (ebreaks && csrs.prv == Supervisor) `endif
             `ifdef user       || (ebreaku && csrs.prv == User)    `endif ) begin
-            trapcause = `halt_ebreak;
+            Bit#(`causesize) trapcause = `halt_ebreak;
             trapcause[`causesize - 1] = 0;
             return trapcause;
           end
@@ -708,7 +709,7 @@ package decoder;
 
     Bit#(32) immediate_value = fn_decode_immediate(inst, csrs);
     Access_type mem_access = fn_decode_mem_access(inst);
-    Bit#(`causesize) trapcause = fn_decode_trapcause(inst, csrs `ifdef debug debug `endif );
+    Bit#(`causesize) trapcause = fn_decode_trapcause(inst, csrs `ifdef debug ,debug `endif );
     Instruction_type inst_type = fn_decode_insttype(inst, csrs);
 
     // --------- Function for ALU -------------
