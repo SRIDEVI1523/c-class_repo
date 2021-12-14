@@ -370,6 +370,9 @@ interface Ifc_s5_interrupts;
 `ifdef usertraps
   method Action ma_plic_ueip (Bit#(1) intrpt);
 `endif
+`ifdef hypervisor
+	method Action ma_plic_vseip(Bit#(1) ex_i);
+`endif
 endinterface:Ifc_s5_interrupts
 
 `ifdef debug
@@ -404,6 +407,16 @@ interface Ifc_s5_csrs;
   method Bit#(`xlen) mv_csr_mstatus;
   method CSRtoDecode mv_csrs_to_decode;
   method Bool mv_resume_wfi;
+`ifdef hypervisor
+	`ifdef RV32
+	method Bit#(`xlen) mv_csr_mstatush;
+	`endif
+	method Bit#(`xlen) mv_csr_hstatus;
+	method Bit#(`xlen) mv_csr_vsstatus;				
+	method Bit#(`xlen) mv_csr_vsatp;
+	method Bit#(`xlen) mv_csr_hgatp;
+	method Bit#(1) mv_vs_bit;
+`endif
 `ifdef supervisor
 	method Bit#(`xlen) mv_csr_satp;
 `endif

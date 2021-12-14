@@ -176,11 +176,14 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
     `ifdef microtrap_support
       if (trapout.is_microtrap) begin
         if (trapout.cause == `Sfence_rerun || trapout.cause == `FenceI_rerun || 
-            trapout.cause == `CSR_rerun ) begin
+            trapout.cause == `CSR_rerun 
+					`ifdef hypervisor || trapout.cause == `Hfence_rerun `endif ) begin
           let _fencei = (trapout.cause == `FenceI_rerun);
           let _sfence = (trapout.cause == `Sfence_rerun);
+  			  let _hfence = (trapout.cause == `Hfence_rerun);
           wr_flush <= WBFlush{flush: True, newpc : fuid.pc , fencei: _fencei 
-              `ifdef supervisor , sfence: _sfence `endif };
+              `ifdef supervisor , sfence: _sfence `endif 
+              `ifdef hypervisor , hfence: _hfence `endif };
           `logLevel( stage5, 0, $format("[%2d]STAGE5 : Redirect PC:%h",hartid, fuid.pc))
         `ifdef perfmonitors
           wr_count_microtrap <= 1;
@@ -193,7 +196,8 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       else `endif begin
         let tvec <- csr.mav_upd_on_trap(trapout.cause, fuid.pc, trapout.mtval);
         wr_flush <= WBFlush{flush: True, newpc : tvec, fencei: False 
-            `ifdef supervisor , sfence: False `endif };
+            `ifdef supervisor , sfence: False `endif 
+            `ifdef hypervisor , hfence: False `endif };
       `ifdef perfmonitors
         Bit#(1) cause_type = truncateLSB(trapout.cause);
         if (cause_type == 1)
@@ -235,7 +239,8 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         let epc <- csr.mav_upd_on_ret(truncateLSB(systemout.csr_address));
         exit = True;
         wr_flush <= WBFlush{flush: True, newpc : epc, fencei: False
-          `ifdef supervisor , sfence: False `endif };
+          `ifdef supervisor , sfence: False `endif 
+          `ifdef hypervisor , hfence: False `endif };
         rg_epoch <= ~rg_epoch;
           `logLevel( stage5, 0, $format("[%2d]STAGE5 : Redirect PC:%h",hartid,epc))
       end
@@ -276,6 +281,9 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         _pkt.rdata = csr_response.data;
         clogpkt.inst_type = tagged CSR _pkt;
         clogpkt.mode = csr.mv_prv;
+			`ifdef hypervisor
+				clogpkt.v = csr.mv_virtual;
+			`endif
         rg_commitlog <= tagged Valid clogpkt;
         rx_commitlog.u.deq;
       `endif
@@ -314,6 +322,9 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       let clogpkt = rx_commitlog.u.first;
       rx_commitlog.u.deq;
       clogpkt.mode = csr.mv_prv;
+			`ifdef hypervisor
+				clogpkt.v = csr.mv_virtual;
+			`endif
       rg_commitlog <= tagged Valid clogpkt;
     `endif
     end
@@ -371,6 +382,9 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         _pkt.commit_data = cache_resp;
         clogpkt.inst_type = tagged MEM _pkt;
         clogpkt.mode = csr.mv_prv;
+			`ifdef hypervisor
+				clogpkt.v = csr.mv_virtual;
+			`endif
         rg_commitlog <= tagged Valid clogpkt;
       `endif
       end
@@ -387,7 +401,8 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
           if (ioresp.trap) begin
             let tvec <- csr.mav_upd_on_trap(ioresp.cause, fuid.pc, ioresp.word);
             wr_flush <= WBFlush{flush: True, newpc : tvec, fencei: False 
-                `ifdef supervisor , sfence: False `endif };
+                `ifdef supervisor , sfence: False `endif 
+                `ifdef hypervisor , hfence: False `endif };
             `logLevel( stage5, 0, $format("[%2d]STAGE5 : Redirect PC:%h",hartid, tvec))
             rg_epoch <= ~rg_epoch;
             rx_fuid.u.deq;
@@ -413,6 +428,9 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
             _pkt.commit_data = (fuid.rd ==0 `ifdef spfpu && fuid.rdtype == IRF `endif )?0:commit_data;
             clogpkt.inst_type = tagged MEM _pkt;
             clogpkt.mode = csr.mv_prv;
+					`ifdef hypervisor
+						clogpkt.v = csr.mv_virtual;
+					`endif
             rg_commitlog <= tagged Valid clogpkt;
           `endif
           end
@@ -461,8 +479,11 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
   interface interrupts = interface Ifc_s5_interrupts
     method ma_clint_msip = csr.ma_set_mip_msip;
     method ma_clint_mtip = csr.ma_set_mip_mtip;
-    method ma_clint_mtime = csr.ma_set_time;
+    //method ma_clint_mtime = csr.ma_set_time;
     method ma_plic_meip = csr.ma_set_mip_meip;
+  `ifdef hypervisor
+  	method ma_plic_vseip = csr.ma_set_vseip;
+  `endif
   `ifdef supervisor 
     method ma_plic_seip = csr.ma_set_mip_seip;
   `endif
@@ -512,10 +533,21 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
     method mv_cacheenable = truncate(csr.sbread.mv_csr_customcontrol);
     method mv_curr_priv = pack(csr.mv_prv);
     method mv_csr_mstatus = csr.sbread.mv_csr_mstatus;
+  `ifdef hypervisor
+		`ifdef RV32
+			method mv_csr_mstatush = csr.sbread.mv_csr_mstatush;
+ 		`endif
+		method mv_csr_hstatus = csr.sbread.mv_csr_hstatus;
+		method mv_csr_vsstatus = csr.sbread.mv_csr_vsstatus;				
+		method mv_csr_vsatp = csr.sbread.mv_csr_vsatp;
+		method mv_csr_hgatp = csr.sbread.mv_csr_hgatp;
+		method mv_vs_bit = csr.mv_virtual;
+  `endif
     method mv_csrs_to_decode = CSRtoDecode {prv: csr.mv_prv,
         csr_mip: truncate(csr.sbread.mv_csr_mip), 
         csr_mie: truncate(csr.sbread.mv_csr_mie), 
-        csr_mstatus: truncate(csr.sbread.mv_csr_mstatus) `ifdef debug & {'1,csr.mv_debug_mode,17'd0} `endif , 
+        csr_mstatus: truncate(csr.sbread.mv_csr_mstatus) `ifdef debug & {'1,csr.mv_debug_mode,17'd0} `endif ,
+        csr_sstatus: `ifdef hypervisor (csr.mv_virtual == 1)? csr.sbread.mv_csr_vsstatus: `endif csr.sbread.mv_csr_mstatus,
         csr_misa: truncate(csr.sbread.mv_csr_misa)
       `ifdef spfpu
         ,frm: truncate(csr.sbread.mv_csr_frm)
@@ -525,6 +557,11 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       `endif
       `ifdef non_m_traps 
         ,csr_mideleg: truncate(csr.sbread.mv_csr_mideleg)
+    `endif 
+    `ifdef hypervisor
+    , csr_hideleg: truncate(csr.sbread.mv_csr_hideleg)
+    , csr_hstatus: truncate(csr.sbread.mv_csr_hstatus)   
+    , csr_vs_bit: truncate(csr.mv_virtual)
       `endif };
     method mv_resume_wfi = unpack( |((csr.sbread.mv_csr_mip)& (csr.sbread.mv_csr_mie) ));
 	`ifdef supervisor

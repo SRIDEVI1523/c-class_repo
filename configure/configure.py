@@ -238,6 +238,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
         macros += ' user'
     if 'N' in foo['ISA']:
         macros += ' usertraps'
+    if 'H' in foo['ISA']:
+        macros += ' hypervisor'
     if 'S' in foo['ISA']:
         macros += ' supervisor'
         macros += ' itlbsize='+str(s_itlbsize)
@@ -328,7 +330,7 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     if pmp_entries > 0:
         macros += ' pmp'
         macros += ' pmpentries='+str(pmp_entries)
-        macros += ' pmp_grainbits='+str(isa_node['pmp_granularity']+2)
+        macros += ' pmp_grain='+str(isa_node['pmp_granularity'])
 
 
     # reset cycle latency

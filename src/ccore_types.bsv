@@ -67,7 +67,8 @@ typedef enum {ALU, MEMORY, BRANCH, JAL, JALR, SYSTEM_INSTR, TRAP, WFI
  * min size: 3 bits. max_size: 3*/
 typedef enum {Load = 0, Store = 1, Fence = 3, FenceI = 4
               `ifdef atomic,      Atomic = 2 `endif
-              `ifdef supervisor,  SFence = 5 `endif } Access_type deriving (Bits, Eq, FShow);
+              `ifdef supervisor,  SFence = 5 `endif 
+              `ifdef hypervisor, HFence_VVMA = 6, HFence_GVMA = 7 `endif } Access_type deriving (Bits, Eq, FShow);
 
 /*doc:enum: This enum indicates the type of the operand-1 used for execution 
  * min size: 1 max size: 2 */
@@ -103,6 +104,9 @@ typedef struct{
 `endif
 `ifdef supervisor
   Bool  sfence;       // bits [XLEN]
+`endif
+`ifdef hypervisor
+  Bool  hfence;
 `endif
   Bit#(`vaddr) pc;    // bits [XLEN-1:0]
 } Stage0Flush deriving(Bits, Eq, FShow);
@@ -266,14 +270,20 @@ typedef struct{
 `ifdef debug
   Bit#(32)  csr_dcsr;
 `endif 
+`ifdef spfpu
+  Bit#(3) frm;
+`endif
+`ifdef hypervisor
+    Bit#(12) csr_hideleg;
+    Bit#(`xlen) csr_hstatus;   
+    Bit #(1) csr_vs_bit;
+`endif
   Privilege_mode prv;
   Bit#(TAdd#(`max_int_cause,1)) csr_mip;
   Bit#(TAdd#(`max_int_cause,1)) csr_mie;
   Bit#(26) csr_misa;
-`ifdef spfpu
-  Bit#(3) frm;
-`endif
   Bit#(`xlen) csr_mstatus;
+  Bit#(`xlen) csr_sstatus;
 } CSRtoDecode deriving(Bits, Eq, FShow);
 
 typedef struct {
@@ -318,6 +328,9 @@ typedef union tagged {
 } CommitLogType deriving(Bits, FShow, Eq);
 
 typedef struct{
+`ifdef hypervisor
+  Bit#(1) v;
+`endif
   Privilege_mode mode;
   Bit#(`xlen) pc;
   Bit#(32) instruction;
@@ -533,6 +546,9 @@ typedef struct{
 } WBMemop deriving (Bits, Eq, FShow);
 
 typedef struct{
+`ifdef hypervisor
+  Bool hfence;
+`endif
 `ifdef supervisor
   Bool sfence;
 `endif

@@ -24,15 +24,11 @@ import Assert ::*;
 import imem::*;
 import dmem::*;
 import pipe_ifcs :: * ;
-
-`ifdef supervisor
-  `ifdef RV64
-    import ptwalk_rv64::*;
-  `else
-    import ptwalk_rv32::*;
-  `endif
+`ifdef hypervisor
+  import ptwalk_hypervisor :: * ;
+`elsif supervisor
+  import ptwalk_merged::*;
 `endif
-
 `include "ccore_params.defines"
 `include "Logger.bsv"
 
@@ -126,14 +122,12 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_cco
   /*doc:mod: instatiate the riscv pipeline */
   Ifc_riscv riscv <- mkriscv(resetpc, hartid);
 
-`ifdef supervisor
-  `ifdef RV64
-  Ifc_ptwalk_rv64#(`asidwidth) ptwalk <- mkptwalk_rv64;
-`else
-  Ifc_ptwalk_rv32#(`asidwidth) ptwalk <- mkptwalk_rv32;
-`endif
-  Reg#(PTWState) rg_ptw_state <- mkReg(None);
-`endif
+    Reg#(PTWState) rg_ptw_state <- mkReg(None);
+    `ifdef hypervisor
+    Ifc_ptwalk ptwalk <- mkptwalk;
+  `elsif supervisor
+    Ifc_ptwalk#(`asidwidth) ptwalk <- mkptwalk;
+  `endif
 
 	AXI4_Master_Xactor_IFC #(`paddr, `elen, USERSPACE) fetch_xactor <- mkAXI4_Master_Xactor;
 	AXI4_Master_Xactor_IFC #(`paddr, `elen, USERSPACE) memory_xactor <- mkAXI4_Master_Xactor;
@@ -482,7 +476,18 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   mkConnection(ptwalk.ma_satp_from_csr,riscv.csrs.mv_csr_satp);
   mkConnection(ptwalk.ma_curr_priv, curr_priv);
   mkConnection(ptwalk.ma_mstatus_from_csr, riscv.csrs.mv_csr_mstatus);
-
+  `ifdef hypervisor
+    mkConnection(ptwalk.ma_hgatp_from_csr,riscv.csrs.mv_csr_hgatp);
+    mkConnection(ptwalk.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
+    mkConnection(ptwalk.ma_hstatus_from_csr, riscv.csrs.mv_csr_hstatus);
+    mkConnection(ptwalk.ma_vsstatus_from_csr, riscv.csrs.mv_csr_vsstatus);
+    mkConnection(ptwalk.ma_vs_mode, riscv.csrs.mv_vs_bit);				//vs_bit from from csr_grp1		
+    mkConnection(dmem.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
+    mkConnection(dmem.ma_vsstatus_from_csr, riscv.csrs.mv_csr_vsstatus);
+    mkConnection(dmem.ma_vs_mode, riscv.csrs.mv_vs_bit);				//vs_bit from from csr_grp1		
+    mkConnection(imem.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
+    mkConnection(imem.ma_vs_mode, riscv.csrs.mv_vs_bit);				//vs_bit from from csr_grp1		
+  `endif
   /*doc:rule: this rule forwards the tlb miss request from the itlb to the pagetable walk module.
   * This only fires if the page-table walk module is not already handling a miss*/
   rule rl_itlb_req_to_ptwalk(rg_ptw_state == None);

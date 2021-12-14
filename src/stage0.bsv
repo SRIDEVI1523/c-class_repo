@@ -109,6 +109,11 @@ package stage0;
     Reg#(Bool) rg_sfence[2] <- mkCReg(2, False);
   `endif
 
+  `ifdef hypervisor
+    /*doc:reg: When true indicates that the flush occurred due to a hfence*/
+    Reg#(Bool) rg_hfence[2] <- mkCReg(2, False);
+  `endif
+
 `ifdef bpu
   `ifdef compressed
     /*doc:reg: This register when Valid indicates a 32-bit control instruction on a
@@ -163,7 +168,8 @@ package stage0;
 
       `ifdef bpu
         // bpu is flushed in case of ifence and not for sfence
-        if( `ifdef supervisor !rg_sfence[0] && `endif True) begin
+        if( `ifdef supervisor !rg_sfence[0] && `endif 
+            `ifdef hypervisor !rg_hfence[0] && `endif True) begin
           let bpuresp <- bpu.mav_prediction_response(PredictionRequest{pc: rg_pc[0]
                                     `ifdef ifence     ,fence: rg_fence[0] `endif
                                     `ifdef compressed , discard: (rg_pc[0][1]==1) `endif });
@@ -192,7 +198,9 @@ package stage0;
       `logLevel( stage0, 0, $format("STAGE0: nextpc1: %h ",nextpc))
 
       // don't update the pc in case fence or sfence instruction
-      if( `ifdef ifence !rg_fence[0] && `endif `ifdef supervisor !rg_sfence[0] && `endif True)
+      if( `ifdef ifence !rg_fence[0] && `endif 
+          `ifdef supervisor !rg_sfence[0] && `endif
+          `ifdef hypervisor !rg_hfence[0] && `endif True)
         rg_pc[0] <= nextpc ;
 
       `ifdef ifence
@@ -205,13 +213,21 @@ package stage0;
           rg_sfence[0] <= False;
       `endif
 
+      `ifdef hypervisor
+        if(rg_hfence[0])
+          rg_hfence[0] <= False;
+      `endif
+
         `logLevel( stage0, 0, $format("[%2d]STAGE0: Sending PC:%h to I$. ",hartid, rg_pc[0] & signExtend(3'b100)))
         ff_to_cache.enq(IMem_core_request{address  : rg_pc[0] & signExtend(3'b100),
                                         epochs  : curr_epoch
                   `ifdef supervisor    ,sfence  : rg_sfence[0]    `endif
+                  `ifdef hypervisor    ,hfence  : rg_hfence[0]    `endif
                   `ifdef ifence        ,fence   : rg_fence[0]     `endif });
 
-        if( `ifdef ifence !rg_fence[0] && `endif `ifdef supervisor !rg_sfence[0] && `endif True) begin
+        if( `ifdef ifence !rg_fence[0] && `endif 
+            `ifdef supervisor !rg_sfence[0] && `endif 
+            `ifdef hypervisor !rg_hfence[0] && `endif True) begin
           tx_tostage1.u.enq(Stage0PC{   address      : rg_pc[0] & signExtend(3'b100)
                     `ifdef compressed   ,discard     : rg_pc[0][1]==1        `endif
                     `ifdef bpu          ,btbresponse : bpu_resp.btbresponse `endif  });
@@ -247,6 +263,9 @@ package stage0;
       `ifdef supervisor
         rg_sfence[1] <= fl.sfence;
       `endif
+    `ifdef hypervisor
+      rg_hfence[1] <= fl.hfence;
+    `endif
         rg_pc[1] <= fl.pc;
     `ifdef bpu
       `ifdef compressed

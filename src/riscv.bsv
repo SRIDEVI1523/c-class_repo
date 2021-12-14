@@ -37,6 +37,16 @@ package riscv;
 	`ifdef supervisor
 		method Bit#(`xlen) mv_csr_satp;
 	`endif
+  `ifdef hypervisor
+  	method Bit#(`xlen) mv_csr_vsatp;
+  	method Bit#(`xlen) mv_csr_hgatp;
+  	method Bit#(1) mv_vs_bit;
+	  method Bit#(`xlen) mv_csr_hstatus;
+  	method Bit#(`xlen) mv_csr_vsstatus;				
+		`ifdef RV32
+			method Bit#(`xlen) mv_csr_mstatush;
+		`endif
+  `endif	
   `ifdef pmp
     method Vector#(`pmpentries, Bit#(8)) mv_pmp_cfg;
     method Vector#(`pmpentries, Bit#(`paddr)) mv_pmp_addr;
@@ -240,6 +250,9 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
                                 `ifdef ifence
                                   ,fence : wbflush.fencei
                                 `endif
+															 	`ifdef supervisor
+                                  , hfence :  wbflush.hfence
+                                `endif 
                                 `ifdef supervisor
                                   , sfence :  wbflush.sfence
                                 `endif });
@@ -304,6 +317,16 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
       method mv_pmp_cfg = stage5.csrs.mv_pmp_cfg;
       method mv_pmp_addr = stage5.csrs.mv_pmp_addr;
     `endif
+		`ifdef hypervisor
+		  method  mv_csr_vsatp = stage5.csrs.mv_csr_vsatp;
+  		method  mv_csr_hgatp = stage5.csrs.mv_csr_hgatp;
+  		method  mv_vs_bit = stage5.csrs.mv_vs_bit;
+	    method  mv_csr_hstatus  = stage5.csrs.mv_csr_hstatus;
+	    method  mv_csr_vsstatus = stage5.csrs.mv_csr_vsstatus;				
+			`ifdef RV32
+				method mv_csr_mstatush = stage5.csrs.mv_csr_mstatush;
+ 			`endif
+		`endif	
     endinterface;
     interface pipe_status = interface Ifc_pipe_status
       method mv_pipe_isbs_empty = lv_isb_empty;

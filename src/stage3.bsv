@@ -526,6 +526,9 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
                              ,access      : truncate(pack(meta.memaccess))
                              ,writedata   : wr_fwd_op2
                           `ifdef atomic ,atomic_op   : {funct3[0], meta.funct[6:3]} `endif
+													`ifdef hypervisor
+                              ,hfence     : meta.memaccess == HFence_VVMA || meta.memaccess == HFence_GVMA
+                          `endif
                           `ifdef supervisor
                              ,sfence      : meta.memaccess == SFence
                              ,ptwalk_req  : False
@@ -548,7 +551,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
       end
     `ifdef supervisor
       // convert SFence as a nop hence forth in the pipeline.
-      else if (meta.memaccess == SFence) begin
+      else if (meta.memaccess == SFence `ifdef hypervsisor || meta.memaccess == HFence_GVMA || meta.memaccess == HFence_VVMA `endif ) begin
         BaseOut baseoutput = BaseOut { rdvalue   : ?, rd: 0, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: IRF `endif };

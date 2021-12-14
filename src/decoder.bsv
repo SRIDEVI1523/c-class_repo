@@ -46,9 +46,14 @@ package decoder;
   `ifdef decoder_noinline
   (*noinline*)
   `endif
-  function Bool hasCSRPermission(Bit#(12) address, Bool write,  Privilege_mode prv);
+  function Bool hasCSRPermission(Bit#(12) address, Bool write,  Privilege_mode prv
+  `ifdef hypervisor ,Bit#(1) v `endif );
     Bit#(12) csr_index = pack(address);
-    return ((pack(prv) >= csr_index[9:8]) && !(write && csr_index[11:10]==2'b11) );
+    Privilege_mode _prv = prv;
+  `ifdef hypervisor
+    if (_prv == Supervisor && v==0) _prv = Hypervisor;
+  `endif
+    return ((pack(_prv) >= csr_index[9:8]) && !(write && csr_index[11:10]==2'b11) );
   endfunction
 
   // if the operand is not 0 then the instruction will perform a write on the CSR.
@@ -56,8 +61,9 @@ package decoder;
   (*noinline*)
   `endif
 	function Bool valid_csr_access(Bit#(12) csr_addr, Bit#(5) operand, Bit#(2) operation,
-                                  Bit#(1) tvm, Privilege_mode prv);
-		Bool ret = hasCSRPermission(unpack(csr_addr), (operand != 0 || operation=='b01) ? True:False, prv);
+                                  Bit#(1) tvm, Privilege_mode prv
+                                  `ifdef hypervisor ,Bit#(1) v `endif );
+		Bool ret = hasCSRPermission(unpack(csr_addr), (operand != 0 || operation=='b01) ? True:False, prv `ifdef hypervisor ,v `endif );
 
     // accessing satp in supervisor mode with tvm=1 should raise an illegal exception
   `ifdef supervisor
@@ -73,6 +79,7 @@ package decoder;
 	function Tuple2#(Bit#(`causesize), Bool) chk_interrupt(
 	                                                        Privilege_mode prv,
 	                                                        Bit#(`xlen) mstatus,
+                                                          Bit#(`xlen) sstatus,
                                                           Bit#(TAdd#(`max_int_cause,1)) mip,
                                                           Bit#(TAdd#(`max_int_cause,1)) mie
                                                         `ifdef non_m_traps
@@ -83,19 +90,24 @@ package decoder;
                                                         `endif `endif
                                                         `ifdef debug
                                                           ,DebugStatus debug, Bool step_done
+                                                        `endif 
+                                                        `ifdef hypervisor
+                                                          , Bit#(1) vs_bit 
+                                                          , Bit#(12) hideleg
                                                         `endif );
 
 
 
     Bool m_enabled = (prv != Machine) || (mstatus[3]==1);
   `ifdef supervisor
-    Bool s_enabled = (prv == User) || (mstatus[1]==1 && prv==Supervisor);
+    Bool s_enabled = (prv == User) || (sstatus[1]==1 && prv==Supervisor);
   `endif
   `ifdef usertraps
     Bool u_enabled = (mstatus[0]==1 && prv==User);
   `endif
    
     Bit#(TAdd#(`max_int_cause,1)) d_interrupts = 0;
+    Bit#(TAdd#(`max_int_cause,1)) hs_interrupts = 0;
     Bit#(TAdd#(`max_int_cause,1)) m_interrupts = 0;
     Bit#(TAdd#(`max_int_cause,1)) s_interrupts = 0;
     Bit#(TAdd#(`max_int_cause,1)) u_interrupts = 0;
@@ -111,18 +123,26 @@ package decoder;
     m_interrupts =                mie & mip & signExtend(pack(m_enabled))
              `ifdef non_m_traps & ~zeroExtend(mideleg) `endif
              `ifdef debug       & signExtend(pack(!debug.debug_mode)) `endif ;
+  `ifdef hypervisor
+    Bool hs_enabled = vs_bit == 1 || s_enabled;
+    hs_interrupts = mie & mip & signExtend(pack(hs_enabled)) & 
+                    (zeroExtend(mideleg) & ~zeroExtend(hideleg)) ;
+  `endif
   `ifdef supervisor
     s_interrupts =              mie & mip & zeroExtend(mideleg) & signExtend(pack(s_enabled))
+               `ifdef hypervisor & zeroExtend(hideleg) & signExtend(vs_bit) `endif
                `ifdef usertraps & ~zeroExtend(sideleg) `endif
                `ifdef debug     & signExtend(pack(!debug.debug_mode)) `endif ;
   `endif
   `ifdef usertraps
     u_interrupts =                mie & mip & zeroExtend(mideleg) & signExtend(pack(u_enabled))
-              `ifdef supervisor & sideleg `endif
+              `ifdef supervisor & ~zeroExtend(sideleg) `endif
               `ifdef debug      & signExtend(pack(!debug.debug_mode)) `endif ;
   `endif
 
-    Bit#(TAdd#(`max_int_cause,1)) pending_interrupts = d_interrupts | m_interrupts | s_interrupts | u_interrupts;
+    Bit#(TAdd#(`max_int_cause,1)) pending_interrupts = d_interrupts | m_interrupts | s_interrupts 
+                                                      | u_interrupts 
+                                    `ifdef hypervisor | hs_interrupts `endif ;
 		// format pendingInterrupt value to return
     Bool taketrap=unpack(|pending_interrupts) `ifdef debug ||  (step_done && !debug.debug_mode) `endif ;
 
@@ -154,6 +174,16 @@ package decoder;
       int_cause=`Supervisor_soft_int;
     else if(pending_interrupts[5]==1)
       int_cause=`Supervisor_timer_int;
+  `endif
+  `ifdef hypervisor
+    else if (pending_interrupts[12] == 1)
+      int_cause = `Supervisor_guest_ext_int;
+    else if (pending_interrupts[10] == 1)
+      int_cause = `VS_ext_int;
+    else if (pending_interrupts[2] == 1)
+      int_cause = `VS_soft_int;
+    else if (pending_interrupts[6] == 1)
+      int_cause = `VS_timer_int;
   `endif
   `ifdef user
     else if(pending_interrupts[8]==1)
@@ -275,8 +305,10 @@ package decoder;
     //---------------- Decoding the immediate values-------------------------------------
 
 		Bit#(5) opcode= inst[6:2];
+		Bit#(7) funct7 = inst[31:25];
+		Bit#(3) funct3 = inst[14:12];
     // Identify the type of intruction first
-    Bool stype= (opcode=='b01000 || (opcode=='b01001 && csrs.csr_misa[5]==1) );
+    Bool stype= (opcode=='b01000 || (opcode=='b01001 && csrs.csr_misa[5]==1) `ifdef hypervisor || (csrs.csr_misa[7]==1 && funct7[6:3] =='b0110 && funct7[0]==1 && funct3[2:0] =='b100 && inst[11:7]==0 && opcode=='b11100) `endif );
     Bool btype= (opcode=='b11000);
     Bool utype= (opcode=='b01101 || opcode=='b00101);
     Bool jtype= (opcode=='b11011);
@@ -373,7 +405,15 @@ package decoder;
       `ATOMIC_op: return Atomic; 
     `endif
     `ifdef supervisor
-      `SYSTEM_op: if (funct7=='b0001001 && funct3==0) return SFence; else return Load;
+      `SYSTEM_op: if (funct7=='b0001001 && funct3==0) 
+										return SFence;
+							  `ifdef hypervisor
+									else if(funct7=='b0010001 && funct3==0) //HFENCE.VVMA
+						      	return HFence_VVMA;
+							    else if(funct7=='b0110001 && funct3==0) 						// HFENCE.GVMA
+      							return HFence_GVMA;
+						    `endif
+									else return Load;
     `endif
       default: return Load;
     endcase
@@ -433,7 +473,9 @@ package decoder;
     Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
   `endif
 	  Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa);
-  	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12], csrs.csr_mstatus[20], csrs.prv);
+  	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12], 
+																					csrs.csr_mstatus[20], csrs.prv
+																				`ifdef hypervisor ,csrs.csr_vs_bit `endif );
     case (inst) matches
       `LUI_INSTR		         :return ALU;
       `AUIPC_INSTR		       :return ALU;
@@ -460,17 +502,36 @@ package decoder;
     `ifdef ifence
       `FENCEI_INSTR	         :return MEMORY;
     `endif
-      `CSR_INSTR             :if (funct3==0)
+      `CSR_INSTR             :if (funct3==0) begin
                                 if (inst[31:20]=='b000000000010 && inst[19:7]==0 && csrs.csr_misa[13]==1) // URET
                                   return SYSTEM_INSTR;
-                                else if (inst[31:20]== 'b000100000010 && inst[19:7]==0 &&  csrs.csr_misa[18]==1 && (csrs.prv == Machine || (csrs.prv == Supervisor && csrs.csr_mstatus[22]==0))) // SRET
-                                  return SYSTEM_INSTR;
+                                else if (inst[31:20]== 'b000100000010 && inst[19:7]==0 && csrs.csr_misa[18]==1) begin
+                                  if (csrs.prv == Machine || (csrs.prv == Supervisor && csrs.csr_mstatus[22]==0 `ifdef hypervisor && csrs.csr_vs_bit == 0 )
+                                                         || (csrs.prv == Supervisor && csrs.csr_hstatus[22] == 0 && csrs.csr_vs_bit == 1 `endif ) )
+                                    return SYSTEM_INSTR;
+                                  else
+                                    return TRAP;
+                                end
                                 else if (inst[31:20] == 'b001100000010 && inst[19:7]==0 &&  csrs.prv == Machine) // MRET
                                   return SYSTEM_INSTR;
                                 else if (inst[31:20] == 'b00100000101 && inst[19:7]==0 && (csrs.prv==Machine || csrs.csr_mstatus[21]==0)) //WFI
                                   return WFI;
+                              `ifdef hypervisor // HFENCE
+                                else if (inst[31] == 0 && inst[29:25] == 'b10001 && inst[11:7] == 0) begin
+                                  if (csrs.prv == Machine || (csrs.prv == Supervisor && csrs.csr_vs_bit == 0 && csrs.csr_mstatus[20] == 0))
+                                    return MEMORY;
+                                  else
+                                    return TRAP;
+                                end
+                              `endif
                               `ifdef supervisor
-                                else if (inst[31:25] == 'b001001 && inst[14:7]== 0 && (csrs.csr_mstatus[20]==0 || csrs.prv == Machine)) // SFENCE
+                                else if (inst[31:25] == 'b001001 && inst[14:7]== 0 && 
+                                        (csrs.csr_mstatus[20]==0 || csrs.prv == Machine)) // SFENCE
+                                  `ifdef hypervisor
+                                    if (csrs.prv == Supervisor && csrs.csr_vs_bit == 1 && csrs.csr_hstatus[20] == 1) 
+                                      return TRAP; 
+                                    else
+                                  `endif
                                   return MEMORY;
                               `endif
                               `ifdef debug
@@ -479,12 +540,27 @@ package decoder;
                               `endif
                                 else
                                   return TRAP;
+                              end
                             `ifdef zicsr
                               else if(funct3!=4 && address_is_valid && access_is_valid)  // CSR ops
                                 return SYSTEM_INSTR;
+                            `endif
+                            `ifdef hypervisor
+                              else if (funct3 == 4) begin // Hypevisor load/store ops
+                                if ( (funct7[0] == 0 && funct7[6:3] == 'b0110 && inst[24:22] == 0 
+                                      && inst[21:20] !=2 && ( ((inst[21:20]==1) ? (funct7[2:1]!=3) : (inst[21:20]==3) ? (funct7[2:1]==2 || funct7[2:1]==1) : True )) )
+                                   || (funct7[0] == 1 && funct7[6:3] == 'b0110 && inst[11:7] == 0) // VStore
+                                   )
+                                   if (csrs.prv == Machine || (csrs.prv == Supervisor && csrs.csr_vs_bit == 0 ) || (csrs.prv== User && csrs.csr_hstatus[9] == 1))
+                                     return MEMORY;
+                                   else
+                                     return TRAP;
+                                else
+                                  return TRAP;
+                              end
+                            `endif
                               else
                                 return TRAP;
-                            `endif
     `ifdef muldiv
       `MULDIV_INSTR          : if (csrs.csr_misa[12]==1) return MULDIV; else return TRAP;
      `ifdef RV64
@@ -565,10 +641,14 @@ package decoder;
     Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif ) && !debug.debug_mode;
     Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[13] `else 0 `endif ) && !debug.debug_mode;
   `endif
+		Bit#(7) funct7 = inst[31:25];
+		Bit#(3) funct3 = inst[14:12];
     case (inst) matches
       `ECALL_INSTR: return
         `ifdef user       (csrs.csr_misa[20]==1 && csrs.prv==User)?       `Ecall_from_user:  `endif
-        `ifdef supervisor (csrs.csr_misa[18]==1 && csrs.prv==Supervisor)? `Ecall_from_supervisor: `endif
+        `ifdef supervisor (csrs.csr_misa[18]==1 && csrs.prv==Supervisor)? 
+        `ifdef hypervisor (csrs.csr_vs_bit == 1)? `Ecall_from_vs_supervisor: `endif 
+                                                 `Ecall_from_supervisor: `endif
                                                                        `Ecall_from_machine;
       `EBREAK_INSTR: `ifdef debug
           if(                   (ebreakm && csrs.prv == Machine)
@@ -582,6 +662,23 @@ package decoder;
           else
         `endif
           return `Breakpoint;
+    `ifdef hypervisor
+      `CSR_INSTR : begin
+        if (funct3 == 0 && (inst[31:20] == 'h102 && inst[19:15] == 0 && inst[11:7] == 0) && 
+            (csrs.prv == Supervisor && csrs.csr_vs_bit == 1 && csrs.csr_hstatus[22] == 1) ) // SRET
+          return `Virt_inst ;
+        else if (funct3 == 0 &&  (inst[31:25] == 'b0001001 && inst[11:7] == 0) && 
+            (csrs.prv == Supervisor && csrs.csr_vs_bit == 1 && csrs.csr_hstatus[20] == 1)) // SFENCE
+          return `Virt_inst ;
+        else if (funct3 == 0 &&  ( inst[31] == 0 && inst[29:25] == 'b10001 && inst[11:7] == 0)  &&
+                  (csrs.csr_vs_bit == 1) ) // HFENCE
+          return `Virt_inst;
+        else if (funct3 == 4 && inst[31:28] == 'b0110 && csrs.csr_vs_bit == 1) // HLV Load/Store
+          return `Virt_inst;
+        else 
+          return `Illegal_inst;
+      end
+    `endif
       default: return `Illegal_inst ;
     endcase
   endfunction 
@@ -629,7 +726,8 @@ package decoder;
       temp1=zeroExtend(trapcause);
 
     Bool microtrap = mem_access==Fence || mem_access==FenceI || inst_type==SYSTEM_INSTR
-                `ifdef supervisor || mem_access==SFence `endif ;
+                `ifdef supervisor || mem_access==SFence `endif 
+								`ifdef hypervisor || mem_access == HFence_VVMA || mem_access == HFence_GVMA `endif ;
     let op_addr = OpAddr{rs1addr:rs1, rs2addr:rs2, rd:rd `ifdef spfpu ,rs3addr: rs3 `endif };
     let op_type = OpType{rs1type: rs1type, rs2type:rs2type `ifdef spfpu ,rs3type: rs3type, rdtype: rdtype `endif };
     let instr_meta = InstrMeta{inst_type: inst_type,
@@ -669,11 +767,13 @@ package decoder;
                                                     `ifdef debud ,debug `endif );
       let {icause, takeinterrupt} = chk_interrupt( csrs.prv,
                                                    csrs.csr_mstatus,
+                                                   csrs.csr_sstatus,
                                                    csrs.csr_mip,
                                                    csrs.csr_mie
                                 `ifdef non_m_traps ,csrs.csr_mideleg `endif
                 `ifdef supervisor `ifdef usertraps ,csrs.csr_sideleg `endif `endif
-                                  `ifdef debug     ,debug, step_done `endif );
+                                  `ifdef debug     ,debug, step_done `endif 
+								`ifdef hypervisor  ,csrs.csr_vs_bit, csrs.csr_hideleg `endif );
 
       Bit#(TMax#(7,`causesize)) func_cause=result_decode.meta.funct_cause;
       Instruction_type x_inst_type = result_decode.meta.inst_type;

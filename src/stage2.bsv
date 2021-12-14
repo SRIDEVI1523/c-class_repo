@@ -376,6 +376,7 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
   
         rg_microtrap <= decoded.meta.microtrap && !wr_flush_from_exe && !wr_flush_from_wb;
         rg_microtrap_cause <= (decoded.meta.inst_type== SYSTEM_INSTR )? `CSR_rerun :
+`ifdef hypervisor (decoded.meta.memaccess == HFence_GVMA || decoded.meta.memaccess== HFence_VVMA)? `Hfence_rerun: `endif
                              (decoded.meta.memaccess == FenceI)?`FenceI_rerun : `Sfence_rerun ;
   
         // -------------------------- Enque relevant data to the next stage -------------------- //

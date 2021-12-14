@@ -15,8 +15,10 @@ package TbSoc;
 	import AXI4_Fabric:: *;
   import uart::*;
 	import ccore_types::*;
+	import csr_types :: *;
 	import csrbox_decoder :: * ;
   import csrbox :: * ;
+  import Vector :: * ;
   `include "ccore_params.defines"
   `include "Logger.bsv"
   `include "Soc.defines"
@@ -27,6 +29,8 @@ package TbSoc;
 `ifdef debug
   import DebugSoc     :: * ;
 `endif
+
+`define limit 'd10000000
 
 `ifdef openocd
   import "BDPI" function ActionValue #(int) init_rbb_jtag(Bit#(1) dummy);
@@ -81,6 +85,14 @@ package TbSoc;
     Reg#(Bool) rg_read_rx<- mkDReg(False);
 
     Reg#(Bit#(5)) rg_cnt <-mkReg(0);
+
+    Vector#(100, String) string_field;
+    for (Integer i = 0; i<100; i = i + 1) begin
+      string_field[i] = integerToString(i);
+    end
+
+    /*doc:reg: */
+    Reg#(Bit#(32)) rg_inst_count <- mkReg(0);
 
     rule display_eol;
 	    let timeval <- $time;
@@ -138,6 +150,7 @@ package TbSoc;
     rule write_dump_file(rg_cnt >= 1);
 
       let generate_dump <- $test$plusargs("rtldump");
+      let stime <- $stime;
       if (soc.commitlog matches tagged Valid .idump) begin
     `ifndef openocd `ifndef cocotb_sim
       if(idump.instruction=='h00006f||idump.instruction =='h00a001)
@@ -145,28 +158,53 @@ package TbSoc;
       else
     `endif `endif
       if(generate_dump) begin
+        if (rg_inst_count % `limit == 0 && rg_inst_count != 0) begin
+          File lfh1 <- $fopen( "rtl"+string_field[rg_inst_count/`limit ]+".dump","w");
+          dump <= lfh1;
+        end
+        rg_inst_count <= rg_inst_count + 1;
+
         if (idump.instruction[1:0] == 'b11)
-        	$fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%8h", idump.instruction, ")");
+        	$fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif " 0x%16h", idump.pc, " (0x%8h", idump.instruction, ")");
         else
-          $fwrite(dump, "core   0: ", idump.mode, " 0x%16h", idump.pc, " (0x%4h", idump.instruction[15:0], ")");
+          $fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif " 0x%16h", idump.pc, " (0x%4h", idump.instruction[15:0], ")");
 
         if (idump.inst_type matches tagged REG .d) begin
+          let csr_address = 'h300; // mstatus
+          Bit#(`xlen) wdata = fn_probe_csr(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif );
           if (!(idump.instruction[31:25] =='b0001001 && idump.instruction[14:0] == 'b000000001110011)) begin
             if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
             if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
-            if (!d.irf && valueOf(`flen) == 64)
+            if (!d.irf && valueOf(`flen) == 64) begin
+              $fwrite(dump, " " , fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
               $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
-            if (!d.irf && valueOf(`flen) == 32)
+            end
+            if (!d.irf && valueOf(`flen) == 32) begin
+              $fwrite(dump, " " , fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
               $fwrite(dump, " f%d", d.rd, " 0x%8h", d.wdata);
+            end
           end
         end
 
         if (idump.inst_type matches tagged CSR .d) begin
           let csr_address = d.csr_address;
-          if (d.csr_address == 'h100)
-            csr_address = 'h300;
+          csr_address = `ifdef hypervisor fn_address_virtual(csr_address, idump.v) `else csr_address `endif ;
+        `ifdef supervisor
+          `ifdef hypervisor if (idump.v == 0) `endif
+            if (csr_address == `SSTATUS || csr_address == `SIE || csr_address == `SIP) begin
+              csr_address = csr_address + 'h200;
+            end
+        `endif
+        `ifdef hypervisor
+          if (csr_address == `HIE || csr_address == `HIP)
+            csr_address = csr_address - 'h300; // convert to MIE/MIP
+          else if (csr_address == `VSIE || csr_address == `VSIP)
+            csr_address = csr_address + 'h100; // convert to MIE/MIP
+          else if (csr_address == `HVIP)
+            csr_address = `MIP; // convert to MIP
+        `endif
           if (valueOf(`xlen) == 64 && d.rd != 0)
             $fwrite(dump, " x%d", d.rd, " 0x%16h", d.rdata);
           if (valueOf(`xlen) == 32 && d.rd != 0)
@@ -178,12 +216,24 @@ package TbSoc;
             if (valueOf(`xlen) == 32)
               $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
           end
+        `ifdef spfpu
+          if (csr_address == `FCSR || csr_address == `FRM || csr_address == `FFLAGS)begin
+            csr_address = `MSTATUS;
+            Bit#(`xlen) wdata = fn_probe_csr(csr_address);
+            if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
+              if (valueOf(`xlen) == 64) 
+                $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%16h", wdata);
+              if (valueOf(`xlen) == 32)
+                $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
+            end
+          end
+        `endif
         end
 
         if (idump.inst_type matches tagged MEM .d) begin
           let store_data = d.data;
         `ifdef atomic
-          if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
+          if (d.access == Atomic && d.atomic_op[3:0] != 5 && d.atomic_op[3:0] != 7) begin
             store_data = fn_atomic_op(d.atomic_op,d.data, d.commit_data);
           end
         `endif
@@ -204,7 +254,7 @@ package TbSoc;
             $fwrite(dump, " mem 0x%8h", d.address);
 
         `ifdef atomic
-          if (d.access == Atomic && d.atomic_op != 5 && d.atomic_op != 7) begin
+          if (d.access == Atomic && d.atomic_op[3:0] != 5 && d.atomic_op[3:0] != 7) begin
             if(valueOf(`xlen) ==64)
               $fwrite(dump, " mem 0x%16h", d.address);
             if(valueOf(`xlen) ==32)
@@ -212,7 +262,7 @@ package TbSoc;
           end
         `endif
 
-          if (d.access == Store  `ifdef atomic || (d.access == Atomic && d.atomic_op != 5) `endif ) begin
+          if (d.access == Store  `ifdef atomic || (d.access == Atomic && d.atomic_op[3:0] != 5) `endif ) begin
             if (d.size == 0) begin
               if (store_data[7:4]==0)
                 $fwrite(dump, " 0x%1h", store_data[3:0]);
