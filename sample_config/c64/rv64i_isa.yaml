@@ -24,30 +24,6 @@ hart0:
     physical_addr_sz: 32
     supported_xlen:
       - 64
-    misa:
-        reset-val: 0x8000000000141105
-        rv32:
-            accessible: false
-        rv64:
-            accessible: true
-            mxl:
-                implemented: true
-                type: 
-                    warl:
-                        dependency_fields: []
-                        legal:
-                          - mxl[1:0] in [0x2]
-                        wr_illegal:
-                          - Unchanged
-            extensions:
-                implemented: true
-                type: 
-                    warl:
-                        dependency_fields: []
-                        legal:
-                          - "extensions[25:0] bitmask [0x0141105, 0x0000000]"
-                        wr_illegal:
-                          - "Unchanged"
     mvendorid:
         reset-val: 0x0
         rv32:
@@ -414,44 +390,29 @@ hart0:
                     wr_illegal:
                       - Unchanged
         reset-val: 0
-    fflags:
+    fcsr:
         rv32:
             accessible: false
         rv64:
-            accessible: false
-            type:
-                warl:
-                    dependency_fields: []
-                    legal:
-                      - fflags[4:0] in [0x00:0x1F]
-                    wr_illegal:
-                      - Unchanged
-        reset-val: 0
-    frm:
-        rv32:
-            accessible: false
-        rv64:
-            accessible: false
-            type:
+            accessible: true
+            frm:
+              implemented: True
+              type:
                 warl:
                     dependency_fields: []
                     legal:
                       - frm[2:0] in [0x0:0x7]
                     wr_illegal:
                       - Unchanged
-        reset-val: 0
-    fcsr:
-        rv32:
-            accessible: false
-        rv64:
-            accessible: false
-            type:
-                warl:
-                    dependency_fields: []
-                    legal:
-                      - fcsr[7:0] in [0x00:0xFF]
-                    wr_illegal:
-                      - Unchanged
+            fflags:
+              implemented: True
+              type:
+                  warl:
+                      dependency_fields: []
+                      legal:
+                        - fflags[4:0] in [0x00:0x1F]
+                      wr_illegal:
+                        - Unchanged
         reset-val: 0
     time:
         rv32:
@@ -544,7 +505,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp0cfg]
                     legal:
-                      - "pmp0cfg[7] in [0] -> pmpaddr0[63:0] bitmask [0xFFFFFFFFFFFFFFFE,0x0000000000000000]"
+                      - "pmp0cfg[7] in [0] -> pmpaddr0[29:0] bitmask [0x3FFFFFFE,0x00000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -557,7 +518,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp1cfg]
                     legal:
-                      - "pmp1cfg[7] in [0] -> pmpaddr1[63:0] bitmask [0xFFFFFFFFFFFFFFFE,0x0000000000000000]"
+                      - "pmp1cfg[7] in [0] -> pmpaddr1[29:0] bitmask [0x3FFFFFFE,0x00000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -570,7 +531,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp2cfg]
                     legal:
-                      - "pmp2cfg[7] in [0] -> pmpaddr2[63:0] bitmask [0xFFFFFFFFFFFFFFFE,0x0000000000000000]"
+                      - "pmp2cfg[7] in [0] -> pmpaddr2[29:0] bitmask [0x3FFFFFFE,0x00000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -583,7 +544,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp3cfg]
                     legal:
-                      - "pmp3cfg[7] in [0] -> pmpaddr3[63:0] bitmask [0xFFFFFFFFFFFFFFFE,0x0000000000000000]"
+                      - "pmp3cfg[7] in [0] -> pmpaddr3[29:0] bitmask [0x3FFFFFFE,0x00000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0

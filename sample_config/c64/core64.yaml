@@ -64,13 +64,12 @@ bsc_compile_options:
   top_file: TbSoc.bsv
   top_dir: test_soc
   open_ocd: False
-  cocotb_sim: True
+  cocotb_sim: False
 verilator_configuration:
   coverage: none
   trace: false
   threads: 1
   verbosity: true
-  sim_speed: fast
   out_dir: bin
 noinline_modules:
   stage0: True
