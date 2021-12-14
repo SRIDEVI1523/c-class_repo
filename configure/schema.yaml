@@ -603,15 +603,20 @@ verilator_configuration:
       type: boolean
     out_dir:
       type: string
-    sim_speed:
+    opt_fast:
       type: string
-      allowed: ['fast','slow']
+    opt_slow:
+      type: string
+    opt:
+      type: string
   default:
     coverage: "none"
     trace: False
     threads: 1
     verbosity: True
-    sim_speed: fast
+    opt_fast: "-O3"
+    opt_slow: "-O3"
+    opt: "-O3"
     out_dir: bin
 
 

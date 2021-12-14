@@ -391,10 +391,10 @@ def generate_makefile(foo, logging=False):
     else:
         verilator_coverage = '--coverage-'+\
                 foo['verilator_configuration']['coverage']
-    if "fast" in foo['verilator_configuration']['sim_speed']:
-        verilator_speed = 'OPT_SLOW="-O3" OPT_FAST="-O3"'
-    else:
-        verilator_speed = ''
+    verilator_speed = ''
+    verilator_speed += ' OPT_FAST="{0}"'.format(foo['verilator_configuration']['opt_fast'])
+    verilator_speed += ' OPT_SLOW="{0}"'.format(foo['verilator_configuration']['opt_slow'])
+    verilator_speed += ' OPT="{0}"'.format(foo['verilator_configuration']['opt'])
     verilator_cmd = verilator_cmd.format(verilator_trace, verilator_coverage,
             verilator_threads)
     if foo['bsc_compile_options']['ovl_assertions']:
