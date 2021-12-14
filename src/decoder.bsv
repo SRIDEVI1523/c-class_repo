@@ -465,7 +465,7 @@ package decoder;
   /*doc:func: This function decodes the type of instruction. Default the instruction type is TRAP.
    * Only when a legal instruction is encountered the type changes accordingly*/
   function Instruction_type fn_decode_insttype(Bit#(32) inst, CSRtoDecode csrs
-                            `ifdef debuf DebugStatus debug `endif );
+                            `ifdef debug ,DebugStatus debug `endif );
     Bit#(1) fs = |csrs.csr_mstatus[14:13];
 		Bit#(3) funct3= inst[14:12];
 		Bit#(7) funct7= inst[31:25];
@@ -536,7 +536,7 @@ package decoder;
                                   return MEMORY;
                               `endif
                               `ifdef debug
-                                else if (inst[31:20] == 'b011110110010 && debug.mode)// DRET 
+                                else if (inst[31:20] == 'b011110110010 && debug.debug_mode)// DRET 
                                   return SYSTEM_INSTR;
                               `endif
                                 else
@@ -710,7 +710,7 @@ package decoder;
     Bit#(32) immediate_value = fn_decode_immediate(inst, csrs);
     Access_type mem_access = fn_decode_mem_access(inst);
     Bit#(`causesize) trapcause = fn_decode_trapcause(inst, csrs `ifdef debug ,debug `endif );
-    Instruction_type inst_type = fn_decode_insttype(inst, csrs);
+    Instruction_type inst_type = fn_decode_insttype(inst, csrs `ifdef debug , debug `endif );
 
     // --------- Function for ALU -------------
     // In case of Atomic operations as well,  the immediate portion will ensure the right opcode is
@@ -765,7 +765,7 @@ package decoder;
                             `ifdef debug , DebugStatus debug, Bool step_done `endif ) =  actionvalue
 
       DecodeOut result_decode = fn_decode(inst, csrs `ifdef compressed ,compressed `endif
-                                                    `ifdef debud ,debug `endif );
+                                                    `ifdef debug ,debug `endif );
       let {icause, takeinterrupt} = chk_interrupt( csrs.prv,
                                                    csrs.csr_mstatus,
                                                    csrs.csr_sstatus,

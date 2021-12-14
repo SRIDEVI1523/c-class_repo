@@ -190,6 +190,10 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     Ifc_mbox mbox <- mkmbox(0);
     FIFOF#(Bit#(`xlen)) ff_mbox_out <- mkSizedBypassFIFOF(`isb_s3s4 );
   `endif
+  `ifdef debug
+    /*doc:wire: */
+    Wire#(Bit#(1)) wr_debugger_available <- mkWire();
+  `endif
 
     let {pipe_s4s5_notEmpty, lv_bypass_1} <- mkPipe_s4_s5(stage4.tx, stage5.rx);
     let {pipe_s3s4_notEmpty, lv_bypass_0} <- mkPipe_s3_s4(stage3.tx, stage4.rx);
@@ -250,7 +254,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
                                 `ifdef ifence
                                   ,fence : wbflush.fencei
                                 `endif
-															 	`ifdef supervisor
+															 	`ifdef hypervisor
                                   , hfence :  wbflush.hfence
                                 `endif 
                                 `ifdef supervisor
@@ -290,7 +294,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
 
   `ifdef debug
     rule rl_connect_debug_decode;
-      stage2.debug.debug_status(DebugStatus {debugger_available : wr_debugger_available ,
+      stage2.debug.debug_status(DebugStatus {debugger_available : wr_debugger_available==1 ,
                                        debug_mode: unpack(stage5.debug.mv_debug_mode),
                                        step_set           : unpack(stage5.debug.mv_csr_dcsr[2]),
                                        step_ie            : unpack(stage5.debug.mv_csr_dcsr[11]),

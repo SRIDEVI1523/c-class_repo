@@ -41,6 +41,7 @@ import FIFOF        :: * ;
 import TxRx         :: * ;
 import DefaultValue :: * ;
 import Assert       :: * ;
+import Connectable  :: * ;
 
 `include "Logger.bsv"
 `include "trap.defines"
@@ -479,7 +480,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
   interface interrupts = interface Ifc_s5_interrupts
     method ma_clint_msip = csr.ma_set_mip_msip;
     method ma_clint_mtip = csr.ma_set_mip_mtip;
-    //method ma_clint_mtime = csr.ma_set_time;
+    method ma_clint_mtime = csr.ma_set_time;
     method ma_plic_meip = csr.ma_set_mip_meip;
   `ifdef hypervisor
   	method ma_plic_vseip = csr.ma_set_vseip;
