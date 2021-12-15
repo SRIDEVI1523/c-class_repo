@@ -605,10 +605,13 @@ verilator_configuration:
       type: string
     opt_fast:
       type: string
+      default: "-O3"
     opt_slow:
       type: string
+      default: "-O3"
     opt:
       type: string
+      default: "-O3"
   default:
     coverage: "none"
     trace: False
