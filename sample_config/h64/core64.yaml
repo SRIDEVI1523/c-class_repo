@@ -70,8 +70,8 @@ verilator_configuration:
   trace: false
   threads: 1
   verbosity: true
-  opt_fast: "-O3 -march=znver3"
-  opt_slow: "-O3 -march=znver3"
+  opt_fast: "-O3"
+  opt_slow: "-O3"
   opt: "-O3 -march=znver3"
   out_dir: bin
 noinline_modules:
