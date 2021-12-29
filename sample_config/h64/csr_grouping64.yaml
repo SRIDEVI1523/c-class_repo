@@ -38,6 +38,7 @@ grp1:
     - HGEIE
     - HGATP
     - HTIMEDELTA
+    - TIME
     - MCYCLE
     - MINSTRET
     - MHARTID

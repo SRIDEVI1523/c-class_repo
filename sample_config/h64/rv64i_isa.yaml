@@ -683,7 +683,7 @@ hart0:
         rv32:
             accessible: false
         rv64:
-            accessible: false
+            accessible: True
             type:
                 ro_variable: true
         reset-val: 0
