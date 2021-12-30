@@ -77,7 +77,7 @@ package Soc;
   endinterface
 
   (*synthesize*)
-  module mkSoc`ifdef debug #(Vector#(`num_harts, Reset) hartresets ) `endif (Ifc_Soc);
+  module mkSoc `ifdef debug #(Vector#(`num_harts, Reset) hartresets ) `endif (Ifc_Soc);
     let curr_clk<-exposeCurrentClock;
     let curr_reset<-exposeCurrentReset;
     
