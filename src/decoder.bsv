@@ -639,8 +639,8 @@ package decoder;
                                     `ifdef debug ,DebugStatus debug `endif );
   `ifdef debug
     Bool ebreakm = unpack(csrs.csr_dcsr[15]) && !debug.debug_mode;
-    Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[14] `else 0 `endif ) && !debug.debug_mode;
-    Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[13] `else 0 `endif ) && !debug.debug_mode;
+    Bool ebreaks = unpack(`ifdef supervisor csrs.csr_dcsr[13] `else 0 `endif ) && !debug.debug_mode;
+    Bool ebreaku = unpack(`ifdef user csrs.csr_dcsr[12] `else 0 `endif ) && !debug.debug_mode;
   `endif
 		Bit#(7) funct7 = inst[31:25];
 		Bit#(3) funct3 = inst[14:12];
