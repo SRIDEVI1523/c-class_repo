@@ -223,6 +223,20 @@ interface Ifc_s3_common;
   
   method Action ma_sb_release(CommitData commit);
 
+  (*always_enabled, always_ready*)
+  method Action ma_priv (Bit#(2) priv);
+  
+  (*always_enabled, always_ready*)
+  method Action ma_mstatus (Bit#(`xlen) mstatus);
+
+`ifdef hypervisor
+  (*always_enabled, always_ready*)
+  method Action ma_vs_mode (Bit#(1) vs);
+
+  (*always_enabled, always_ready*)
+  method Action ma_hstatus (Bit#(`xlen) hstatus);
+`endif
+
 `ifdef arith_trap
   method  Action ma_arith_trap_en(Bit#(1) en);
 `endif

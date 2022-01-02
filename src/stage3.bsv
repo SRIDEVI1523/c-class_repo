@@ -171,6 +171,18 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   /*doc:wire: reads operand-3/immediate from the registerfile which was indexed in the previous cycle*/
   Wire#(RFOp3) wr_op3 <- mkWire();
 
+  /*doc:wire: wire to hold the current privilege mode*/
+  Wire#(Bit#(2)) wr_priv <- mkWire();
+  /*doc:wire: wire to hold the current value of hstatus*/
+  Wire#(Bit#(`xlen)) wr_mstatus <- mkWire();
+
+`ifdef hypervisor
+  /*doc:wire: wire to hold the current virtual mode*/
+  Wire#(Bit#(1)) wr_vs_mode <- mkWire();
+  /*doc:wire: wire to hold the current value of hstatus*/
+  Wire#(Bit#(`xlen)) wr_hstatus <- mkWire();
+`endif
+
   /*doc:wire: The vector of all bypass values coming from varios ISBs. The lower index indicates
   * bypass from the youngest instruction and the highest index indicates bypass from the oldest
   * instruction*/
@@ -517,6 +529,17 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
        `ifdef rtldump `ifdef atomic ,atomicop    : {funct3[0], meta.funct[6:3]} `endif `endif
                  `ifdef dpfpu ,nanboxing   : nanboxing `endif } ;
 
+    Bit#(1) mprv = wr_mstatus[17];
+    Bit#(2) access_prv = mprv == 1?wr_mstatus[12:11]: wr_priv;
+  `ifdef hypervisor
+    Bool hvm_loadstore = unpack(meta.hvm_loadstore);
+    Bit#(1) hlvx = meta.hlvx;
+    Bit#(1) mpv = wr_mstatus[39];
+    if (hvm_loadstore) access_prv = zeroExtend(wr_hstatus[8]);
+
+    Bit#(1) access_virt = (mprv == 1 && mpv == 1 && access_prv!=3)?1: wr_vs_mode;
+    if (hvm_loadstore) access_virt = 1;
+  `endif
     // wait until all operands are available.
     if( wr_op1_avail && wr_op2_avail) begin
       let req = DMem_request{address      : memory_address,
@@ -525,9 +548,12 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
                              ,fence       : meta.memaccess == FenceI || meta.memaccess == Fence
                              ,access      : truncate(pack(meta.memaccess))
                              ,writedata   : wr_fwd_op2
+                             ,prv         : access_prv
                           `ifdef atomic ,atomic_op   : {funct3[0], meta.funct[6:3]} `endif
 													`ifdef hypervisor
                               ,hfence     : meta.memaccess == HFence_VVMA || meta.memaccess == HFence_GVMA
+                              ,virt       : access_virt
+                              ,hlvx       : hlvx
                           `endif
                           `ifdef supervisor
                              ,sfence      : meta.memaccess == SFence
@@ -837,6 +863,24 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
                   `ifdef no_wawstalls ,id: commit.id `endif
                   `ifdef spfpu ,rdtype: commit.rdtype `endif });
     endmethod
+
+    method Action ma_priv (Bit#(2) priv);
+      wr_priv <= priv;
+    endmethod
+
+    method Action ma_mstatus (Bit#(`xlen) mstatus);
+      wr_mstatus <= mstatus;
+    endmethod
+
+  `ifdef hypervisor
+    method Action ma_vs_mode (Bit#(1) vs);
+      wr_vs_mode <= vs;
+    endmethod
+
+    method Action ma_hstatus (Bit#(`xlen) hstatus);
+      wr_hstatus <= hstatus;
+    endmethod
+ `endif
  `ifdef arith_trap
     method  Action ma_arith_trap_en(Bit#(1) en);
       multicycle_alu.ma_arith_trap_en(en);

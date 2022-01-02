@@ -211,6 +211,10 @@ typedef struct{
 
 // this struct holds the meta decoded information of an instruction
 typedef struct{
+`ifdef hypervisor
+  Bit#(1) hlvx;
+  Bit#(1) hvm_loadstore;
+`endif
   Instruction_type inst_type; // instruction type
   Access_type memaccess;      // memory access type
   Bit#(32) immediate;         // immediate fields
@@ -366,6 +370,10 @@ typedef struct{
 }PIPE1 deriving (Bits, Eq, FShow);
 
 typedef struct{
+`ifdef hypervisor
+  Bit#(1) hlvx;
+  Bit#(1) hvm_loadstore;
+`endif
 `ifdef spfpu
   RFType rdtype;
 `endif

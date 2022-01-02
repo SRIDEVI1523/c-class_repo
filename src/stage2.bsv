@@ -332,6 +332,9 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
     let stage3meta = Stage3Meta{funct : func_cause, memaccess : decoded.meta.memaccess,
                                 pc : pc, epochs : epochs, rd: decoded.op_addr.rd,
                                 is_microtrap: rg_microtrap
+                  `ifdef hypervisor ,hlvx : decoded.meta.hlvx
+                                    ,hvm_loadstore : decoded.meta.hvm_loadstore
+                  `endif
                   `ifdef spfpu ,rdtype      : decoded.op_type.rdtype `endif
                   `ifdef RV64  , word32     :     word32
                   `elsif dpfpu , word32     :     word32 `endif
