@@ -66,3 +66,7 @@ grp2:
     - CUSTOMCONTROL
     - SCOUNTEREN
     - MCOUNTEREN
+    - DPC
+    - DCSR
+    - DSCRATCH0
+    - DSCRATCH1

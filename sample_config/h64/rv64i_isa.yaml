@@ -709,7 +709,7 @@ hart0:
           warl:
             dependency_fields: []
             legal:
-              - mideleg[63:0] bitmask [0x0000000000000EEE, 0x0000000000001000]
+              - mideleg[63:0] bitmask [0x0000000000000AAA, 0x0000000000001444]
             wr_illegal:
               - Unchanged
     hedeleg:

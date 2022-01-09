@@ -212,7 +212,7 @@ package decoder;
        `LUI_op : return 0;
        `AUIPC_op : return 0;
        `JAL_op : return 0 ;
-       `SYSTEM_op : return (inst[14]==1)?0:inst[19:15];
+       `SYSTEM_op : `ifdef hypervisor if (inst[14:12] == 4) return inst[19:15]; else `endif return (inst[14]==1)?0:inst[19:15];
        default: return inst[19:15] ;
      endcase
   endfunction:fn_decode_rs1
@@ -249,7 +249,8 @@ package decoder;
       `LUI_op: return 0 ;
       `AUIPC_op : return 0 ;
       `LOAD_op: return 0;
-      `SYSTEM_op: return (funct3!=0 || funct7!='b0001001)?0:inst[24:20];
+      `SYSTEM_op: return `ifdef hypervisor (funct3 == 4 && inst[25]==1)?inst[24:20]: `endif 
+                                (funct3!=0)?0: (funct7=='b0001001 || funct7 == 'b0010001 || funct7 == 'b0110001)?inst[24:20]: 0;
       `IMM_ARITH_op: return 0;
     `ifdef spfpu
       `FN_op: return (funct7[5]==1)?0:inst[24:20];
@@ -693,6 +694,9 @@ package decoder;
 
 		Bool word32 =False;
 
+		Bit#(1) hlvx = 0;
+		Bit#(1) hvm_loadstore = 0;
+
 		Bit#(5) rs1 = fn_decode_rs1(inst);
 		Bit#(5) rs2 = fn_decode_rs2(inst, csrs);
 		Bit#(5) rd  = fn_decode_rd(inst) ;
@@ -722,6 +726,16 @@ package decoder;
       funct3=csrs.frm;
   `endif
 
+  `ifdef hypervisor
+		if (inst[6:0] == 'b1110011 && inst[14:12] == 4 && inst[31:28] == 'b0110) begin
+		  hvm_loadstore = 1;
+		  immediate_value = 0;
+		  funct3 = {inst[20]&~inst[25], inst[27:26]}; // the funct3 defines size of the hvm load/store ops
+  		if ( (inst[27:25] == 'b010 || inst[27:25] == 'b100   ) && inst[24:20] == 'b00011 )
+  		  hlvx = 1;
+		end
+	`endif
+
     Bit#(TMax#(`causesize, 7)) temp1 = {'d0,fn,funct3};
     if(inst_type==TRAP)
       temp1=zeroExtend(trapcause);
@@ -735,7 +749,11 @@ package decoder;
                               memaccess: mem_access,
                               funct_cause:temp1,
                               immediate: immediate_value,
-                              microtrap: microtrap};
+                              microtrap: microtrap
+                            `ifdef hypervisor
+                              ,hlvx : hlvx
+                              ,hvm_loadstore : hvm_loadstore
+                            `endif };
     return DecodeOut{op_addr:op_addr, op_type:op_type, meta:instr_meta
                     `ifdef compressed , compressed:False `endif };
 

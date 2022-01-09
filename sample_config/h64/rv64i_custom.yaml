@@ -72,6 +72,15 @@ hart0:
           shadow_type:
           msb: 3
           lsb: 3
+        debug_enable:
+          implemented: true
+          type: 
+            ro_constant: 0x1
+          description: bit for enabling debugger on the current hart
+          shadow_type:
+          shadow:
+          msb: 4
+          lsb: 4
       description: the register holds enable bits for arithmetic exceptions, branch predictor unit, i-cache, d-cache units
       address: 0x800
       priv_mode: U

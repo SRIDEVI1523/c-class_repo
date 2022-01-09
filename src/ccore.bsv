@@ -474,17 +474,14 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   mkConnection(dmem.ma_satp_from_csr, riscv.csrs.mv_csr_satp);
   mkConnection(dmem.ma_mstatus_from_csr, riscv.csrs.mv_csr_mstatus);
   mkConnection(ptwalk.ma_satp_from_csr,riscv.csrs.mv_csr_satp);
-  mkConnection(ptwalk.ma_curr_priv, curr_priv);
   mkConnection(ptwalk.ma_mstatus_from_csr, riscv.csrs.mv_csr_mstatus);
   `ifdef hypervisor
     mkConnection(ptwalk.ma_hgatp_from_csr,riscv.csrs.mv_csr_hgatp);
     mkConnection(ptwalk.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
     mkConnection(ptwalk.ma_hstatus_from_csr, riscv.csrs.mv_csr_hstatus);
     mkConnection(ptwalk.ma_vsstatus_from_csr, riscv.csrs.mv_csr_vsstatus);
-    mkConnection(ptwalk.ma_vs_mode, riscv.csrs.mv_vs_bit);				//vs_bit from from csr_grp1		
     mkConnection(dmem.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
     mkConnection(dmem.ma_vsstatus_from_csr, riscv.csrs.mv_csr_vsstatus);
-    mkConnection(dmem.ma_vs_mode, riscv.csrs.mv_vs_bit);				//vs_bit from from csr_grp1		
     mkConnection(imem.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
     mkConnection(imem.ma_vs_mode, riscv.csrs.mv_vs_bit);				//vs_bit from from csr_grp1		
   `endif
