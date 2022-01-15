@@ -72,7 +72,7 @@ verilator_configuration:
   verbosity: true
   opt_fast: "-O3"
   opt_slow: "-O3"
-  opt: "-O3 -march=znver3"
+  opt: "-O3 "
   out_dir: bin
 noinline_modules:
   stage0: True
