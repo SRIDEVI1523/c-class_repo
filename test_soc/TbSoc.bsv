@@ -172,7 +172,8 @@ package TbSoc;
         if (idump.inst_type matches tagged REG .d) begin
           let csr_address = 'h300; // mstatus
           Bit#(`xlen) wdata = fn_probe_csr(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif );
-          if (!(idump.instruction[31:25] =='b0001001 && idump.instruction[14:0] == 'b000000001110011)) begin
+          if (!((idump.instruction[31:25] =='b0001001 || idump.instruction[31:25]== 'b0010001 || 
+               idump.instruction[31:25] =='b0110001)&& idump.instruction[14:0] == 'b000000001110011)) begin
             if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
             if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)

@@ -577,7 +577,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
       end
     `ifdef supervisor
       // convert SFence as a nop hence forth in the pipeline.
-      else if (meta.memaccess == SFence `ifdef hypervsisor || meta.memaccess == HFence_GVMA || meta.memaccess == HFence_VVMA `endif ) begin
+      else if (meta.memaccess == SFence `ifdef hypervisor || meta.memaccess == HFence_GVMA || meta.memaccess == HFence_VVMA `endif ) begin
         BaseOut baseoutput = BaseOut { rdvalue   : ?, rd: 0, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: IRF `endif };
