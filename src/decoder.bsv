@@ -414,6 +414,9 @@ package decoder;
 						      	return HFence_VVMA;
 							    else if(funct7=='b0110001 && funct3==0) 						// HFENCE.GVMA
       							return HFence_GVMA;
+      						else if ((funct7 == 'b0110111 || funct7 == 'b0110101 || funct7 == 'b0110011 || funct7 == 'b0110001) &&
+                						funct3 == 'b100)
+                		return Store;
 						    `endif
 									else return Load;
     `endif
