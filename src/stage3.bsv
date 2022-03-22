@@ -434,7 +434,8 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   * stages. No operand availability is required here*/
   rule rl_trap_from_prev(epochs_match && instr_type == TRAP);
     TrapOut trapout = TrapOut {cause   : truncate(meta.funct),
-                               mtval : mtval 
+                               mtval : mtval,
+                               mtval2 : 0 
                              `ifdef microtrap_support
                                 ,is_microtrap : meta.is_microtrap 
                              `endif };
@@ -522,7 +523,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
 
     // create a trap template
     TrapOut trapout = TrapOut {cause   : memory_cause, is_microtrap: False,
-                               mtval : memory_address};
+                               mtval : memory_address, mtval2: ? };
 
     // craete the memory output response template
     let memoryout = MemoryOut{  memaccess   : meta.memaccess
@@ -712,7 +713,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     if(redirection && wr_op1_avail && wr_op2_avail)
       `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
   `endif
-    TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False, mtval : meta.pc};
+    TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False, mtval : meta.pc, mtval2: ?};
     BaseOut baseoutput = BaseOut { rdvalue   : nlogical_pc, rd: meta.rd, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: meta.rdtype `endif };

@@ -466,12 +466,13 @@ instance FShow#(BaseOut);
   endfunction
 endinstance
 
-typedef struct{
+typedef struct {
 `ifdef microtrap_support
   Bool is_microtrap;
 `endif
-  Bit#(`causesize)    cause;
-  Bit#(`vaddr)        mtval;
+  Bit#(`causesize)        cause;
+  Bit#(`vaddr)            mtval;
+  Bit#(`vaddr)            mtval2;
 } TrapOut deriving(Bits, Eq);
 
 instance FShow#(TrapOut);
