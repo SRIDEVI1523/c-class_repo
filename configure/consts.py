@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: 13.1.1
+  checkout: hypervisor-fixes
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: master
@@ -71,7 +71,8 @@ verification:
   checkout: 59-update-verif-templates
   recursive: True
   patch:
-    - [riscv-tests/env , verification/patches/riscv-tests-cclass.patch]
+    - [riscv-tests/env , verification/patches/riscv-tests-cclass-hyp-env.patch]
+    - [riscv-tests/ , verification/patches/riscv-tests-cclass-hyp-rv.patch]
 benchmarks:
   url: https://gitlab.com/incoresemi/core-generators/benchmarks
   checkout: master
