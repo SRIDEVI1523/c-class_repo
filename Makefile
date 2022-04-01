@@ -147,6 +147,10 @@ regress: ## To run regressions on the core.
 test: ## To run a single riscv-test on the core.
 	@SHAKTI_HOME=$$PWD CONFIG_LOG=0 perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/makeTest.pl $(opts)
 
+.PHONY: simonly
+simonly: ## To run a single riscv-test on the core.
+	@SHAKTI_HOME=$$PWD CONFIG_LOG=0 perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/simOnly.pl $(opts)
+
 .PHONY: torture
 torture: ## To run riscv-tortur on the core.
 	@SHAKTI_HOME=$$PWD perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/makeTorture.pl $(opts)

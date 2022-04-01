@@ -20,6 +20,7 @@ package DebugSoc ;
   import Clocks       :: * ;
   import ccore_types  :: * ;                                                                   
   import csrbox       :: * ;
+  import DefaultValue :: * ;
 
 
 
