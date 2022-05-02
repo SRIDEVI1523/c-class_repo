@@ -68,11 +68,10 @@ common_verilog:
   checkout: master
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 59-update-verif-templates
+  checkout: 65-upstream-riscv-tests
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-cclass-hyp-env.patch]
-    - [riscv-tests/ , verification/patches/riscv-tests-cclass-hyp-rv.patch]
 benchmarks:
   url: https://gitlab.com/incoresemi/core-generators/benchmarks
   checkout: master
