@@ -547,7 +547,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
     method mv_csrs_to_decode = CSRtoDecode {prv: csr.mv_prv,
         csr_mip: truncate(csr.sbread.mv_csr_mip), 
         csr_mie: truncate(csr.sbread.mv_csr_mie), 
-        csr_mstatus: truncate(csr.sbread.mv_csr_mstatus) `ifdef debug & {'1,csr.mv_debug_mode,17'd0} `endif ,
+        csr_mstatus: truncate(csr.sbread.mv_csr_mstatus),
         csr_sstatus: `ifdef hypervisor (csr.mv_virtual == 1)? csr.sbread.mv_csr_vsstatus: `endif csr.sbread.mv_csr_mstatus,
         csr_misa: truncate(csr.sbread.mv_csr_misa)
       `ifdef spfpu
