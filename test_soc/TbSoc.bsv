@@ -179,7 +179,7 @@ package TbSoc;
             if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)
               $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
             if (!d.irf && valueOf(`flen) == 64) begin
-              $fwrite(dump, " " , fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
+              $fwrite(dump, " ", fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
               $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
             end
             if (!d.irf && valueOf(`flen) == 32) begin
@@ -212,8 +212,16 @@ package TbSoc;
             $fwrite(dump, " x%d", d.rd, " 0x%8h", d.rdata);
           Bit#(`xlen) wdata = fn_probe_csr(csr_address);
           if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
+            //$display("Tb: Dumping instruction: %h", idump.instruction);
+           `logLevel( tb, 0, $format("\n %h", idump.instruction))
+            if(idump.instruction=='h10200073 && csr_address== 'h300) begin //sret
+              Bit#(`xlen) hstatus = fn_probe_csr('h600);
+              //$display("Tb: %h", hstatus);
+              `logLevel( tb, 0, $format("\n hstatus: %h", hstatus))
+              $fwrite(dump, " c1536_hstatus 0x%16h", hstatus);
+            end
             if (valueOf(`xlen) == 64) 
-              $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%16h", wdata);
+              $fwrite(dump, " ", fn_csr_to_str(csr_address), " 0x%16h", wdata);
             if (valueOf(`xlen) == 32)
               $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
           end
