@@ -14,7 +14,7 @@ caches_mmu/src/dcache
 caches_mmu/src/tlbs
 caches_mmu/src/pmp
 devices/bootrom
-devices/uart
+devices/uart_v2
 devices/clint
 devices/bram
 devices/riscvDebug013
