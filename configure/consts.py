@@ -59,7 +59,7 @@ common_bsv:
   checkout: master
 devices:
   url: https://gitlab.com/shaktiproject/uncore/devices
-  checkout: sos
+  checkout: 7.0.10
 fabrics:
   url: https://gitlab.com/shaktiproject/uncore/fabrics
   checkout: 1.2.0

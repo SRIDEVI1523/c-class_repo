@@ -4,6 +4,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.10.0] - 2022-09-14
+--------------------
+
+- Added UARTv2 changes
+- Modified requirements.txt for running with mod-spike
+
 [1.9.9] - 2020-11-03
 --------------------
 
