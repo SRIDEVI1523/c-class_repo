@@ -68,12 +68,16 @@ check-mr-build:
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make generate_boot_files link_verilator
         - echo -e "section_end:`date +%s`:generate_verilog\r\e[0Ksection_start:`date +%s`:sim_out\r\e[0KRISC-V Tests Regression"
-        - make regress opts='--filter=rv64 --test_opts='--timeout=120s' --debug --sub' CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--filter=rv64 --parallel=50 --test_opts='--timeout=120s' --debug --sub' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--filter=rv64 --final'
         - echo -e "section_end:`date +%s`:sim_out\r\e[0Ksection_start:`date +%s`:cleanup\r\e[0KCleanup"
         - aapg version
-        - make clean
         - make clean_verif
+        - make aapg opts='--config=rv64imafdc* --test_count=1 --parallel=30' CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=aapg.list --sub --test_opts='--timeout=15m' --parallel=30' CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=aapg.list --final' CONFIG_ISA=RV64IMAFDC
+        - make clean_verif
+        - make clean
         - python -m configure.main --clean
         - echo -e "section_end:`date +%s`:cleanup\r\e[0K"
     only:
