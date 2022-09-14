@@ -14,6 +14,8 @@ c-class:
         - eval "$(pyenv virtualenv-init -)"
         - pyenv activate venv
         - source /tools/setup.sh
+        - pip install --upgrade pip
+        - pip uninstall -r requirements.txt -y
         - pip install -r requirements.txt
         - python -m configure.main
         - make clean
