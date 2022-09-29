@@ -249,7 +249,7 @@ package gshare_fa;
       Bool instr16 = False;
     `endif
 
-      if(wr_bpu_enable) begin
+      if(!r.fence && wr_bpu_enable) begin
         // a one - hot vector to store the hits of the btb
         Bit#(`btbdepth) match_;
         for(Integer i = 0; i < `btbdepth; i =  i + 1)

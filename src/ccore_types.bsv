@@ -472,7 +472,9 @@ typedef struct {
 `endif
   Bit#(`causesize)        cause;
   Bit#(`vaddr)            mtval;
+`ifdef hypervisor 
   Bit#(`vaddr)            mtval2;
+`endif
 } TrapOut deriving(Bits, Eq);
 
 instance FShow#(TrapOut);

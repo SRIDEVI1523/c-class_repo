@@ -46,7 +46,7 @@ dcache_configuration:
   replacement: RR
   ecc_enable: false
   one_hot_select: false
-  rwports: '1r1w'
+  rwports: '1rw'
 reset_pc: 4096
 bus_protocol: AXI4
 bsc_compile_options:
@@ -70,6 +70,9 @@ verilator_configuration:
   trace: false
   threads: 1
   verbosity: true
+  opt_fast: "-O3"
+  opt_slow: "-O3"
+  opt: "-O3 "
   out_dir: bin
 noinline_modules:
   stage0: True

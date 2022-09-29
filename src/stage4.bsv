@@ -184,8 +184,11 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
           fuid.insttype = TRAP;
           TrapOut trapout = TrapOut {cause   : cause, 
                                      is_microtrap: False,
-                                     mtval : truncate(mem_response.word),
-																	 	 mtval2: zeroExtend(mem_response.mtval2)};
+                                     mtval : truncate(mem_response.word)
+                                     `ifdef hypervisor
+																	 	 , mtval2: zeroExtend(mem_response.mtval2)
+                                      `endif
+                                      };
           tx_trapout.u.enq(trapout);
           tx_fuid.u.enq(fuid);
           `logLevel( stage4, 0, $format("[%2d]STAGE4: Memory responded with trap: ",hartid, fshow(trapout)))

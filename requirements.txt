@@ -1,4 +1,6 @@
-repomanager==1.3.0
+repomanager
 Cerberus==1.3.1
 ruamel.yaml>=0.17.16
-csrbox==1.6.6
+csrbox==1.6.13
+riscv_config==2.14.0
+

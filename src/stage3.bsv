@@ -434,8 +434,10 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   * stages. No operand availability is required here*/
   rule rl_trap_from_prev(epochs_match && instr_type == TRAP);
     TrapOut trapout = TrapOut {cause   : truncate(meta.funct),
-                               mtval : mtval,
-                               mtval2 : 0 
+                               mtval : mtval
+                             `ifdef hypervisor
+                               ,mtval2 : 0
+                             `endif
                              `ifdef microtrap_support
                                 ,is_microtrap : meta.is_microtrap 
                              `endif };
@@ -523,7 +525,9 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
 
     // create a trap template
     TrapOut trapout = TrapOut {cause   : memory_cause, is_microtrap: False,
-                               mtval : memory_address, mtval2: ? };
+                               mtval : memory_address
+                               `ifdef hypervisor , mtval2: ? `endif
+                                };
 
     // craete the memory output response template
     let memoryout = MemoryOut{  memaccess   : meta.memaccess
@@ -564,9 +568,10 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
       let common_pkt = s4common; 
 
       // if no trap offload instruction to cache.
-      if (!trap)
+      if (!trap) begin
         wr_memory_request <= req;
-
+        `logLevel( stage3, 0, $format("[%2d]STAGE3: wr_memory_request assignd : ",hartid, fshow(req)))
+      end
       // lock the destination register in the scoreboard
       let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
 
@@ -713,7 +718,10 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     if(redirection && wr_op1_avail && wr_op2_avail)
       `logLevel( stage3, 0, $format("[%2d]STAGE3: Misprediction. NextPC in Pipe:%h ExpectedPC:%h",hartid,nextpc,redirect_pc))
   `endif
-    TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False, mtval : meta.pc, mtval2: ?};
+    TrapOut trapout = TrapOut {cause   : `Inst_addr_misaligned, is_microtrap: False, mtval : meta.pc
+                                                                                            `ifdef hypervisor ,mtval2: ?
+                                                                                            `endif
+                                                                                            };
     BaseOut baseoutput = BaseOut { rdvalue   : nlogical_pc, rd: meta.rd, epochs: curr_epochs[0]
                                  `ifdef no_wawstalls ,id: ? `endif
                                  `ifdef spfpu ,fflags    : 0 , rdtype: meta.rdtype `endif };
@@ -898,6 +906,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     // Description : interface to send memory requests.
     interface mv_memory_request = interface Get
       method ActionValue#(DMem_request#(`vaddr, `elen, 1)) get;
+        `logLevel( stage3, 0, $format("[%2d]STAGE3: request sent",hartid))
         return wr_memory_request;
       endmethod
     endinterface;

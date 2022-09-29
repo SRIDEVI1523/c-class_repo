@@ -195,7 +195,8 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         end
       end
       else `endif begin
-        let tvec <- csr.mav_upd_on_trap(trapout.cause, fuid.pc, trapout.mtval, trapout.mtval2);
+        let tvec <- csr.mav_upd_on_trap(trapout.cause, fuid.pc, trapout.mtval 
+          `ifdef hypervisor , trapout.mtval2 `endif );
         wr_flush <= WBFlush{flush: True, newpc : tvec, fencei: False 
             `ifdef supervisor , sfence: False `endif 
             `ifdef hypervisor , hfence: False `endif };
@@ -400,7 +401,9 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         else if (wr_ioop_response matches tagged Valid .ioresp) begin
           rg_ioop_init <= False;
           if (ioresp.trap) begin
-            let tvec <- csr.mav_upd_on_trap(ioresp.cause, fuid.pc, ioresp.word, ?);
+            let tvec <- csr.mav_upd_on_trap(ioresp.cause, fuid.pc, ioresp.word 
+            `ifdef hypervisor , ? `endif 
+            );
             wr_flush <= WBFlush{flush: True, newpc : tvec, fencei: False 
                 `ifdef supervisor , sfence: False `endif 
                 `ifdef hypervisor , hfence: False `endif };
