@@ -32,7 +32,7 @@ c-class:
         - make clean_verif
         - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
         - make csmith opts='--test_count=30 --parallel=30' CONFIG_ISA=RV64IMAFDC
-        - make regress opts='--list=csmith.list --parallel=30 --sub'  CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --parallel=30 --sub'  CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=csmith.list --final'
         - echo -e "section_end:`date +%s`:csmith\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
         - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
@@ -79,7 +79,7 @@ check-mr-build:
         - make clean_verif
         - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
         - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
-        - make regress opts='--list=csmith.list --sub'  CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub'  CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=csmith.list --final'
         - echo -e "section_end:`date +%s`:csmith\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
         - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
