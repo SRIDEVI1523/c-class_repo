@@ -60,14 +60,15 @@ check-mr-build:
         - pip uninstall aapg -y
         - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
         - eval "$(pyenv init -)"
+        - eval "$(pyenv init --path)"
         - eval "$(pyenv virtualenv-init -)"
         - pyenv activate venv
         - source /tools/setup_cclass.sh
-        - pip install --upgrade pip
-        - pip uninstall -r requirements.txt -y
-        - pip install -r requirements.txt
+#        - pip install --upgrade pip
+#        - pip uninstall -r requirements.txt -y
+#        - pip install -r requirements.txt
         - which aapg 
-        - aapg setup
+        - make aapg opts='--config=rv64imafdc* --test_count=1 --debug' CONFIG_ISA=RV64IMAFDC
         - python -m configure.main
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make generate_boot_files link_verilator
