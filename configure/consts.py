@@ -68,7 +68,7 @@ common_verilog:
   checkout: master
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 68-csmith-fix
+  checkout: 4.0.17
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
