@@ -475,6 +475,7 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   mkConnection(dmem.ma_mstatus_from_csr, riscv.csrs.mv_csr_mstatus);
   mkConnection(ptwalk.ma_satp_from_csr,riscv.csrs.mv_csr_satp);
   mkConnection(ptwalk.ma_mstatus_from_csr, riscv.csrs.mv_csr_mstatus);
+  mkConnection(ptwalk.ma_curr_priv,curr_priv);
   `ifdef hypervisor
     mkConnection(ptwalk.ma_hgatp_from_csr,riscv.csrs.mv_csr_hgatp);
     mkConnection(ptwalk.ma_vsatp_from_csr,riscv.csrs.mv_csr_vsatp);
