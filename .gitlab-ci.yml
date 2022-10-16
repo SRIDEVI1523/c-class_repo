@@ -66,6 +66,8 @@ check-mr-build:
         - pip install --upgrade pip
         - pip uninstall -r requirements.txt -y
         - pip install -r requirements.txt
+        - which aapg 
+        - aapg setup
         - python -m configure.main
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make generate_boot_files link_verilator
