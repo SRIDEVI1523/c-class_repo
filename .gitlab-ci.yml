@@ -57,12 +57,12 @@ check-mr-build:
         - schedules
     script:
         - echo -e "section_start:`date +%s`:source_tools\r\e[0KSetup Initialization"
-        - which aapg
         - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
         - eval "$(pyenv init -)"
         - eval "$(pyenv virtualenv-init -)"
         - pyenv activate venv
         - source /tools/setup.sh
+        - which aapg
         - pip install --upgrade pip
         - pip uninstall -r requirements.txt -y
         - pip install -r requirements.txt
