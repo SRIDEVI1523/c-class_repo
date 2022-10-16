@@ -34,23 +34,8 @@ hart0: &hart0
           implemented: True
         ebreaku:
           implemented: True
-          type:
-            warl:
-              dependency_fields: []
-              legal:
-                - ebreaku[0] in [0x0, 0x1]
-              wr_illegal:
-                - unchanged
         ebreaks:
           implemented: True
-          type:
-            warl:
-              dependency_fields: []
-              legal:
-                - ebreaks[0] in [0x0, 0x1]
-              wr_illegal:
-                - unchanged
-
         ebreakm:
           implemented: True
         ebreakvu:

@@ -1,39 +1,47 @@
 grp1:
     - MISA
     - MSCRATCH
-    - SSCRATCH
-    - SATP
     - MVENDORID
     - MSTATUS
-    - SSTATUS
     - MIE
-    - SIE
     - MIP
-    - SIP
     - MTVEC
-    - STVEC
     - MEPC
-    - SEPC
     - MCAUSE
-    - SCAUSE
     - MTVAL
-    - STVAL
-    - TIME
     - MCYCLE
     - MINSTRET
     - MHARTID
     - MARCHID
     - MIMPID
+    - TIME
     - CYCLE
     - MCOUNTINHIBIT
     - INSTRET
     - MIDELEG
     - MEDELEG
-grp2:
+    - PMPCFG0
+    - PMPADDR0
+    - PMPADDR1
+    - PMPADDR2
+    - PMPADDR3
     - CUSTOMCONTROL
-    - SCOUNTEREN
+    - FCSR
+    - FFLAGS
+    - FRM
+    - SSCRATCH
+    - SSTATUS
+    - SATP
+    - STVAL
+    - SCAUSE
+    - SEPC
+    - STVEC
+    - SIP
+    - SIE
     - MCOUNTEREN
+    - SCOUNTEREN
+grp2:
     - DPC
-    - DCSR
     - DSCRATCH0
     - DSCRATCH1
+    - DCSR

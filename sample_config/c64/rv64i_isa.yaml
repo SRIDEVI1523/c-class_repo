@@ -18,14 +18,14 @@ hart0:
         cause_name: debug_interrupt
         on_reset_enable: 1
         priv_mode : M
-    ISA: RV64IMACSUZicsr_Zifencei
+    ISA: RV64IMAFDCSUZicsr_Zifencei
     User_Spec_Version: '2.3'
     pmp_granularity: 1
     physical_addr_sz: 32
     supported_xlen:
       - 64
     misa:
-        reset-val: 0x8000000000141105
+        reset-val: 0x800000000014112d
         rv32:
             accessible: false
         rv64:
@@ -424,23 +424,22 @@ hart0:
                     wr_illegal:
                       - Unchanged
         reset-val: 0
-    frm: 
-      rv32:
-        accessible: False
-      rv64:
-        accessible: False
-    fflags: 
-      rv32:
-        accessible: False
-      rv64:
-        accessible: False
     fcsr:
         rv32:
             accessible: false
         rv64:
-            accessible: false
+            accessible: true
+            frm:
+              implemented: True
+              type:
+                warl:
+                    dependency_fields: []
+                    legal:
+                      - frm[2:0] in [0x0:0x7]
+                    wr_illegal:
+                      - Unchanged
             fflags:
-              implemented: true
+              implemented: True
               type:
                 warl:
                     dependency_fields: []
@@ -448,16 +447,8 @@ hart0:
                         - fflags[4:0] in [0x00:0x1F]
                     wr_illegal:
                       - Unchanged
-            frm:
-              implemented: true
-              type:
-                  warl:
-                      dependency_fields: []
-                      legal:
-                        - frm[2:0] in [0x0:0x7]
-                      wr_illegal:
-                        - Unchanged
         reset-val: 0
+
     time:
         rv32:
             accessible: false
@@ -592,6 +583,31 @@ hart0:
                     wr_illegal:
                       - Unchanged
         reset-val: 0
+    mcounteren:
+      rv32:
+        accessible: False
+      rv64:
+        accessible: True
+        type:
+          warl:
+            dependency_fields: []
+            legal:
+              - "mcounteren[31:0] bitmask [0x0000001f, 0x00000000]"
+            wr_illegal:
+              - Unchanged
+    scounteren:
+      rv32:
+        accessible: False
+      rv64:
+        accessible: True
+        type:
+          warl:
+            dependency_fields: []
+            legal:
+              - "scounteren[31:0] bitmask [0x0000001f, 0x00000000]"
+            wr_illegal:
+              - Unchanged
+        
     mhpmcounter3:
         rv32:
             accessible: false
