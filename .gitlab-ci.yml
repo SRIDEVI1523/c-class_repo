@@ -77,7 +77,7 @@ check-mr-build:
         - make regress opts='--filter=rv64 --final'
         - make clean_verif
         - echo -e "section_end:`date +%s`:riscv-test\r\e[0Ksection_start:`date +%s`:aapg\r\e[0KAAPG Regression"
-        - make aapg opts='--config=rv64imafdc* --test_count=1 --parallel=30' CONFIG_ISA=RV64IMAFDC
+        - make aapg opts='--config=rv64imafdc* --test_count=1' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=aapg.list --sub --test_opts="--mod-spike --timeout=15m" --parallel=30' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=aapg.list --final' CONFIG_ISA=RV64IMAFDC
         - make clean_verif
