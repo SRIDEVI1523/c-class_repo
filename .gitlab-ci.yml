@@ -68,12 +68,11 @@ check-mr-build:
 #        - pip uninstall -r requirements.txt -y
 #        - pip install -r requirements.txt
         - which aapg 
-        - make aapg opts='--config=rv64imafdc* --test_count=1 --debug' CONFIG_ISA=RV64IMAFDC
         - python -m configure.main
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make generate_boot_files link_verilator
         - echo -e "section_end:`date +%s`:generate_verilog\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
-        - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
+        #- make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
         # - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub'  CONFIG_ISA=RV64IMAFDC
         # - make regress opts='--list=csmith.list --final'
         # - echo -e "section_end:`date +%s`:csmith\r\e[0Ksection_start:`date +%s`:riscv-test\r\e[0KRISC-V Tests Regression"
