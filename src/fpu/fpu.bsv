@@ -31,6 +31,7 @@ import fpu_fclass::*;
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
+import TxRx     :: *;
 import DReg::*;
 import UniqueWrappers::*;
 import SpecialFIFOs::*;
@@ -38,28 +39,16 @@ import Clocks::*;
 /*========================= */
 
 interface Ifc_fpu;							//interface to module mk_fpu
-	method Action _start(Bit#(ELEN) operand1, Bit#(ELEN) operand2,
-                       Bit#(ELEN) operand3, Bit#(4) opcode,
-                       Bit#(7) funct7,      Bit#(3) funct3,
-                       Bit#(2) imm, Bool issp
-                      );
+	method Action _start(Input_Packet m);
  `ifdef arith_trap
       method Action rd_arith_excep_en(Bit#(1) arith_en);
  `endif
-	method XBoxOutput get_result;
+	// method XBoxOutput get_result;
+  method TXe#(XBoxOutput) tx_output;
 	method Action flush;
 endinterface
 
-typedef struct{
-        Bit#(ELEN) operand1;
-        Bit#(ELEN) operand2;
-        Bit#(ELEN) operand3;
-        Bit#(4) opcode;
-        Bit#(7) funct7;
-        Bit#(3) funct3;
-        Bit#(2) imm;
-        Bool    issp;
-    }Input_Packet deriving (Bits,Eq);
+
 
 (*synthesize*)
 module mkfpu(Ifc_fpu);
@@ -68,6 +57,7 @@ module mkfpu(Ifc_fpu);
   // ============================================
   Reg#(XBoxOutput) rg_result <- mkDReg(XBoxOutput{valid: False, data:?, fflags: 0
                                         `ifdef arith_trap ,trap:False, cause:? `endif });
+  TX#(XBoxOutput) tx_fbox_out <- mkTX;
   FIFO# (Input_Packet) ff_input   <- mkFIFO1;
 	Wire#(Bool) wr_flush<-mkDWire(False);
 
@@ -246,6 +236,7 @@ module mkfpu(Ifc_fpu);
 					y.data=zeroExtend(x.final_result);
 				`endif
         rg_result <= y;
+        tx_fbox_out.u.enq(y);
 			end
     `ifdef dpfpu
 			else begin
@@ -256,6 +247,7 @@ module mkfpu(Ifc_fpu);
             let sign4 = operand2[63];
             let x<-inst_dpfpu_compare_min_max._start(operand1,operand2,funct3,funct7[2],tuple2(f1,f2));
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
 			end
     `endif
    	  `ifdef verbose $display($time,"\tGiving inputs to fpu_compare_min_max %h operand2 %h funct7 : %h",operand1, operand2,funct7); `endif
@@ -270,11 +262,13 @@ module mkfpu(Ifc_fpu);
 					y.data=zeroExtend(x.final_result);
 				`endif
         rg_result <= y;
+        tx_fbox_out.u.enq(y);
 			end
     `ifdef dpfpu
 			else begin
 				let x<-inst_dpfpu_int_to_fp._start(operand1,imm[0],imm[1],funct3);
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
 			end
     `endif
    	  `ifdef verbose $display($time,"\tGiving inputs to fpu_int_to_fp %h operand2[0] %h operand2[1] : %h",operand1, operand2[0],operand2[1]); `endif
@@ -290,11 +284,13 @@ module mkfpu(Ifc_fpu);
 				y.data=zeroExtend(x.final_result);
 			`endif
         rg_result <= y;
+        tx_fbox_out.u.enq(y);
       end
     `ifdef dpfpu
       else begin
 				let x<-inst_dpfpu_sign_injection._start(operand1,operand2,funct3);
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
 			end
     `endif
 			`ifdef verbose $display($time,"\tGiving inputs to the fpu sign injection"); `endif
@@ -307,6 +303,7 @@ module mkfpu(Ifc_fpu);
 				let {flags1,flags2,flags3} <- condFlags32.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
 				let x <- inst_spfp_to_int._start(op1[31],exp1,man1, imm[0],imm[1],funct3,flags1);
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
       end
     `ifdef dpfpu
       else begin
@@ -315,6 +312,7 @@ module mkfpu(Ifc_fpu);
       	  let {flags4,flags5,flags6} <- condFlags64.func(tuple2(man4,exp4),tuple2(0,0),tuple2(0,0));
       	  let x<-inst_dpfp_to_int._start(operand1[63],exp4,man4,imm[0],imm[1],funct3,flags4);
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
       end
     `endif
 			 `ifdef verbose $display($time,"\tGiving Inputs to fpu to int Conversion Module");   `endif
@@ -327,6 +325,7 @@ module mkfpu(Ifc_fpu);
 				let {x1,x2,x3}           <- condFlags32.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
 				let x<-inst_spfpu_fclass._start(op1[31],man1,exp1,x1);
 				rg_result <= XBoxOutput{valid: True, data: zeroExtend(x.final_result), fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: zeroExtend(x.final_result), fflags: x.fflags});
        end
      `ifdef dpfpu
        else begin
@@ -335,6 +334,7 @@ module mkfpu(Ifc_fpu);
 				let {x1,x2,x3}       <- condFlags64.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
 				let x<-inst_dpfpu_fclass._start(operand1[63],man1,exp1,x1);
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
        end
      `endif
 		`ifdef verbose $display($time,"\tGiving inputs to floating classify module"); `endif
@@ -349,6 +349,7 @@ module mkfpu(Ifc_fpu);
       	     let {x1,x2,x3}           <- condFlags32.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
       	     let x<-inst_spfpu_cnvt._start(op1[31],exp1,man1,funct3,x1);
 				rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags});
       	end
       	else begin
 					`ifdef verbose $display("Giving inputs to Convert DP to SP"); `endif
@@ -363,6 +364,7 @@ module mkfpu(Ifc_fpu);
 			  	y.data=(x.final_result);
 			  `endif
           rg_result<=y;
+          tx_fbox_out.u.enq(y);
       	end
 		end
   `endif
@@ -378,6 +380,7 @@ module mkfpu(Ifc_fpu);
   	 				final_result= zeroExtend(operand1[31:0]);
   	 			`endif
       rg_result <= XBoxOutput{valid: True, data:final_result, fflags:0};
+      tx_fbox_out.u.enq(XBoxOutput{valid: True, data:final_result, fflags:0});
 		end
 		else if(((funct7 == `FMV_X_D_f7 || funct7 == `FMV_D_X_f7) && funct3 == 'b000) && opcode == `FP_OPCODE)begin // TODO merge with above condition
 			`ifdef verbose $display($time,"\tGiving inputs to FMV"); `endif
@@ -387,6 +390,7 @@ module mkfpu(Ifc_fpu);
 			else // integer to sp FMV.W.X
 						final_result= operand1;
       rg_result <= XBoxOutput{valid: True, data:final_result, fflags:0};
+      tx_fbox_out.u.enq(XBoxOutput{valid: True, data:final_result, fflags:0});
 		end
 		else if(((funct7[6:2] == `FADD_f5 || funct7[6:2] == `FSUB_f5) && opcode == `FP_OPCODE))begin // add sub
 			rg_multicycle_op<=True;
@@ -517,6 +521,7 @@ module mkfpu(Ifc_fpu);
         y.data=zeroExtend(x.final_result);
     `endif
     rg_result <= y;
+    tx_fbox_out.u.enq(y);
 	  rg_multicycle_op<=False;
   endrule
 
@@ -526,6 +531,7 @@ module mkfpu(Ifc_fpu);
     `ifdef verbose $display($time,"\tGot output from spfpu divider");  `endif
     let x= inst_dpfpu_divider.final_result_;
     rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
+    tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags});
 	  rg_multicycle_op<=False;
   endrule
  `endif
@@ -543,6 +549,7 @@ module mkfpu(Ifc_fpu);
 			y.data=zeroExtend(x.final_result);
 		`endif
     rg_result <= y;
+    tx_fbox_out.u.enq(y);
 	  rg_multicycle_op<=False;
   endrule
 
@@ -552,6 +559,7 @@ module mkfpu(Ifc_fpu);
     `ifdef verbose $display($time,"\tGot output from spfpu sqrt");  `endif
     let x = res;
     rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
+    tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags});
 	  rg_multicycle_op<=False;
   endrule
 `endif
@@ -568,6 +576,7 @@ module mkfpu(Ifc_fpu);
 			y.data=zeroExtend(x.final_result);
 		`endif
     rg_result <= y;
+    tx_fbox_out.u.enq(y);
      `ifdef verbose $display($time,"\tFMA Result : %16h", y.data); `endif
 	  rg_multicycle_op<=False;
 	 endrule
@@ -578,6 +587,7 @@ module mkfpu(Ifc_fpu);
 		`ifdef verbose $display($time,"\tGot output from sp fused multiple add conversion Module"); `endif
 		let x= inst_dpfm_add_sub.get_result;
     rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
+    tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags});
      `ifdef verbose $display($time,"\tFMA Result : %16h", x.final_result); `endif
 	  rg_multicycle_op<=False;
 	 endrule
@@ -590,48 +600,41 @@ module mkfpu(Ifc_fpu);
 
 	// input method to start the floating point operation
 
-	method Action _start(Bit#(ELEN) operand1, Bit#(ELEN) operand2, Bit#(ELEN) operand3, Bit#(4) opcode, Bit#(7) funct7, Bit#(3) funct3, Bit#(2) imm, Bool issp) if(!rg_multicycle_op);
-	    ff_input.enq ( Input_Packet {
-                                        operand1 : operand1,
-                                        operand2 : operand2,
-                                        operand3 : operand3,
-                                        opcode   : opcode,
-                                        funct7   : funct7,
-                                        funct3   : funct3,
-                                        imm      : imm,
-                                        issp     : issp
-                                    });
-      `logLevel( fpu, 0, $format("FPU: op1:%h op2:%h op3:%h",operand1,operand2,operand3))
-      `logLevel( fpu, 0, $format("FPU: opcode:%b f7:%h f3:%b imm:%h issp:%b", opcode, funct7,
-                                                                                funct3,imm, issp))
+	method Action _start(Input_Packet m) if(!rg_multicycle_op);
+	    ff_input.enq (m);
+      `logLevel( fpu, 0, $format("FPU: op1:%h op2:%h op3:%h",m.operand1,m.operand2,m.operand3))
+      `logLevel( fpu, 0, $format("FPU: opcode:%b f7:%h f3:%b imm:%h issp:%b", m.opcode, m.funct7,
+                                                                                m.funct3,m.imm, m.issp))
     endmethod
 
-	method XBoxOutput get_result;
-    let res_ = rg_result;
-    /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
-    csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
-    written below */
-  `ifdef arith_trap
-    if(wr_arith_en==1'b1) begin
-        if(res_.fflags!=0)
-          res_.trap = True;
-        if (res_.fflags[4]==1)
-          res_.cause =`FP_invalid; //Invalid
-        else if (res_.fflags[3]==1)
-          res_.cause=`FP_divide_by_zero; //Divide_by_zero_float
-        else if (res_.fflags[2]==1)
-          res_.cause=`FP_overflow; //Overflow
-        else if (res_.fflags[1]==1)
-          res_.cause=`FP_underflow; //Underflow
-        else if (res_.fflags[0]==1)
-          res_.cause=`FP_inexact; //Inexact
-      end
-    else
-       res_.trap=False;
-	`endif
+	// method XBoxOutput get_result;
+  //   let res_ = rg_result;
+  //   /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
+  //   csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
+  //   written below */
+  // `ifdef arith_trap
+  //   if(wr_arith_en==1'b1) begin
+  //       if(res_.fflags!=0)
+  //         res_.trap = True;
+  //       if (res_.fflags[4]==1)
+  //         res_.cause =`FP_invalid; //Invalid
+  //       else if (res_.fflags[3]==1)
+  //         res_.cause=`FP_divide_by_zero; //Divide_by_zero_float
+  //       else if (res_.fflags[2]==1)
+  //         res_.cause=`FP_overflow; //Overflow
+  //       else if (res_.fflags[1]==1)
+  //         res_.cause=`FP_underflow; //Underflow
+  //       else if (res_.fflags[0]==1)
+  //         res_.cause=`FP_inexact; //Inexact
+  //     end
+  //   else
+  //      res_.trap=False;
+	// `endif
 
-     return res_ ;
-	endmethod
+  //    return res_ ;
+
+	// endmethod
+  method tx_output = tx_fbox_out.e;
 	method Action flush;
 		  wr_flush<=True;
         inst_spfpu_divider.flush();

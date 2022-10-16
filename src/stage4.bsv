@@ -38,6 +38,9 @@ package stage4;
   `ifdef muldiv
     interface Ifc_s4_muldiv s4_mbox;
   `endif
+  `ifdef spfpu
+  interface Ifc_s4_float s4_fbox;
+`endif
   endinterface:Ifc_stage4
 
 `ifdef stage4_noinline
@@ -46,12 +49,16 @@ package stage4;
 // the following attributes are only required in simulation mode. They basically allows a rule to
 // fire which indicates that a stall is observed.
 `ifdef simulate
+`ifdef spfpu
+  (*preempts="rl_capture_float, rl_polling_check"*)
+`endif
   (*preempts="rl_capture_muldiv, rl_polling_check"*)
   (*preempts="rl_fwd_baseout, rl_polling_check"*)
   (*preempts="rl_fwd_systemout, rl_polling_check"*)
   (*preempts="rl_fwd_trapout, rl_polling_check"*)
   (*preempts="rl_handle_memory, rl_polling_check"*)
 `endif
+
   /*doc:module:*/
 module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     /*doc:submodule: The following are the virtual FIFOs connected to the ISBs from the EXE stage*/
@@ -66,6 +73,9 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
   `ifdef muldiv
     RX#(Bit#(`xlen)) rx_mbox <- mkRX;
   `endif
+  `ifdef spfpu
+  RX#(XBoxOutput) rx_fbox <- mkRX;
+`endif
   
     /*doc:submodule: Following are the virtual FIFOs connected to the ISBs feeding into the
      * write-back stage*/
@@ -210,7 +220,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
         `endif
         end
         else begin
-          `ifdef dpfpu if (memop.nanboxing == 1 ) response.word[63:32] == '1; `endif
+          `ifdef dpfpu if (memop.nanboxing == 1 ) mem_response.word[63:32] = '1; `endif
           fuid.insttype = BASE;
           let baseout = BaseOut {rd: rx_fuid.u.first.rd, rdvalue: mem_response.word, epochs: fuid.epochs
                             `ifdef no_wawstalls ,id: ? `endif
@@ -270,6 +280,37 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     `endif
     endrule:rl_capture_muldiv
   `endif
+  `ifdef spfpu
+  /*doc:rule: This rule is fired when the FUid points to the muldiv operations. This rule is fired
+   * when the fbox has a valid output. It is expected that the fbox provides output in the same
+   * order the inputs were provided. 
+   * The outputs from the fbox are transfered to the tx_baseout ISB for a regular commit in the
+   * write-back stage
+  */
+  rule rl_capture_float(rx_fuid.u.first.insttype == FLOAT && rx_fbox.u.notEmpty());
+    let _r = rx_fbox.u.first;
+    let fuid = fn_fu2cu(rx_fuid.u.first);
+    rx_fbox.u.deq;
+    tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: _r.data, epochs: fuid.epochs
+          `ifdef no_wawstalls ,id: fuid.id `endif
+          `ifdef spfpu ,fflags: _r.fflags, rdtype: fuid.rdtype `endif });
+    fuid.insttype = BASE;
+    tx_fuid.u.enq(fuid);
+    rx_fuid.u.deq;
+    `logLevel( stage4, 0, $format("[%2d]STAGE4: PC:%h",hartid,rx_fuid.u.first.pc))
+    `logLevel( stage4, 0, $format("[%2d]STAGE4: Enquing FLOAT Output: ",hartid, fshow(_r)))
+  `ifdef rtldump
+    let clogpkt = rx_commitlog.u.first;
+    CommitLogReg _pkt =?;
+    if (clogpkt.inst_type matches tagged REG .r)
+      _pkt = r;
+    _pkt.wdata = _r.data;
+    clogpkt.inst_type = tagged REG _pkt;
+    tx_commitlog.u.enq(clogpkt);
+    rx_commitlog.u.deq;
+  `endif
+  endrule:rl_capture_float
+`endif
 
     interface rx = interface Ifc_s4_rx
       interface rx_baseout_from_stage3 = rx_baseout.e;
@@ -304,6 +345,11 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
       interface rx_mbox_output = rx_mbox.e;
     endinterface;
   `endif
+  `ifdef spfpu
+  interface s4_fbox = interface Ifc_s4_float
+    interface rx_fbox_output = rx_fbox.e;
+  endinterface;
+`endif
   endmodule:mkstage4
 endpackage: stage4
 

@@ -79,7 +79,7 @@ interface Ifc_stage2;
 endinterface : Ifc_stage2
 
 function Fmt fstage2(Bit#(`xlen) hartid, FwdType op1, Op1type op1type, FwdType op2, Op2type op2type, 
-                     RFOp3 op3, Instruction_type insttype, Stage3Meta meta, Bit#(`xlen) mtval );
+                        FwdType op3, Instruction_type insttype, Stage3Meta meta, Bit#(`xlen) mtval );
   Fmt result = $format("[%2d]STAGE2 : ",hartid);
   Fmt op1_addr = ?;
   if (op1type == IntegerRF)
@@ -146,8 +146,8 @@ function Fmt fstage2(Bit#(`xlen) hartid, FwdType op1, Op1type op1type, FwdType o
   `ifdef muldiv
     MULDIV: result = result + $format("MULDIV -") + op1_addr + op2_addr + op_rd;
   `endif
-  `ifdef 
-    FLOAT: result = result + $format("FLOAT -") + op1_addr + op2_addr + op_rd;
+  `ifdef spfpu
+    FLOAT: result = result + $format("FLOAT -") + op1_addr + op2_addr + op3_addr + op_rd;
   `endif
   endcase
   return result;
@@ -247,7 +247,7 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
   /*doc:reg:
     This register holds the latest value of operand3 from the RF. This will get updated
     every time a retirement to the same register occurs.*/
-  Reg#(RFOp3) rg_op3[2] <- mkCReg(2, unpack(0));
+  Reg#(FwdType) rg_op3[2] <- mkCReg(2, unpack(0));
 
   // ---------------------- End Instatiations --------------------------//
 
@@ -393,6 +393,10 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
                               rs2addr: decoded.op_addr.rs2addr,
                               rs1type: decoded.op_type.rs1type,
                               rs2type: decoded.op_type.rs2type
+                            `ifdef spfpu
+                              ,rs3type: decoded.op_type.rs3type
+                              ,rs3addr: decoded.op_addr.rs3addr
+                            `endif
                             };
         tx_meta.u.enq(stage3meta);
         tx_mtval.u.enq(mtval);
@@ -423,8 +427,13 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
                           `ifdef no_wawstalls ,id: ? `endif
                           `ifdef spfpu ,rdtype: (decoded.op_type.rs2type==FloatingRF)?FRF:IRF `endif
                           };
-        let _op3 = RFOp3{ data: op4 
-              `ifdef spfpu ,addr: decoded.op_addr.rs3addr, optype: decoded.op_type.rs3type `endif };
+        let _op3 = FwdType{ valid: True, 
+                            addr: `ifdef spfpu decoded.op_addr.rs3addr `else 0 `endif ,
+                            data: signExtend(op4),
+                            epochs: wEpoch
+                          `ifdef spfpu ,rdtype: decoded.op_type.rs3type `endif 
+                          `ifdef no_wawstalls ,id : ? `endif };
+                            
         rg_op1[0] <= _op1;
         rg_op2[0] <= _op2;
         rg_op2type[0] <= decoded.op_type.rs2type;
@@ -500,7 +509,7 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
           rg_op2[1] <= _x;
         end
     
-        if(rg_op3[1].addr == commit.addr && rg_op3[1].optype == FRF &&  commit.rdtype == FRF)
+        if(rg_op3[1].addr == commit.addr && rg_op3[1].rdtype == FRF &&  commit.rdtype == FRF)
           rg_op3[1].data <= commit.data;
     
       `else

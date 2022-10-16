@@ -17,6 +17,9 @@ package riscv;
 `ifdef muldiv
   import mbox         :: * ;
 `endif
+`ifdef spfpu 
+  import fpu         :: * ;
+`endif
   import scoreboard   :: * ;
   import stage0       :: * ;
   import stage1       :: * ;
@@ -194,6 +197,10 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     /*doc:wire: */
     Wire#(Bit#(1)) wr_debugger_available <- mkWire();
   `endif
+  `ifdef spfpu
+    Ifc_fpu fbox <- mkfpu();
+    FIFOF#(XBoxOutput) ff_fbox_out <- mkSizedBypassFIFOF(`isb_s3s4);
+  `endif
 
     let {pipe_s4s5_notEmpty, lv_bypass_1} <- mkPipe_s4_s5(stage4.tx, stage5.rx);
     let {pipe_s3s4_notEmpty, lv_bypass_0} <- mkPipe_s3_s4(stage3.tx, stage4.rx);
@@ -242,6 +249,11 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     mkConnection(stage3.muldiv.mv_mbox_inputs, mbox.ma_inputs);
     mkConnection(mbox.tx_output, ff_mbox_out);
     mkConnection(ff_mbox_out, stage4.s4_mbox.rx_mbox_output);
+  `endif
+  `ifdef spfpu
+    mkConnection(stage3.float.mv_fbox_inputs, fbox._start);
+    mkConnection(fbox.tx_output, ff_fbox_out);
+    mkConnection(ff_fbox_out, stage4.s4_fbox.rx_fbox_output);
   `endif
   `ifdef bpu
     /*doc:rule: */

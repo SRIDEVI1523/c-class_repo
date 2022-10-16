@@ -171,7 +171,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
     `logLevel( stage5, 0, $format("[%2d]STAGE5 : Trap: ",hartid, fshow(trapout)))
     wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
                           `ifdef no_wawstalls , id: fuid.id `endif
-                           `ifdef spfpu rdtype: fuid.rdtype `endif };
+                           `ifdef spfpu ,rdtype: fuid.rdtype `endif };
 
     if (epochs_match) begin
     `ifdef microtrap_support
@@ -264,7 +264,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         wr_increment_minstret <= True;
         wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(csr_response.data), unlock_only:False
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
         rx_systemout.u.deq;
         rx_fuid.u.deq;
       `ifdef perfmonitors
@@ -295,7 +295,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping instruction",hartid))
       wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
       rx_systemout.u.deq;
       rx_fuid.u.deq;
     `ifdef rtldump
@@ -317,7 +317,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       `ifdef spfpu csr.ma_set_fflags(baseout.fflags); `endif
       wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(baseout.rdvalue), unlock_only:False
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
       rx_fuid.u.deq;
       rx_baseout.u.deq;
     `ifdef rtldump
@@ -334,7 +334,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping instruction",hartid))
       wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
       rx_baseout.u.deq;
       rx_fuid.u.deq;
     `ifdef rtldump
@@ -375,7 +375,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
         if (memop.memaccess == Atomic) 
           wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(cache_resp), unlock_only:False
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
       `else
         Bit#(`elen) cache_resp = 0;
       `endif
@@ -413,7 +413,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
             rx_memio.u.deq;
             wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only: True
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
           `ifdef rtldump
             rx_commitlog.u.deq;
           `endif
@@ -424,7 +424,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
             `ifdef spfpu if (memop.nanboxing) commit_data[63:32] = '1; `endif
             wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(commit_data), unlock_only:False
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
             rx_fuid.u.deq;
             rx_memio.u.deq;
           `ifdef rtldump
@@ -448,7 +448,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
       `logLevel( stage5, 0, $format("[%2d]STAGE5 : Dropping instruction",hartid))
       wr_commit <= CommitData{addr: fuid.rd, data: ?, unlock_only:True
                                       `ifdef no_wawstalls , id: fuid.id `endif
-                                      `ifdef spfpu rdtype: fuid.rdtype `endif };
+                                      `ifdef spfpu ,rdtype: fuid.rdtype `endif };
       rx_memio.u.deq;
       rx_fuid.u.deq;
     `ifdef rtldump

@@ -20,6 +20,19 @@ import Vector         :: * ;
 typedef 0 USERSPACE;
 typedef 1 IDWIDTH ;  
 
+`ifdef RV64
+typedef 64 XLEN;
+`else
+typedef 32 XLEN;
+`endif
+`ifdef dpfpu
+typedef 64 FLEN;
+`elsif spfpu
+typedef 32 FLEN;
+`else
+typedef `vaddr FLEN;
+`endif
+
 function String excause2str (Bit#(TSub#(`causesize,1)) cause);
   case (cause)
     `Inst_addr_misaligned  : return "Instruction-Address-Misaligned-Trap";
@@ -84,6 +97,8 @@ typedef enum {`ifdef spfpu FloatingRF = 4, `endif
 /*doc:enum: This enum indicates in which rf the destination register needs to be updated
  * min size: 1 max size: 1 */
 typedef enum {FRF = 1, IRF = 0} RFType deriving(Bits, Eq, FShow);
+
+typedef TMax#(XLEN, FLEN) ELEN;
 
 /*doc:enum: This indicate which ISB after EXE should the result be captured in
  * min size: 2 max size: 3 */
@@ -400,7 +415,7 @@ instance FShow#(Stage3Meta);
   function Fmt fshow(Stage3Meta val);
     Fmt result = $format("Stage3Meta: rd:%d epochs:%b funct:%h",val.rd, val.epochs, val.funct);
   `ifdef spfpu
-    result = result + $format(" rdtype:",fshow(val.rdtype))
+    result = result + $format(" rdtype:",fshow(val.rdtype));
   `endif
   `ifdef compressed
     result = result + $format(" compressed:",fshow(val.compressed));
@@ -410,6 +425,10 @@ instance FShow#(Stage3Meta);
 endinstance
 
 typedef struct {
+`ifdef spfpu
+  RFType  rs3type;
+  Bit#(5) rs3addr;
+`endif
   Op1type rs1type;
   Op2type rs2type;
   Bit#(5) rs1addr;
@@ -520,7 +539,7 @@ instance FShow#(SystemOut);
     if (value.funct3 !=0)
       result = $format(csrop , " %s",fn_csr_to_str(value.csr_address), " rs1:%h",value.rs1_imm);
     else 
-      result = $format("NON-CSR System Op");
+      result = $format("NON-CSR System Op %h",value.csr_address);
     return result;
   endfunction
 endinstance
@@ -673,7 +692,7 @@ instance FShow#(CommitData);
     Fmt optype = $format("X");
   `ifdef spfpu
     if (val.rdtype == FRF)
-      optype = "F";
+      optype = $format("F");
   `endif
     result = result + optype + $format("[%d] = %h unlock:%b",val.addr,val.data,val.unlock_only);
   `ifdef no_wawstalls
@@ -682,6 +701,29 @@ instance FShow#(CommitData);
     return result;
   endfunction:fshow
 endinstance
+
+typedef struct{
+        Bit#(ELEN) operand1;
+        Bit#(ELEN) operand2;
+        Bit#(ELEN) operand3;
+        Bit#(4) opcode;
+        Bit#(7) funct7;
+        Bit#(3) funct3;
+        Bit#(2) imm;
+        Bool    issp;
+}Input_Packet deriving (Bits,Eq);
+
+typedef struct{
+  Bit#(ELEN)  data;
+  Bool        valid;
+`ifdef arith_trap
+  Bool             trap;
+  Bit#(`causesize) cause;
+`endif
+`ifdef spfpu
+  Bit#(5) fflags;
+`endif
+} XBoxOutput deriving(Bits, Eq, FShow);
 
 typedef struct{
 	Bit#(width) final_result;					// the final result for the operation

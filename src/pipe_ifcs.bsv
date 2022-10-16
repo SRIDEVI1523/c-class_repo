@@ -146,7 +146,7 @@ interface Ifc_s3_rf;
   method Action ma_op2 (FwdType i);
   /*doc:method: receive op2 and its meta info from previous stage (stage2/decode)*/
   (*always_enabled, always_ready*)
-  method Action ma_op3 (RFOp3 i);
+  method Action ma_op3 (FwdType i);
 endinterface: Ifc_s3_rf
 
 interface Ifc_s3_cache;
@@ -186,6 +186,18 @@ interface Ifc_s3_muldiv;
   /*doc:method: This method captures the ready signals from the mbox unit*/
   method Action ma_mbox_ready(MBoxRdy rdy);
 endinterface: Ifc_s3_muldiv
+`endif
+
+`ifdef spfpu
+interface Ifc_s3_float;
+    method Input_Packet mv_fbox_inputs;
+  endinterface: Ifc_s3_float
+`endif
+
+`ifdef spfpu
+  interface Ifc_s4_float;
+    interface RXe#(XBoxOutput) rx_fbox_output;
+  endinterface:Ifc_s4_float
 `endif
 
 `ifdef perfmonitors
@@ -282,7 +294,7 @@ interface Ifc_s2_rf;
 
   (*always_ready*)
   /*doc:method: Latest value of operand3 from rf*/
-  method RFOp3 mv_op3;
+  method FwdType mv_op3;
 
 endinterface:Ifc_s2_rf
 
