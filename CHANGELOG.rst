@@ -8,7 +8,11 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 --------------------
 
 - Added UARTv2 changes
-- Modified requirements.txt for running with mod-spike
+- Modified requirements.txt to use recent aapg
+- Updated decoder to check for non-zero fs bits in mstatus for floating point instruction
+- Updated decoder to check for valid rounding mode
+- BPU was giving a prediction at the start of fence operation, should not do that. Fixed it
+- Updated gitlab-ci.yaml to use mod-spike
 
 [1.9.9] - 2020-11-03
 --------------------
