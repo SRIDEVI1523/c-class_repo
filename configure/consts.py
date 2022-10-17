@@ -59,7 +59,7 @@ common_bsv:
   checkout: master
 devices:
   url: https://gitlab.com/shaktiproject/uncore/devices
-  checkout: 5.0.1
+  checkout: 7.0.10
 fabrics:
   url: https://gitlab.com/shaktiproject/uncore/fabrics
   checkout: 1.2.0
@@ -68,7 +68,7 @@ common_verilog:
   checkout: master
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 4.0.0
+  checkout: 4.0.17
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]

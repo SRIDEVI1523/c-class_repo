@@ -4,6 +4,16 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.10.0] - 2022-09-14
+--------------------
+
+- Added UARTv2 changes
+- Modified requirements.txt to use recent aapg
+- Updated decoder to check for non-zero fs bits in mstatus for floating point instruction
+- Updated decoder to check for valid rounding mode
+- Fixed BPU to not give prediction at the start of fence operation.
+- Updated gitlab-ci.yaml to use mod-spike
+
 [1.9.9] - 2020-11-03
 --------------------
 

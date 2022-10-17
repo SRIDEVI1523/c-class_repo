@@ -45,7 +45,7 @@ package TbSoc;
     Ifc_Soc soc <- mkSoc();
   `endif
 
-    UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5);
+    UserInterface#(`paddr,XLEN,16) uart <- mkuart_user(5, 0, 0);
     Reg#(Bool) rg_read_rx<- mkDReg(False);
 
     Reg#(Bit#(5)) rg_cnt <-mkReg(0);
@@ -91,8 +91,8 @@ package TbSoc;
     endrule
 
     rule check_if_character_present(!rg_read_rx);
-      let {data,err}<- uart.read_req('hc,Byte);
-      if (data[3]==1) // character present
+      let {data,err}<- uart.read_req('hc,HWord);
+      if (data[2]==1) // character present
         rg_read_rx<=True;
     endrule
 

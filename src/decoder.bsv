@@ -22,7 +22,7 @@ package decoder;
   import BUtils::*;
   `include "ccore_params.defines"
   (*noinline*)
-  function Bool address_valid(Bit#(12) addr, Bit#(26) misa);
+  function Bool address_valid(Bit#(12) addr, Bit#(26) misa,Bit#(1) fs);
     Bool valid=False;
     case(addr[9:8])
       // user level CSRS
@@ -33,7 +33,7 @@ package decoder;
                   'h0, 'h4, 'h5, 'h40, 'h41, 'h42, 'h43, 'h44: valid=unpack(misa[13]&misa[20]);
                 `endif
                   // user floating point csrs
-                  'h1, 'h2, 'h3: valid=True;
+                  'h1, 'h2, 'h3: valid=(fs!=0);
               endcase
               // User Counters/Timers
             `ifdef user
@@ -444,7 +444,7 @@ package decoder;
   Bool validOp32  = (funct3==1)?(funct7==0):(funct3==0 || funct3==5)?(funct7=='b0000000||funct7=='b0100000):False;
   Bool validFloat = fs!=0 && ((funct7[0]==0 && csrs.csr_misa[5]==1) `ifdef dpfpu || (funct7[0]==1 &&  csrs.csr_misa[3]==1) `endif );
   Bool validFNM = inst[26]==0 && validFloat;
-  Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110):(funct3!='b101 && funct3!='b110);
+  Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
   //TODO: RM field check
   Bool validFloatOpF = case(inst[31:27])
     'b00000, 'b00001, 'b00010, 'b00011: valid_rounding; // FADD, FSUB, FMUL, FDIV
@@ -468,7 +468,7 @@ package decoder;
     'b01000: (inst[24:21]=='b0 && valid_rounding && inst[25] == ~inst[20]); // FCVT.S.D
     default: False;
   endcase;
-	Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa);
+	Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa,fs);
 	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12],
                                         	csrs.csr_mstatus[20], csrs.prv);
   Instruction_type inst_type = TRAP;
