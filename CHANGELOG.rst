@@ -11,7 +11,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 - Modified requirements.txt to use recent aapg
 - Updated decoder to check for non-zero fs bits in mstatus for floating point instruction
 - Updated decoder to check for valid rounding mode
-- BPU was giving a prediction at the start of fence operation, should not do that. Fixed it
+- Fixed BPU to not give prediction at the start of fence operation.
 - Updated gitlab-ci.yaml to use mod-spike
 
 [1.9.9] - 2020-11-03
