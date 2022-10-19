@@ -12,8 +12,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 - Updated decoder to check for non-zero fs bits in mstatus for floating point instruction
 - Updated decoder to check for valid rounding mode
 - Fixed BPU to not give prediction at the start of fence operation.
-- Updated gitlab-ci.yaml to use mod-spike
-- Updated merge CI to exclude csmith
+- Upstreamed verification and updated timeout in ci
 
 [1.9.9] - 2020-11-03
 --------------------
