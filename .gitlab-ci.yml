@@ -22,10 +22,6 @@ c-class:
         - make clean
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make generate_boot_files link_verilator
-        - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
-        - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
-        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub'  CONFIG_ISA=RV64IMAFDC
-        - make regress opts='--list=csmith.list --final'
         - echo -e "section_end:`date +%s`:generate_verilog\r\e[0Ksection_start:`date +%s`:riscv-test\r\e[0KRISC-V Tests Regression"
         - make regress opts='--filter=rv64 --parallel=10 --test_opts="--mod-spike --timeout=120s" --sub' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--filter=rv64 --final'
@@ -42,6 +38,10 @@ c-class:
         - make torture opts='--config=all --debug' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=riscv-torture.list --test_opts="--mod-spike --timeout=30m" --sub' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=riscv-torture.list --final'
+        - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
+#        - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
+#        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub'  CONFIG_ISA=RV64IMAFDC
+#        - make regress opts='--list=csmith.list --final'
         - echo -e "section_end:`date +%s`:torture\r\e[0Ksection_start:`date +%s`:cleanup\r\e[0KCleanup"
         - make clean_verif
         - make clean
