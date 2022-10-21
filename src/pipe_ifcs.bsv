@@ -191,6 +191,10 @@ endinterface: Ifc_s3_muldiv
 `ifdef spfpu
 interface Ifc_s3_float;
     method Input_Packet mv_fbox_inputs;
+    (*always_ready, always_enabled*)
+  /*doc:method: This method captures the ready signals from the fbox unit*/
+  method Action ma_fbox_ready(Bit#(1) rdy);
+    
   endinterface: Ifc_s3_float
 `endif
 

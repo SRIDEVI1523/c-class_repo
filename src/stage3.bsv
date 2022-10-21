@@ -257,6 +257,8 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   * for this value.*/
   Wire#(Bool) wr_op3_avail <- mkWire();
   Probe#(Bool) wr_op3_avail_probe <- mkProbe();
+
+  Wire#(Bool) wr_fbox_ready <- mkWire();
 `endif
   // The following registers are use to the maintain epochs from various pipeline stages:
   // writeback and execute stage.
@@ -392,7 +394,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     wr_op1_avail_probe <= _op1_avail;
 
     wr_op2_avail <= _op2_avail; wr_fwd_op2 <= _fwd_op2;
-    wr_op2_avail_probe <= _op1_avail;
+    wr_op2_avail_probe <= _op2_avail;
 
   `ifdef spfpu
     `ifdef no_wawstalls
@@ -873,6 +875,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   `ifdef dpfpu
     let issp = meta.word32;
   `endif
+
   // Bool spfma_rdy = (`ifdef dpfpu issp && `endif 
   //                  (opcode[2] == 0 || (opcode[2] == 1 && (f7[6:1] == `FADDS_f7 || f7[6:1] == `FSUBS_f7 || f7[6:1] == `FMULS_f7))));
   // Bool dpfma_rdy = (wr_fbox_ready.dfma && `ifdef dpfpu !issp && `endif 
@@ -890,7 +893,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   /*doc:rule: This rule will fire when the epochs match and when the multiplier/divider are
   * avaialble based on the current instruction. Both the operands are required for execution to be
   * offloaded the mbox.*/
-  rule rl_fbox(instr_type == FLOAT && epochs_match && !wr_waw_stall);
+  rule rl_fbox(instr_type == FLOAT && epochs_match && !wr_waw_stall && wr_fbox_ready);
     let common_pkt = s4common;
     common_pkt.insttype = FLOAT;
     `logLevel( stage3, 0, $format("[%2d]STAGE3: FLOAT Op received",hartid))
@@ -902,6 +905,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
 
       // multicycle_alu.ma_inputs(fn, funct3, arg1, arg2, arg4
       //                             `ifdef RV64 ,meta.word32 `endif );
+      `logLevel( stage3, 0, $format("FPU: op1:%h op2:%h op3:%h",wr_fwd_op1,wr_fwd_op2,wr_fwd_op3))
       `logLevel( stage3, 0, $format("[%2d]STAGE3: FLOAT op offloaded",hartid))
       deq_rx;
       let _id <- sboard.ma_lock_rd(SBDUpd{rd: meta.rd `ifdef spfpu ,rdtype: meta.rdtype `endif });
@@ -1073,9 +1077,9 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
 `ifdef spfpu
   interface float = interface Ifc_s3_float
     method mv_fbox_inputs = wr_float_inputs;
-    // method Action ma_fbox_ready(FBoxRdy rdy);
-    //   wr_fbox_ready <= rdy;
-    // endmethod: ma_fbox_ready
+    method Action ma_fbox_ready(Bit#(1) rdy);
+      wr_fbox_ready <= unpack(rdy);
+    endmethod: ma_fbox_ready
   endinterface;
 `endif
 endmodule
