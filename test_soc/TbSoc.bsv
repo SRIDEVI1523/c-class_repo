@@ -62,6 +62,20 @@ package TbSoc;
 	  			default:return op1;
 	  		endcase
     endfunction
+
+    `ifdef spfpu
+    function Bool fn_fflags_print (Bit#(7) funct7,Bit#(7) opcode, Bool irf);
+      if ((!irf ||
+          funct7[6:1] == 'b110000 ||  //fcvt.w.s/d instr
+          funct7[6:1] == 'b101000) && //fcmp
+          !(funct7[6:1] == 'b111000 && opcode == 'b1010011)&&  //fmv.x.w and fmv.x.d
+          !(funct7[6:1] == 'b111100 && opcode == 'b1010011) &&  //fmv.w.x and fmv.w.d
+          !(funct7[6:1] == 'b001000 && opcode == 'b1010011))    //fsgnj*
+        return True;
+      else
+        return False;
+    endfunction
+  `endif
   (*synthesize*)
   module mkTbSoc(Empty);
 
@@ -100,6 +114,40 @@ package TbSoc;
     endrule
 
   `ifdef rtldump
+  Reg#(Bit#(`xlen)) rg_prev_mstatus <- mkReg(0);
+  Reg#(Bool) rg_prev_mstatus_valid <- mkReg(False);
+  Bit#(XLEN) lv_misa_init = 0;
+  `ifdef RV64
+    lv_misa_init[63:62] = 2'b10;
+  `else
+    lv_misa_init[31:30] = 2'b01;
+  `endif
+  `ifdef atomic
+    lv_misa_init[0] = 1;
+  `endif
+  `ifdef compressed
+    lv_misa_init[2] = 1;
+  `endif
+  `ifdef dpfpu
+    lv_misa_init[3] = 1;
+  `endif
+  `ifdef spfpu
+    lv_misa_init[5] = 1;
+  `endif
+  lv_misa_init[8] = 1;  //Base I isa.
+  `ifdef muldiv
+    lv_misa_init[12] = 1;
+  `endif
+  `ifdef usertraps
+    lv_misa_init[13] = 1;
+  `endif
+  `ifdef supervisor
+    lv_misa_init[18] = 1;
+  `endif
+  `ifdef user
+    lv_misa_init[20] = 1;
+  `endif
+  Reg#(Bit#(XLEN)) rg_prev_misa <- mkReg(lv_misa_init);
  	  let dump <- mkReg(InvalidFile) ;
     rule open_file_rtldump(rg_cnt<1);
       let generate_dump <- $test$plusargs("rtldump");
@@ -170,21 +218,38 @@ package TbSoc;
           $fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif " 0x%16h", idump.pc, " (0x%4h", idump.instruction[15:0], ")");
 
         if (idump.inst_type matches tagged REG .d) begin
-          let csr_address = 'h300; // mstatus
+
+        `ifdef spfpu
+        if (!(idump.instruction[31:25] =='b0001001 && idump.instruction[14:0] == 'b000000001110011)) begin
+          Bit#(`xlen) wdata_fflags = fn_probe_csr(`FFLAGS);
+          Bit#(`xlen) flags = zeroExtend(d.fflags);
+        // !flags &&
+        if( flags!=0 && fn_fflags_print(idump.instruction[31:25],idump.instruction[6:0], d.irf)) begin 
+          //Flags not zero. Destination reg is FRF.
+          if (valueOf(`flen) == 64) begin
+            $fwrite(dump, " ", fn_csr_to_str(`FFLAGS), " 0x%16h", wdata_fflags);
+          end
+          if (valueOf(`flen) == 32) begin
+            $fwrite(dump, " ", fn_csr_to_str(`FFLAGS), " 0x%8h", wdata_fflags);
+          end
+        end
+        end
+      `endif
+          let csr_address = `FFLAGS; // mstatus
           Bit#(`xlen) wdata = fn_probe_csr(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif );
           if (!((idump.instruction[31:25] =='b0001001 || idump.instruction[31:25]== 'b0010001 || 
                idump.instruction[31:25] =='b0110001)&& idump.instruction[14:0] == 'b000000001110011)) begin
             if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
-              $fwrite(dump, " x%d", d.rd, " 0x%16h", d.wdata);
+              $fwrite(dump, " x%0d", d.rd, " 0x%16h", d.wdata);
             if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)
-              $fwrite(dump, " x%d", d.rd, " 0x%8h", d.wdata);
+              $fwrite(dump, " x%0d", d.rd, " 0x%8h", d.wdata);
             if (!d.irf && valueOf(`flen) == 64) begin
-              $fwrite(dump, " ", fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
-              $fwrite(dump, " f%d", d.rd, " 0x%16h", d.wdata);
+              // $fwrite(dump, " ", fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
+              $fwrite(dump, " f%0d", d.rd, " 0x%16h", d.wdata);
             end
             if (!d.irf && valueOf(`flen) == 32) begin
-              $fwrite(dump, " " , fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
-              $fwrite(dump, " f%d", d.rd, " 0x%8h", d.wdata);
+              // $fwrite(dump, " " , fn_csr_to_str(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif ), " 0x%16h", wdata);
+              $fwrite(dump, " f%0d", d.rd, " 0x%8h", d.wdata);
             end
           end
         end
@@ -207,33 +272,78 @@ package TbSoc;
             csr_address = `MIP; // convert to MIP
         `endif
           if (valueOf(`xlen) == 64 && d.rd != 0)
-            $fwrite(dump, " x%d", d.rd, " 0x%16h", d.rdata);
+            $fwrite(dump, " x%0d", d.rd, " 0x%16h", d.rdata);
           if (valueOf(`xlen) == 32 && d.rd != 0)
-            $fwrite(dump, " x%d", d.rd, " 0x%8h", d.rdata);
+            $fwrite(dump, " x%0d", d.rd, " 0x%8h", d.rdata);
           Bit#(`xlen) wdata = fn_probe_csr(csr_address);
           if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
             //$display("Tb: Dumping instruction: %h", idump.instruction);
            `logLevel( tb, 0, $format("\n %h", idump.instruction))
+           `ifdef hypervisor
             if(idump.instruction=='h10200073 && csr_address== 'h300) begin //sret
               Bit#(`xlen) hstatus = fn_probe_csr('h600);
               //$display("Tb: %h", hstatus);
               `logLevel( tb, 0, $format("\n hstatus: %h", hstatus))
               $fwrite(dump, " c1536_hstatus 0x%16h", hstatus);
             end
+            `endif
+            if (csr_address != `FCSR && csr_address != `MISA ) begin
             if (valueOf(`xlen) == 64) 
               $fwrite(dump, " ", fn_csr_to_str(csr_address), " 0x%16h", wdata);
             if (valueOf(`xlen) == 32)
               $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
+
+            if (csr_address == `MSTATUS) begin
+              rg_prev_mstatus <= wdata;
+              rg_prev_mstatus_valid <= True;
+            end
+
+           
+
+            end
+            if( csr_address == `MISA) begin
+            if (wdata != rg_prev_misa) begin
+              if (valueOf(`xlen) == 64) 
+                $fwrite(dump, " ", fn_csr_to_str(csr_address), " 0x%16h", wdata);
+              if (valueOf(`xlen) == 32)
+                $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
+              rg_prev_misa <= wdata;
+            end
+          end
           end
         `ifdef spfpu
+        if (csr_address == `FCSR) begin
+          Bit#(`xlen) wdata_fflags = fn_probe_csr(`FFLAGS);
+          Bit#(`xlen) wdata_frm = fn_probe_csr(`FRM);
+          if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
+          if (valueOf(`xlen) == 64) begin
+                  $fwrite(dump, " ", fn_csr_to_str(`FFLAGS), " 0x%16h", wdata_fflags);
+                  // if(lv_fssr_print)                     
+                  //   $fwrite(dump, " x%0d", d.rd, " 0x%16h", d.rdata);
+                  $fwrite(dump, " ", fn_csr_to_str(`FRM), " 0x%16h", wdata_frm);
+                end
+          if (valueOf(`xlen) == 32) begin
+            $fwrite(dump, " ", fn_csr_to_str(`FFLAGS), " 0x%8h", wdata_fflags);
+            // if(lv_fssr_print)
+            //   $fwrite(dump, " x%0d", d.rd, " 0x%8h", d.rdata);
+            $fwrite(dump, " ", fn_csr_to_str(`FRM), " 0x%8h", wdata_frm);
+          end
+          end
+        end
           if (csr_address == `FCSR || csr_address == `FRM || csr_address == `FFLAGS)begin
             csr_address = `MSTATUS;
             Bit#(`xlen) wdata = fn_probe_csr(csr_address);
+            if ( !rg_prev_mstatus_valid || (wdata!=rg_prev_mstatus)   ) begin 
             if (!(d.op==2'b10 && idump.instruction[19:15] == 0)) begin
               if (valueOf(`xlen) == 64) 
                 $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%16h", wdata);
               if (valueOf(`xlen) == 32)
                 $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
+
+              rg_prev_mstatus <= wdata;
+              rg_prev_mstatus_valid <= True;
+
+            end
             end
           end
         `endif
@@ -248,13 +358,13 @@ package TbSoc;
         `endif
           if (d.access == Load `ifdef atomic || d.access == Atomic `endif ) begin
             if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
-              $fwrite(dump, " x%d", d.rd, " 0x%16h", d.commit_data);
+              $fwrite(dump, " x%0d", d.rd, " 0x%16h", d.commit_data);
             if (d.irf && valueOf(`xlen) == 32 && d.rd != 0)
-              $fwrite(dump, " x%d", d.rd, " 0x%8h", d.commit_data);
+              $fwrite(dump, " x%0d", d.rd, " 0x%8h", d.commit_data);
             if (!d.irf && valueOf(`flen) == 64 )
-              $fwrite(dump, " f%d", d.rd, " 0x%16h", d.commit_data);
+              $fwrite(dump, " f%0d", d.rd, " 0x%16h", d.commit_data);
             if (!d.irf && valueOf(`flen) == 32 )
-              $fwrite(dump, " f%d", d.rd, " 0x%8h", d.commit_data);
+              $fwrite(dump, " f%0d", d.rd, " 0x%8h", d.commit_data);
           end
 
           if(valueOf(`xlen) ==64 && d.access != Fence && d.access != FenceI)

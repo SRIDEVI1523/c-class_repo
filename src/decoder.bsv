@@ -477,7 +477,7 @@ package decoder;
     Bit#(3) frm = csrs.frm;
     Bool valid_rounding = (funct3=='b111)?(frm!='b101 && frm!='b110 && frm!='b111):(funct3!='b101 && funct3!='b110);
   `endif
-	  Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa);
+	  Bool address_is_valid=address_valid(inst[31:20],csrs.csr_misa,fs);
   	Bool access_is_valid=valid_csr_access(inst[31:20],inst[19:15], inst[13:12], 
 																					csrs.csr_mstatus[20], csrs.prv
 																				`ifdef hypervisor ,csrs.csr_vs_bit `endif );

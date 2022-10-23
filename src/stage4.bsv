@@ -305,6 +305,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     if (clogpkt.inst_type matches tagged REG .r)
       _pkt = r;
     _pkt.wdata = _r.data;
+    _pkt.fflags = _r.fflags;
     clogpkt.inst_type = tagged REG _pkt;
     tx_commitlog.u.enq(clogpkt);
     rx_commitlog.u.deq;

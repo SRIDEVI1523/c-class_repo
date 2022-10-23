@@ -337,6 +337,9 @@ typedef struct{
   Bit#(`xlen) wdata;
   Bit#(5) rd;
   Bool irf;
+  `ifdef spfpu
+  Bit#(5) fflags;
+`endif
 } CommitLogReg deriving(Bits, FShow, Eq);
 
 typedef union tagged {

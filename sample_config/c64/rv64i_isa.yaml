@@ -45,7 +45,7 @@ hart0:
                     warl:
                         dependency_fields: []
                         legal:
-                          - "extensions[25:0] bitmask [0x0141185, 0x0000000]"
+                          - "extensions[25:0] bitmask [0x014112d, 0x0000000]"
                         wr_illegal:
                           - "Unchanged"
     mvendorid:
