@@ -51,6 +51,9 @@ include depends.mk
 '''
 
 dependency_yaml='''
+caches_mmu:
+  url: https://gitlab.com/shaktiproject/uncore/caches_mmu
+  checkout: hypervisor-fixes
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: master
@@ -63,6 +66,12 @@ fabrics:
 common_verilog:
   url: https://gitlab.com/shaktiproject/common_verilog
   checkout: master
+verification:
+  url: https://gitlab.com/shaktiproject/verification_environment/verification
+  checkout: 4.0.19
+  recursive: True
+  patch:
+    - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
 benchmarks:
   url: https://gitlab.com/incoresemi/core-generators/benchmarks
   checkout: master
