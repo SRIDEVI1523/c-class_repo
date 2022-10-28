@@ -359,8 +359,8 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
         end
         else
           `logLevel( stage2, 0, $format("[%2d]STAGE2 : Dropping WFI",hartid))
+        instrType = ALU;
       end
-      else begin
       // The following logic is used to ensure correct step functionality. When the core is halted
       // or free-running rg_step_done is set to false. When the step bit in dcsr is set and resume
       // request is received, the very next instruction (matching epochs) will set rg_step_done to
@@ -442,7 +442,6 @@ module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
         `logLevel( stage2, 0, fstage2( hartid, _op1, decoded.op_type.rs1type, 
                   _op2, decoded.op_type.rs2type, _op3, instrType, stage3meta, mtval ))
         // -------------------------------------------------------------------------------------- //
-      end
       rx_pipe1.u.deq;
     `ifdef rtldump
       rx_commitlog.u.deq;

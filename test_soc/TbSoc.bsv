@@ -235,8 +235,8 @@ package TbSoc;
         end
         end
       `endif
-          let csr_address = `FFLAGS; // mstatus
-          Bit#(`xlen) wdata = fn_probe_csr(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif );
+          // let csr_address = `FFLAGS; // mstatus
+          // Bit#(`xlen) wdata = fn_probe_csr(`ifdef hypervisor fn_address_virtual(csr_address,idump.v) `else csr_address `endif );
           if (!((idump.instruction[31:25] =='b0001001 || idump.instruction[31:25]== 'b0010001 || 
                idump.instruction[31:25] =='b0110001)&& idump.instruction[14:0] == 'b000000001110011)) begin
             if (d.irf && valueOf(`xlen) == 64 && d.rd != 0)
