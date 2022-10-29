@@ -524,13 +524,59 @@ hart0:
                       wr_illegal:
                         - Unchanged
             pmp4cfg:
-                implemented: false
+                implemented: true
+                type:
+                  ro_constant: 0
             pmp5cfg:
-                implemented: false
+                implemented: true
+                type:
+                  ro_constant: 0
             pmp6cfg:
-                implemented: false
+                implemented: true
+                type:
+                  ro_constant: 0
             pmp7cfg:
-                implemented: false
+                implemented: true
+                type:
+                  ro_constant: 0
+    pmpcfg2:
+        reset-val: 0
+        rv32:
+            accessible: false
+        rv64:
+            accessible: true
+            pmp8cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp9cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp10cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp11cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp12cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp13cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp14cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
+            pmp15cfg:
+                implemented: true
+                type:
+                  ro_constant: 0
     pmpaddr0:
         rv32:
             accessible: false
@@ -540,7 +586,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp0cfg]
                     legal:
-                      - "pmp0cfg[7] in [0] -> pmpaddr0[29:0] bitmask [0x3FFFFFFE,0x00000000]"
+                      - "pmp0cfg[7] in [0] -> pmpaddr0[63:0] bitmask [0x3FFFFFFE,0x0000000000000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -553,7 +599,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp1cfg]
                     legal:
-                      - "pmp1cfg[7] in [0] -> pmpaddr1[29:0] bitmask [0x3FFFFFFE,0x00000000]"
+                      - "pmp1cfg[7] in [0] -> pmpaddr1[63:0] bitmask [0x3FFFFFFE,0x0000000000000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -566,7 +612,7 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp2cfg]
                     legal:
-                      - "pmp2cfg[7] in [0] -> pmpaddr2[29:0] bitmask [0x3FFFFFFE,0x00000000]"
+                      - "pmp2cfg[7] in [0] -> pmpaddr2[63:0] bitmask [0x3FFFFFFE,0x0000000000000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -579,10 +625,39 @@ hart0:
                 warl:
                     dependency_fields: [pmpcfg0::pmp3cfg]
                     legal:
-                      - "pmp3cfg[7] in [0] -> pmpaddr3[29:0] bitmask [0x3FFFFFFE,0x00000000]"
+                      - "pmp3cfg[7] in [0] -> pmpaddr3[63:0] bitmask [0x3FFFFFFE,0x0000000000000000]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
+    pmpaddr4: &pmp_const
+        rv32:
+          accessible: False
+        rv64:
+          accessible: True
+          type:
+            ro_constant : 0
+    pmpaddr5: 
+      <<: *pmp_const
+    pmpaddr6: 
+      <<: *pmp_const
+    pmpaddr7: 
+      <<: *pmp_const
+    pmpaddr8: 
+      <<: *pmp_const
+    pmpaddr9: 
+      <<: *pmp_const
+    pmpaddr10: 
+      <<: *pmp_const
+    pmpaddr11: 
+      <<: *pmp_const
+    pmpaddr12: 
+      <<: *pmp_const
+    pmpaddr13: 
+      <<: *pmp_const
+    pmpaddr14: 
+      <<: *pmp_const
+    pmpaddr15: 
+      <<: *pmp_const
     mcounteren:
       rv32:
         accessible: False

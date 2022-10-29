@@ -9,7 +9,7 @@ import logging
 import sys
 import math
 from repomanager.rpm import repoman
-from riscv_config.warl import warl_interpreter
+from riscv_config.warl import warl_class
 from csrbox.csr_gen import find_group
 
 logger = logging.getLogger(__name__)
@@ -123,12 +123,17 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
         s_itlbsize = foo['s_extension']['itlb_size']
         s_dtlbsize = foo['s_extension']['dtlb_size']
         satp_modewarl =\
-                (warl_interpreter(isa_node['satp']['rv'+str(xlen)]['mode']['type']['warl']))
-        if satp_modewarl.islegal(9,[]):
+                warl_class(isa_node['satp']['rv'+str(xlen)]['mode']['type']['warl'], 
+                        'satp::mode', 
+                        isa_node['satp']['rv'+str(xlen)]['mode']['msb'],
+                        isa_node['satp']['rv'+str(xlen)]['mode']['lsb']
+                        )
+
+        if satp_modewarl.islegal(9,[]) == []:
             s_mode = 'sv48'
-        elif satp_modewarl.islegal(8,[]):
+        elif satp_modewarl.islegal(8,[]) == []:
             s_mode = 'sv39'
-        elif satp_modewarl.islegal(1,[]):
+        elif satp_modewarl.islegal(1,[]) == []:
             s_mode = 'sv32'
         else:
             logger.error('Cannot deduce supervisor mode from satp.mode')
@@ -137,7 +142,12 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
         asidlen = 0
         asid_mask = 0xFFFF
         satp_asidwarl =\
-                (warl_interpreter(isa_node['satp']['rv'+str(xlen)]['asid']['type']['warl']))
+                warl_class(isa_node['satp']['rv'+str(xlen)]['asid']['type']['warl'], 
+                        'satp::asid', 
+                        isa_node['satp']['rv'+str(xlen)]['asid']['msb'],
+                        isa_node['satp']['rv'+str(xlen)]['asid']['lsb']
+                        )
+
         while asid_mask != 0:
             if satp_asidwarl.islegal(int(asid_mask),[]):
                 asidlen = int(math.log2(asid_mask+1))

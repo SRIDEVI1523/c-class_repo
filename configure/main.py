@@ -88,14 +88,14 @@ def main():
         bsv_dir = 'csrbox/'
                       
         os.makedirs(bsv_dir, exist_ok= True)
-        csr_gen.csr_gen(isa_file, args.gspec, custom_file, debugfile, None, bsv_dir, 'soc',logging=True)
+        csr_gen.csr_gen(isa_file, args.gspec, custom_file, debugfile, None, bsv_dir, 'soc',False,logging=True)
 
     if args.cspec is None:
         logger.info('No CORE YAML provided')
         sys.exit(0)
     elif args.clean is None:
         configure.validate_specs(os.path.abspath(args.cspec),
-                                 os.path.abspath(args.ispec), 
+                                 isa_file, 
                                  debugfile, 
                                  os.path.abspath(args.gspec), True)
 
