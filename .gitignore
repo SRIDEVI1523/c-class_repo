@@ -41,7 +41,7 @@ build/
 
 depends.mk
 
-csrbox/
+csrbox_bsv/
 
 boot/c-class.dtb
 

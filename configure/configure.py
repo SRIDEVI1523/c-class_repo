@@ -9,8 +9,6 @@ import logging
 import sys
 import math
 from repomanager.rpm import repoman
-from riscv_config.warl import warl_class
-from csrbox.csr_gen import find_group
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +22,16 @@ def check_prerequisites():
     utils.which('csrbox')
     utils.which('riscv-config')
 
+def install_csrbox():
+    cwd = os.getcwd()
+    logger.info('Building csrbox')
+    utils.shellCommand('cd csrbox && pip install .').run(cwd=cwd)
+
+def install_riscv_config():
+    cwd = os.getcwd()
+    logger.info('Building riscv-config')
+    utils.shellCommand('cd riscv-config && pip install .').run(cwd=cwd)
+    
 def handle_dependencies(verbose,clean,update,patch):
     repoman(dependency_yaml,clean,update,patch,False,'./')
 
@@ -113,7 +121,7 @@ def specific_checks(foo):
 def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     global bsc_cmd
     global bsc_defines
-
+    from riscv_config.warl import warl_class
     logger.info('Generating BSC compile options')
     xlen = 64
     if '32' in isa_node['ISA']:
@@ -322,7 +330,7 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
         macros += ' arith_trap'
 
     macros += ' csr_low_latency'
-    
+    from csrbox.csr_gen import find_group
     total_counters = 0
     pmp_entries = 0
     for node in isa_node:

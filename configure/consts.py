@@ -75,4 +75,10 @@ verification:
 benchmarks:
   url: https://gitlab.com/incoresemi/core-generators/benchmarks
   checkout: master
+csrbox:
+  url: https://gitlab.com/shaktiproject/cores/csrbox
+  checkout: Floating_point
+riscv-config:
+  url: https://gitlab.com/shaktiproject/cores/riscv-config
+  checkout: No_hyp_reg
 '''

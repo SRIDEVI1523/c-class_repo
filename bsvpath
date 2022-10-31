@@ -1,5 +1,5 @@
 src/
-csrbox/
+csrbox_bsv/
 src/predictors
 src/mbox
 src/fpu/

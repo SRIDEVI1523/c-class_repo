@@ -5,11 +5,6 @@ import sys
 
 import configure.configure as configure
 import configure.utils as utils
-import riscv_config.checker as checker
-import csrbox.csr_gen as csr_gen
-from   csrbox.errors import ValidationError
-import csrbox
-import riscv_config
 
 
 
@@ -35,9 +30,6 @@ def main():
     logger.info('---------- Available under BSD License---------- ')
     logger.info('\n\n')
 
-    logger.info('Using CSRBOX Version: '+ str(csrbox.__version__))
-    logger.info('Using RISCV-CONFIG Version: '+ str(riscv_config.__version__))
-
     if args.clean is None:
         update_dep = True
         patch = True
@@ -53,6 +45,16 @@ def main():
         logger.error('No ISA YAML provided')
         sys.exit(0)
     elif not args.clean:
+        configure.install_riscv_config()
+        configure.install_csrbox()
+        import csrbox.csr_gen as csr_gen
+        from   csrbox.errors import ValidationError
+        import csrbox
+        import riscv_config.checker as checker
+        import riscv_config
+        logger.info('Using CSRBOX Version: '+ str(csrbox.__version__))
+        logger.info('Using RISCV-CONFIG Version: '+ str(riscv_config.__version__))
+
         logger.info('Validating ISA YAML: ' + str(args.ispec))               
         os.makedirs(work_dir, exist_ok= True)
         #isa_file = riscv_config.check_isa_specs(os.path.abspath(args.ispec), work_dir, False)
@@ -61,9 +63,8 @@ def main():
         except ValidationError as msg:
             logger.error(msg)
             return 1
-
+            
         logger.info('Starting CSR generation using CSR-BOX')
-
         if args.customspec:
             try:
                 custom_file = checker.check_custom_specs(args.customspec,
@@ -85,7 +86,7 @@ def main():
             debugfile = None
 
         
-        bsv_dir = 'csrbox/'
+        bsv_dir = 'csrbox_bsv/'
                       
         os.makedirs(bsv_dir, exist_ok= True)
         csr_gen.csr_gen(isa_file, args.gspec, custom_file, debugfile, None, bsv_dir, 'soc',False,logging=True)
