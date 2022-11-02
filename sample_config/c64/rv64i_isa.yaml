@@ -482,7 +482,7 @@ hart0:
             wr_illegal:
               - Unchanged
     pmpcfg0:
-        reset-val: 0
+        reset-val: 0xf
         rv32:
             accessible: false
         rv64:
@@ -589,7 +589,7 @@ hart0:
                       - "pmp0cfg[7] in [0] -> pmpaddr0[63:0] bitmask [0x3FFFFFFE,0x0000000000000000]"
                     wr_illegal:
                       - Unchanged
-        reset-val: 0
+        reset-val: 0x3FFFFFFE
     pmpaddr1:
         rv32:
             accessible: false
