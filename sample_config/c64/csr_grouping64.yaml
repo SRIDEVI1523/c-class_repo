@@ -45,3 +45,7 @@ grp2:
     - DSCRATCH0
     - DSCRATCH1
     - DCSR
+    - MHPMCOUNTER3
+    - MHPMEVENT3
+    - MHPMCOUNTER4
+    - MHPMEVENT4
