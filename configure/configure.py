@@ -19,8 +19,8 @@ bsv_path_file = open('bsvpath','r').read().splitlines()
 def check_prerequisites():
     utils.which('bsc')
     utils.which('bluetcl')
-    utils.which('csrbox')
-    utils.which('riscv-config')
+    # utils.which('csrbox')
+    # utils.which('riscv-config')
 
 def install_csrbox():
     cwd = os.getcwd()
