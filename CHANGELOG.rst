@@ -4,6 +4,22 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.10.0] - 2022-10-19
+--------------------
+
+- Added UARTv2 changes
+- Modified requirements.txt to use recent aapg
+- Updated decoder to check for non-zero fs bits in mstatus for floating point instruction
+- Updated decoder to check for valid rounding mode
+- Fixed BPU to not give prediction at the start of fence operation.
+- Upstreamed verification and updated timeout in ci
+
+[1.9.9] - 2020-11-03
+--------------------
+
+- Added c64, c32 design config yamls
+- Removed obsolete csrs for MTIME and MTIMEH
+
 [1.9.8] - 2020-09-23
 --------------------
 
