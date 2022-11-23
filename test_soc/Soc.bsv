@@ -122,7 +122,8 @@ package Soc;
         ccore[i].ma_debugger_available(1);
       endrule:rl_connect_available
     end
-    mkConnection(clint.ma_stop_count,ccore[0].mv_stop_timer);
+    // mkConnection(clint.ma_stop_count,ccore[0].mv_stop_timer); commenting out this line
+    //                                                       because of change in interface of devices
   `endif
     // -------------------------------- JTAG + Debugger Setup ---------------------------------- //
       
@@ -146,7 +147,6 @@ package Soc;
     for (Integer i = 0; i<`num_harts; i = i + 1) begin    
       mkConnection(ccore[i].sb_clint_mtip,clint.sb_clint_mtip);
       mkConnection(ccore[i].sb_clint_mtime,clint.sb_clint_mtime);
-      mkConnection(ccore[i].sb_clint_msip,clint.sb_clint_msip[i]);
     end
     /*doc:rule: */
     rule rl_connect_plic;
@@ -157,6 +157,14 @@ package Soc;
       `endif
       end  
     endrule:rl_connect_plic
+
+    // rule to connect clint.msip to each of the cores
+    rule rl_connect_clint_msip;
+      let msip <-clint.sb_clint_msip.get();
+      for (Integer i = 0; i<`num_harts; i = i + 1) begin
+        ccore[i].sb_clint_msip.put(msip[i]);
+      end
+    endrule: rl_connect_clint_msip
 
   `ifdef rtldump
     // TODO parameterize this

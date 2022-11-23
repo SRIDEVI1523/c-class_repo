@@ -52,14 +52,14 @@ typedef enum {None, IWalk, DWalk} PTWState deriving(Bits, Eq, FShow);
 interface Ifc_ccore_axi4;
 	interface AXI4_Master_IFC#(`paddr, `elen, USERSPACE) master_d;
 	interface AXI4_Master_IFC#(`paddr, `elen, USERSPACE) master_i;
-  method Action sb_clint_msip (Bit#(1) m) ;
+    interface Put#(Bit#(1)) sb_clint_msip;
 
 	/*doc:method: This method should receive the machine timer interrupt from the CLINT module*/
-  method Action sb_clint_mtip (Bit#(1) m) ;
+  interface Put#(Bit#(1)) sb_clint_mtip;
 
 	/*doc:method: This method should receive the machine timer value from the CLINT module. This will
 	* be used for the pseduo op rdtime instruction in the user mode*/
-  method Action sb_clint_mtime(Bit#(64) m);
+  interface Put#(Bit#(64)) sb_clint_mtime;
 
   /*doc:method: This method should receive the machine external interrupt from the PLIC module*/
 	method Action sb_plic_meip(Bit#(1) ex_i);
@@ -542,9 +542,22 @@ _shift_amount:%d",hartid, req.data, rg_burst_count, last, rg_shift_amount))
   `endif
 `endif   
   
-  method sb_clint_msip = riscv.interrupts.ma_clint_msip;
-  method sb_clint_mtip = riscv.interrupts.ma_clint_mtip; 
-  method sb_clint_mtime = riscv.interrupts.ma_clint_mtime;
+  interface sb_clint_msip = interface Put
+    method Action put(Bit#(1) intrpt);
+      riscv.interrupts.ma_clint_msip(intrpt);
+    endmethod
+  endinterface;
+  interface sb_clint_mtip = interface Put
+    method Action put(Bit#(1) intrpt);
+      riscv.interrupts.ma_clint_mtip(intrpt);
+    endmethod
+  endinterface;
+  interface sb_clint_mtime = interface Put
+    method Action put (Bit#(64) c_mtime);
+      riscv.interrupts.ma_clint_mtime(c_mtime);
+    endmethod
+  endinterface;
+
 	method sb_plic_meip  = riscv.interrupts.ma_plic_meip;
 `ifdef supervisor
 	method sb_plic_seip = riscv.interrupts.ma_plic_seip;
