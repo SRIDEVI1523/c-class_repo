@@ -122,7 +122,7 @@ package Soc;
         ccore[i].ma_debugger_available(1);
       endrule:rl_connect_available
     end
-    // mkConnection(clint.ma_stop_count,ccore[0].mv_stop_timer); commenting out this line
+    mkConnection(clint.ma_stop_count,ccore[0].mv_stop_timer);
     //                                                       because of change in interface of devices
   `endif
     // -------------------------------- JTAG + Debugger Setup ---------------------------------- //
