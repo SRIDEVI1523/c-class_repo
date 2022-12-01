@@ -2,8 +2,7 @@
 /* 
 
 Module name: Multiplier module.  
-author name: Neel Gala
-Email id: neelgala@gmail.com
+author name: IIT Madras
 */
 package muldiv_fpga;
   `ifdef simulate

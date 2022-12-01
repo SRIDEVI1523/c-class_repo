@@ -2,8 +2,7 @@
 /*
 
 Module name : Riscv_arithmetic_unit.
-author name : Neel Gala, Aditya Mathur
-Email id : neelgala@gmail.com
+Author name : IIT Madras
 
 This module is the arithmetic execution unit for the RISCV ISA.
 It is a 64 bit implementation which is named as RV64.  The instruction with a "W" are RV64

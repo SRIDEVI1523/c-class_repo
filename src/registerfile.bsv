@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details:
 
 This module implements the integer and floating point register files. They are currently implemented

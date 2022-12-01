@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details : This stage implements the execute stage of the pipe.
 
 --------------------------------------------------------------------------------------------------

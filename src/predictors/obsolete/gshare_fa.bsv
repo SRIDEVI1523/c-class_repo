@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /* 
 
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details: This module implements a fullt-associative GSHARE branch predictor with
 Return-Address-Stack support. It basically has the prediction and training phase. The comments on
 the respective methods describe their operations.

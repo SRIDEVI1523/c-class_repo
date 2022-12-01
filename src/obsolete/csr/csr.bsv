@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author  : IIT Madras
 Details : This module contains the methods and functions which will perform tasks related to CSRs:
 Trap handling and Updating the CSRs for system - instruction
 

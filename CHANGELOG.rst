@@ -4,6 +4,18 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[2.0.0] - 2022-12-01
+--------------------
+
+- Pipeline upgraded
+- Rtldump changed to match with newer spike
+- Updates made to use newer caches_mmu
+- FPU support added
+- Updates made to use newer devices
+- Configure scripts changes made to build csrbox and riscv-config and use them
+- Changes made to Debugger 1.00 
+
+
 [1.10.0] - 2022-10-19
 --------------------
 

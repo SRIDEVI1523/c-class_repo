@@ -1,9 +1,8 @@
 //See LICENSE.iitm for license details
 /*
-Authors     : Vinod.G, Arjun Menon,Deepa N. Sarma
-Email       : g.vinod1993@gmail.com, c.arjunmenon@gmail.com
+
+Author      : IIT Madras
 Last update : 27th November 2017
-See LICENSE for more details
 Description:
 TODO
 */

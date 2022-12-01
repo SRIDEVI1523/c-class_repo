@@ -1,6 +1,6 @@
-// Copyright (c) 2020 IIT Madras. see LICENSE.iitm for more details on licensing terms
+// See LICENSE.iitm for license details
 /*
-Author: Neel Gala, neelgala@incoresemi.com
+Author: IIT Madras
 Created on: Saturday 19 June 2021 08:22:34 PM
 
 */

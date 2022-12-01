@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author: Snehashri Sivaraman
-Email id: snehashrisivaraman@gmail.com
+Author: IIT Madras
 Details:
 
 This module primarily holds the combo functions to decode the instructions and provide

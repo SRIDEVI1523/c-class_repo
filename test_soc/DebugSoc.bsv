@@ -1,5 +1,6 @@
+// See LICENSE.iitm for license details
 /*
-Author: Neel Gala, neelgala@gmail.com
+Author: IIT Madras
 Created on: Wednesday 29 April 2020 10:09:32 AM IST
 
 */

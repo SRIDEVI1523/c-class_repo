@@ -1,7 +1,6 @@
 //See LICENSE.iitm for license details
 /*
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details: This module implements the multiplier for RISC-V. It expects the operands and funct3
 arguments to be provided. This module uses the signedmul bsvwrapper to perform the multiplication.
 The signedmul module is chosen since it provides benefits in area and frequency when performing asic

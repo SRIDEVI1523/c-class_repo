@@ -1,9 +1,8 @@
 //See LICENSE.iitm for license details
 /*
-Authors     : Vinod.G, Rishi Naidu, Aditya Govardhan
-Email       : g.vinod1993@gmail.com
+
+Author      : IIT Madras
 Last Update : 27th November 2017
-See LICENSE for more details
 
 Implementation is based on a IEEE paper Titled:
 "Implementation of Single Precision Floating Point Square Root on FPGAs"

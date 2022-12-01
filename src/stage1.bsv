@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author : Neel Gala, Vipul, Deepa
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details:
 This module will interact with the memory subsystem to fetch relevant instructions from memory. The
 module will also receive flushes from the write - back stage which could be because of a fence or trap

@@ -1,9 +1,7 @@
 //See LICENSE.iitm for license details
 /*
-Authors     : Vinod.G, Aditya Govardhan
-Email       : g.vinod1993@gmail.com
+Author      : IIT Madras
 Last Update : 27th November 2017
-See LICENSE for more details
 Paper Reference: Floating Point Fused Multiply-Add Architectures (http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=4487224)
 Description:
 TODO

@@ -1,7 +1,6 @@
 //See LICENSE.iitm for license details
 /*
-Author Names : Neel Gala
-Email ID : neelgala@gmail.com
+Author Names : IIT Madras
 
 Description :
 This is the 64 - bit core of the c_class processor. It containes rules for each stage. The description of each stage

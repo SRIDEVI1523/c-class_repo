@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details:
 1.  This module decodes the instructions fetched from the previous stage and also fetches the
     operands from the registerfile.
