@@ -193,6 +193,9 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
   `ifdef muldiv
     Ifc_mbox mbox <- mkmbox(0);
     FIFOF#(Bit#(`xlen)) ff_mbox_out <- mkSizedBypassFIFOF(`isb_s3s4 );
+    `ifdef arith_trap
+      FIFOF#(Tuple2#(Bool, Bit#(`causesize)) ff_mbox_arith_trap_out <- mkSizedBypassFIFOF(`isb_s3s4 );
+    `endif
   `endif
   `ifdef debug
     /*doc:wire: */
@@ -250,12 +253,18 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     mkConnection(stage3.muldiv.mv_mbox_inputs, mbox.ma_inputs);
     mkConnection(mbox.tx_output, ff_mbox_out);
     mkConnection(ff_mbox_out, stage4.s4_mbox.rx_mbox_output);
+    `ifdef arith_trap
+      mbox.ma_arith_trap_en(unpack(stage5.csrs.mv_cacheenable[3]));
+    `endif
   `endif
   `ifdef spfpu
     mkConnection(stage3.float.ma_fbox_ready,fbox.fpu_ready);
     mkConnection(stage3.float.mv_fbox_inputs, fbox._start);
     mkConnection(fbox.tx_output, ff_fbox_out);
     mkConnection(ff_fbox_out, stage4.s4_fbox.rx_fbox_output);
+    `ifdef arith_trap
+      fbox.rd_arith_excep_en(unpack(stage5.csrs.mv_cacheenable[3]));
+    `endif
   `endif
   `ifdef bpu
     /*doc:rule: */

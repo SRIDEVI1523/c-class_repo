@@ -1004,11 +1004,6 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
       wr_hstatus <= hstatus;
     endmethod
  `endif
- `ifdef arith_trap
-    method  Action ma_arith_trap_en(Bit#(1) en);
-      multicycle_alu.ma_arith_trap_en(en);
-    endmethod
- `endif
   endinterface;
 
   interface cache = interface Ifc_s3_cache

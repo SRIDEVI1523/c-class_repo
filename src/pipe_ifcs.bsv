@@ -374,6 +374,9 @@ endinterface:Ifc_s2_debug
 `ifdef muldiv
   interface Ifc_s4_muldiv;
     interface RXe#(Bit#(`xlen)) rx_mbox_output;
+    `ifdef arith_trap
+      interface RXe#(Tuple2(Bool, Bit#(`causesize))) rx_mbox_arith_trap_output;
+    `endif
   endinterface:Ifc_s4_muldiv
 `endif
 // -----------------------------------------------------------------------------------------------
@@ -432,7 +435,7 @@ endinterface:Ifc_s5_cache
 
 interface Ifc_s5_csrs;
   method Bit#(1) mv_csr_misa_c;
-  method Bit#(3) mv_cacheenable;
+  method Bit#(4) mv_cacheenable;
   method Bit#(2) mv_curr_priv;
   method Bit#(`xlen) mv_csr_mstatus;
   method CSRtoDecode mv_csrs_to_decode;
