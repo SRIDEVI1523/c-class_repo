@@ -718,10 +718,9 @@ typedef struct{
 typedef struct{
   Bit#(ELEN)  data;
   Bool        valid;
-`ifdef arith_trap
-  Bool             trap;
-  Bit#(`causesize) cause;
-`endif
+  `ifdef arith_trap
+    Bit#(1) arith_trap_en;
+  `endif
 `ifdef spfpu
   Bit#(5) fflags;
 `endif
