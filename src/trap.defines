@@ -36,12 +36,12 @@
 `define CounterInterrupt      16
 
 // - custom exceptions
-//`define Int_divide_by_zero    17
-//`define FP_invalid            18
-//`define FP_divide_by_zero     19
-//`define FP_overflow           20
-//`define FP_underflow          21
-//`define FP_inexact            22
+`define Int_divide_by_zero    17
+`define FP_invalid            18
+`define FP_divide_by_zero     19
+`define FP_overflow           20
+`define FP_underflow          21
+`define FP_inexact            22
 
 //------------ internal encodings --------------//
 `define Rerun                 `max_ex_cause+1
