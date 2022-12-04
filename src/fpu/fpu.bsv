@@ -11,6 +11,7 @@ package fpu;
 `include "ccore_params.defines"
 `include "fpu.defines"
 `include "Logger.bsv"
+`include "trap.defines"
 import ccore_types::*;
 import fpu_compare_min_max::*;
 import fpu_int_to_sp::*;
@@ -607,34 +608,33 @@ module mkfpu(Ifc_fpu);
                                                                                 m.funct3,m.imm, m.issp))
     endmethod
 
-	// method XBoxOutput get_result;
-  //   let res_ = rg_result;
-  //   /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
-  //   csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
-  //   written below */
-  // `ifdef arith_trap
-  //   if(wr_arith_en==1'b1) begin
-  //       if(res_.fflags!=0)
-  //         res_.trap = True;
-  //       if (res_.fflags[4]==1)
-  //         res_.cause =`FP_invalid; //Invalid
-  //       else if (res_.fflags[3]==1)
-  //         res_.cause=`FP_divide_by_zero; //Divide_by_zero_float
-  //       else if (res_.fflags[2]==1)
-  //         res_.cause=`FP_overflow; //Overflow
-  //       else if (res_.fflags[1]==1)
-  //         res_.cause=`FP_underflow; //Underflow
-  //       else if (res_.fflags[0]==1)
-  //         res_.cause=`FP_inexact; //Inexact
-  //     end
-  //   else
-  //      res_.trap=False;
-	// `endif
+  method TXe#(XBoxOutput) tx_output;
+    let res = tx_fbox_out.e;
+    /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
+    csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
+    written below */
+  `ifdef arith_trap
+    if(wr_arith_en==1'b1) begin
+        if(res.fflags!=0)
+          res.trap = True;
+        if (res.fflags[4]==1)
+          res.cause =`FP_invalid; //Invalid
+        else if (res.fflags[3]==1)
+          res.cause=`FP_divide_by_zero; //Divide_by_zero_float
+        else if (res.fflags[2]==1)
+          res.cause=`FP_overflow; //Overflow
+        else if (res.fflags[1]==1)
+          res.cause=`FP_underflow; //Underflow
+        else if (res.fflags[0]==1)
+          res.cause=`FP_inexact; //Inexact
+      end
+    else
+       res.trap=False;
+	`endif
+    return res;
 
-  //    return res_ ;
-
-	// endmethod
-  method tx_output = tx_fbox_out.e;
+  endmethod
+  //method tx_output = tx_fbox_out.e;
   method fpu_ready = pack(!(rg_multicycle_op || ff_input.notEmpty));
 	method Action flush;
 		  wr_flush<=True;
