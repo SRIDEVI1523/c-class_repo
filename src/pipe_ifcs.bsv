@@ -198,12 +198,6 @@ interface Ifc_s3_float;
   endinterface: Ifc_s3_float
 `endif
 
-`ifdef spfpu
-  interface Ifc_s4_float;
-    interface RXe#(XBoxOutput) rx_fbox_output;
-  endinterface:Ifc_s4_float
-`endif
-
 `ifdef perfmonitors
 interface Ifc_s3_perfmonitors;
   /*doc:method: */
@@ -375,9 +369,15 @@ endinterface:Ifc_s2_debug
   interface Ifc_s4_muldiv;
     interface RXe#(Bit#(`xlen)) rx_mbox_output;
     `ifdef arith_trap
-      interface RXe#(Tuple2(Bool, Bit#(`causesize))) rx_mbox_arith_trap_output;
+      interface RXe#(Tuple2#(Bool, Bit#(`causesize))) rx_mbox_arith_trap_output;
     `endif
   endinterface:Ifc_s4_muldiv
+`endif
+
+`ifdef spfpu
+  interface Ifc_s4_float;
+    interface RXe#(XBoxOutput) rx_fbox_output;
+  endinterface:Ifc_s4_float
 `endif
 // -----------------------------------------------------------------------------------------------
 // ------------------------------------stage5 interfaces -----------------------------------------

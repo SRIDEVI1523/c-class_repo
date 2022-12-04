@@ -101,7 +101,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
       ff_ordering.enq(False);
       `logLevel( mbox, 0, $format("MBOX: To DIV. Op1:%h Op2:%h sign:%b", inputs.in1, inputs.in2, inputs.in1[valueOf(`xlen)-1] ))
       div_.ma_inputs( inputs.in1, inputs.in2, inputs.funct3 `ifdef RV64 ,inputs.wordop `endif ) ;
-      div_.ma_arith_trap_en(wr_arith_trap_en);
+      div_.ma_div_arith_trap_en(wr_arith_trap_en);
     end
   endmethod
   method mv_ready= MBoxRdy{mul: mul_.mv_ready && ff_ordering.notFull, div: div_.mv_ready && ff_ordering.notFull()};

@@ -28,6 +28,7 @@ package stage4;
   import dcache_types :: * ;
   import pipe_ifcs    :: * ;
 
+  `include "trap.defines"
 
   `include "Logger.bsv"
 
@@ -73,7 +74,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
   `ifdef muldiv
     RX#(Bit#(`xlen)) rx_mbox <- mkRX;
     `ifdef arith_trap
-      RX#(Tuple2(Bool, Bit#(`xlen)) rx_mbox_arith_trap_output <- mkRX; 
+      RX#(Tuple2#(Bool, Bit#(`causesize))) rx_mbox_arith_trap_output <- mkRX; 
     `endif
   `endif
   `ifdef spfpu
@@ -261,13 +262,11 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     */
     rule rl_capture_muldiv(rx_fuid.u.first.insttype == MULDIV && rx_mbox.u.notEmpty());
       let mbox_result = rx_mbox.u.first;
-      `ifdef arith_trap
-        let mbox_arith_trap_output = rx_mbox_arith_trap_output.u.first;
-        rx_mbox_arith_trap_output.u.deq;
-      `endif
       let fuid = fn_fu2cu(rx_fuid.u.first);
       rx_mbox.u.deq;
       `ifdef arith_trap
+        let mbox_arith_trap_output = rx_mbox_arith_trap_output.u.first;
+        rx_mbox_arith_trap_output.u.deq;
         if (tpl_1(mbox_arith_trap_output)) begin
           fuid.insttype = TRAP;
           TrapOut trapout = TrapOut {cause   : tpl_2(mbox_arith_trap_output), 
@@ -278,6 +277,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
           tx_fuid.u.enq(fuid);
           rx_fuid.u.deq;
           `ifdef rtldump
+            let clogpkt = rx_commitlog.u.first;
             tx_commitlog.u.enq(clogpkt);
           `endif
         end
@@ -306,7 +306,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
       `logLevel( stage4, 0, $format("[%2d]STAGE4: PC:%h",hartid,rx_fuid.u.first.pc))
       `logLevel( stage4, 0, $format("[%2d]STAGE4: Enquing MULDIV Output: ",hartid, fshow(mbox_result)))
       `ifdef arith_trap
-        `logLevel(stage4, 0, $format("[%2d]STAGE4: MBOX: ArithTrap: ", fshow(mbox_arith_trap_output))
+        `logLevel(stage4, 0, $format("[%2d]STAGE4: MBOX: ArithTrap: ", fshow(mbox_arith_trap_output)))
       `endif
     endrule:rl_capture_muldiv
   `endif
@@ -322,9 +322,26 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     let fuid = fn_fu2cu(rx_fuid.u.first);
     rx_fbox.u.deq;
     `ifdef arith_trap
-      if (tpl_1(_r.trap)) begin
+      Bool arith_trap = False;
+      Bit#(`causesize) arith_cause = 0;
+      if (_r.arith_trap_en == 1) begin
+        if(_r.fflags!=0)
+          arith_trap = True;
+        if (_r.fflags[4]==1)
+          arith_cause =`FP_invalid; //Invalid
+        else if (_r.fflags[3]==1)
+          arith_cause=`FP_divide_by_zero; //Divide_by_zero_float
+        else if (_r.fflags[2]==1)
+          arith_cause=`FP_overflow; //Overflow
+        else if (_r.fflags[1]==1)
+          arith_cause=`FP_underflow; //Underflow
+        else if (_r.fflags[0]==1)
+          arith_cause=`FP_inexact; //Inexact
+      end
+
+      if (arith_trap) begin
         fuid.insttype = TRAP;
-        TrapOut trapout = TrapOut {cause   : tpl_2(mbox_arith_trap_output), 
+        TrapOut trapout = TrapOut {cause   : arith_cause, 
                                    is_microtrap: True,
                                    mtval : ?
                                   };
@@ -332,6 +349,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
         tx_fuid.u.enq(fuid);
         rx_fuid.u.deq;
         `ifdef rtldump
+          let clogpkt = rx_commitlog.u.first;
           tx_commitlog.u.enq(clogpkt);
         `endif
       end

@@ -75,7 +75,7 @@ interface Ifc_restoring_div;
 	method ActionValue#(Bit#(`xlen)) mv_output;
   `ifdef arith_trap
     method Tuple2#(Bool, Bit#(`causesize)) mv_arith_trap_out;
-    method Action ma_arith_trap_en(Bit#(1) en);
+    method Action ma_div_arith_trap_en(Bit#(1) en);
  `endif
 endinterface
 
@@ -165,7 +165,7 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
   endmethod
   `ifdef arith_trap
     method mv_arith_trap_out = tuple2(rg_trap, `Int_divide_by_zero);
-    method Action ma_arith_trap_en(Bit#(1) en);
+    method Action ma_div_arith_trap_en(Bit#(1) en);
       wr_arith_trap <= en;
     endmethod
  `endif
