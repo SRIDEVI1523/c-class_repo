@@ -306,7 +306,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
       `logLevel( stage4, 0, $format("[%2d]STAGE4: PC:%h",hartid,rx_fuid.u.first.pc))
       `logLevel( stage4, 0, $format("[%2d]STAGE4: Enquing MULDIV Output: ",hartid, fshow(mbox_result)))
       `ifdef arith_trap
-        `logLevel(stage4, 0, $format("[%2d]STAGE4: MBOX: ArithTrap: ", fshow(mbox_arith_trap_output)))
+        `logLevel(stage4, 0, $format("[%2d]STAGE4: MBOX: ArithTrap: ", hartid, fshow(mbox_arith_trap_output)))
       `endif
     endrule:rl_capture_muldiv
   `endif
