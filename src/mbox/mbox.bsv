@@ -29,6 +29,10 @@ interface Ifc_mbox;
 	method Action ma_inputs(MBoxIn inputs);
   method MBoxRdy mv_ready;
   method TXe#(Bit#(`xlen)) tx_output;
+  `ifdef arith_trap
+    method Action ma_arith_trap_en(Bit#(1) en);
+    method TXe#(Tuple2#(Bool, Bit#(`causesize))) tx_arith_trap_output;
+  `endif
 endinterface: Ifc_mbox
 
 `ifdef mbox_noinline
@@ -42,6 +46,10 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
 
   FIFOF#(Bool) ff_ordering <- mkUGSizedFIFOF(max(`MULSTAGES_TOTAL,2));
   TX#(Bit#(`xlen)) tx_mbox_out <- mkTX;
+  `ifdef arith_trap
+    Wire#(Bit#(1)) wr_arith_trap_en <- mkDWire(0);
+    TX#(Tuple2#(Bool, Bit#(`causesize))) tx_arith_trap_out <- mkTX;
+  `endif
 
   /*doc:rule: */
   rule rl_fifo_full(!tx_mbox_out.u.notFull());
@@ -56,6 +64,9 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
       if (mul_.mv_output_valid) begin
         let _x <- mul_.mv_output;
         tx_mbox_out.u.enq(_x);
+        `ifdef arith_trap
+          tx_arith_trap_out.u.enq(unpack(0));
+        `endif
         ff_ordering.deq;
         `logLevel( mbox, 0, $format("MBOX: Collecting MUL o/p"))
       end
@@ -66,6 +77,9 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
       if (div_.mv_output_valid) begin
         let _x <- div_.mv_output;
         tx_mbox_out.u.enq(_x);
+        `ifdef arith_trap
+          tx_arith_trap_out.u.enq(div_.mv_arith_trap_out);
+        `endif
         ff_ordering.deq;
         `logLevel( mbox, 0, $format("MBOX: Collecting DIV o/p"))
       end
@@ -87,11 +101,18 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
       ff_ordering.enq(False);
       `logLevel( mbox, 0, $format("MBOX: To DIV. Op1:%h Op2:%h sign:%b", inputs.in1, inputs.in2, inputs.in1[valueOf(`xlen)-1] ))
       div_.ma_inputs( inputs.in1, inputs.in2, inputs.funct3 `ifdef RV64 ,inputs.wordop `endif ) ;
+      div_.ma_arith_trap_en(wr_arith_trap_en);
     end
   endmethod
   method mv_ready= MBoxRdy{mul: mul_.mv_ready && ff_ordering.notFull, div: div_.mv_ready && ff_ordering.notFull()};
 
   method tx_output = tx_mbox_out.e;
+  `ifdef arith_trap
+    method Action ma_arith_trap_en(Bit#(1) en);
+      wr_arith_trap_en <= en;
+    endmethod
+    method tx_arith_trap_output = tx_arith_trap_out.e;
+  `endif
 endmodule
 endpackage
 

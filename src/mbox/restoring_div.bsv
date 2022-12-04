@@ -14,6 +14,7 @@ import Assert         :: * ;
 import DReg           :: * ;
 import FIFOF          :: * ;
 import ConfigReg      :: * ;
+`include "trap.defines"
 
 function Tuple2#(Bit#(TAdd#(1,`xlen)), Bit#(`xlen)) fn_single_div (Bit#(TAdd#(1,`xlen)) remainder,Bit#(`xlen) quotient, Bit#(`xlen) divisor);
   for(Integer i=0; i<(valueOf(`xlen)/`DIVSTAGES); i=i+ 1)begin
@@ -72,6 +73,10 @@ interface Ifc_restoring_div;
 	method Bool mv_ready;
 	method Bool mv_output_valid;
 	method ActionValue#(Bit#(`xlen)) mv_output;
+  `ifdef arith_trap
+    method Tuple2#(Bool, Bit#(`causesize)) mv_arith_trap_out;
+    method Action ma_arith_trap_en(Bit#(1) en);
+ `endif
 endinterface
 
 `ifdef mbox_div_noinline
@@ -100,6 +105,13 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
 `ifdef RV64
   Reg#(Bool)        rg_wordop <- mkReg(False);
 `endif
+
+  `ifdef arith_trap
+    Wire#(Bit#(1)) wr_arith_trap <- mkWire();
+    Reg#(Bool)  rg_trap <- mkDReg(False);
+  `endif
+
+
   rule single_step_div(rg_count != 0 && !rg_valid);
     let {upper, lower}=fn_single_div(truncateLSB(partial),truncate(partial), rg_op2);
     partial<= {upper, lower};
@@ -108,9 +120,11 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
       `logLevel( divider, 0, $format("[%2d] DIV: Divide by zero detected. RgCount:%d",hartid, rg_count))
       rg_count <= 0;
       rg_valid <= True;
+      `ifdef arith_trap
+        if(wr_arith_trap==1)
+          rg_trap <= True;
+      `endif
       Bit#(`xlen) reslt=quotient_remainder? truncate(rg_in1):'1;
-      Bit#(`xlen) product= `ifdef RV64 rg_wordop?signExtend(reslt[31:0]): `endif truncate(reslt);
-      rg_result <= product;
     end
     else if(rg_count == fromInteger(`DIVSTAGES)+ 1 ) begin
       rg_count <= 0;
@@ -149,5 +163,12 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
 	  rg_valid <= False;
     return rg_result;
   endmethod
+  `ifdef arith_trap
+    method mv_arith_trap_out = tuple2(rg_trap, `Int_divide_by_zero);
+    method Action ma_arith_trap_en(Bit#(1) en);
+      wr_arith_trap <= en;
+    endmethod
+ `endif
+
 endmodule
 endpackage
