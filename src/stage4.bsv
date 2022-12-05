@@ -260,7 +260,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
      * The outputs from the mbox are transfered to the tx_baseout ISB for a regular commit in the
      * write-back stage
     */
-    rule rl_capture_muldiv(rx_fuid.u.first.insttype == MULDIV && rx_mbox.u.notEmpty());
+   rule rl_capture_muldiv(rx_fuid.u.first.insttype == MULDIV && rx_mbox.u.notEmpty() `ifdef arith_trap && rx_mbox_arith_trap_output.u.notEmpty() `endif );
       let mbox_result = rx_mbox.u.first;
       let fuid = fn_fu2cu(rx_fuid.u.first);
       rx_mbox.u.deq;

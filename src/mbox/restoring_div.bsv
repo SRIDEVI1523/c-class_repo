@@ -107,10 +107,13 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
 `endif
 
   `ifdef arith_trap
-    Wire#(Bit#(1)) wr_arith_trap <- mkWire();
+    Wire#(Bit#(1)) wr_arith_trap <- mkDWire(0);
     Reg#(Bool)  rg_trap <- mkDReg(False);
   `endif
 
+  rule rl_display;
+    `logLevel( divider, 0, $format("[%2d]DIV: RgCount:%d rg_valid:%d",hartid, rg_count, rg_valid))
+  endrule
 
   rule single_step_div(rg_count != 0 && !rg_valid);
     let {upper, lower}=fn_single_div(truncateLSB(partial),truncate(partial), rg_op2);
@@ -129,6 +132,7 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
     else if(rg_count == fromInteger(`DIVSTAGES)+ 1 ) begin
       rg_count <= 0;
       rg_valid <= True;
+      rg_trap <= False;
       Bit#(`xlen) reslt=quotient_remainder?partial[valueOf(TMul#(2, `xlen))-1:valueOf(`xlen)]:  truncate(partial);
       if((rg_upperbits && rg_complement && reslt[valueOf(`xlen)-1] != rg_sign_op1)||(rg_complement && !rg_upperbits))
       reslt = ~reslt+ 1;
