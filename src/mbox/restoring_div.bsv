@@ -124,6 +124,7 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
       rg_count <= 0;
       rg_valid <= True;
       `ifdef arith_trap
+        `logLevel( divider, 0, $format("[%2d] DIV: Arith_trap_EN ",hartid, wr_arith_trap))
         if(wr_arith_trap==1)
           rg_trap <= True;
       `endif

@@ -47,7 +47,7 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   FIFOF#(Bool) ff_ordering <- mkUGSizedFIFOF(max(`MULSTAGES_TOTAL,2));
   TX#(Bit#(`xlen)) tx_mbox_out <- mkTX;
   `ifdef arith_trap
-    Wire#(Bit#(1)) wr_arith_trap_en <- mkDWire(0);
+    //Wire#(Bit#(1)) wr_arith_trap_en <- mkDWire(0);
     TX#(Tuple2#(Bool, Bit#(`causesize))) tx_arith_trap_out <- mkTX;
   `endif
 
@@ -101,7 +101,6 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
       ff_ordering.enq(False);
       `logLevel( mbox, 0, $format("MBOX: To DIV. Op1:%h Op2:%h sign:%b", inputs.in1, inputs.in2, inputs.in1[valueOf(`xlen)-1] ))
       div_.ma_inputs( inputs.in1, inputs.in2, inputs.funct3 `ifdef RV64 ,inputs.wordop `endif ) ;
-      div_.ma_div_arith_trap_en(wr_arith_trap_en);
     end
   endmethod
   method mv_ready= MBoxRdy{mul: mul_.mv_ready && ff_ordering.notFull, div: div_.mv_ready && ff_ordering.notFull()};
@@ -109,7 +108,9 @@ module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   method tx_output = tx_mbox_out.e;
   `ifdef arith_trap
     method Action ma_arith_trap_en(Bit#(1) en);
-      wr_arith_trap_en <= en;
+      `logLevel( mbox, 0, $format("MBOX: arith_en: %h ", en ))
+       div_.ma_div_arith_trap_en(en);
+      //wr_arith_trap_en <= en;
     endmethod
     method tx_arith_trap_output = tx_arith_trap_out.e;
   `endif
