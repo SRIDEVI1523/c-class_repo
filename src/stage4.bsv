@@ -270,7 +270,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
         if (tpl_1(mbox_arith_trap_output)) begin
           fuid.insttype = TRAP;
           TrapOut trapout = TrapOut {cause   : tpl_2(mbox_arith_trap_output), 
-                                     is_microtrap: True,
+                                     is_microtrap: False,
                                      mtval : ?
                                     };
           tx_trapout.u.enq(trapout);
@@ -342,7 +342,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
       if (arith_trap) begin
         fuid.insttype = TRAP;
         TrapOut trapout = TrapOut {cause   : arith_cause, 
-                                   is_microtrap: True,
+                                   is_microtrap: False,
                                    mtval : ?
                                   };
         tx_trapout.u.enq(trapout);
