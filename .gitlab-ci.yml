@@ -83,9 +83,10 @@ check-mr-build:
         - make regress opts='--list=aapg.list --sub --test_opts="--timeout=15m"' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=aapg.list --final' CONFIG_ISA=RV64IMAFDC
         - make clean_verif
-#        - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
-#        - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
-#        - make clean_verif
+        - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
+        - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
+        - make benchmarks
+        - make clean_verif
         - echo -e "section_end:`date +%s`:benchmarks\r\e[0Ksection_start:`date +%s`:torture\r\e[0KTORTURE Regression"
         - make torture opts='--config=bringup --test_count=1' CONFIG_ISA=RV64IMAFDC
         - make torture opts='--config=rv64imafdc --test_count=1' CONFIG_ISA=RV64IMAFDC
