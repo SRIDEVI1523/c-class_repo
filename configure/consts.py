@@ -73,8 +73,8 @@ verification:
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
 benchmarks:
-  url: https://gitlab.com/incoresemi/core-generators/benchmarks
-  checkout: master
+  url: https://gitlab.com/shaktiproject/cores/benchmarks
+  checkout: c-class-chnages
 csrbox:
   url: https://gitlab.com/shaktiproject/cores/csrbox
   checkout: Floating_point

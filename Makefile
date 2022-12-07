@@ -163,6 +163,21 @@ aapg: ## to generate and run aapf tests
 csmith: ## to generate and run csmith tests
 	@SHAKTI_HOME=$$PWD perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/makeCSmith.pl $(opts)
 
+.PHONY: benchmarks
+benchmarks: ## to run benchmarks
+	@make -C benchmarks hello
+	@echo "Running hello.. \n Output:"
+	@cd benchmarks/output; \
+	ln -sf $(SHAKTI_HOME)/bin/* . ;\
+	./out > /dev/null 2>&1 ;\
+	cat app_log
+	@make -C benchmarks coremarks
+	@echo "Running coremarks.. \n Output:"
+	@cd benchmarks/output; \
+	ln -sf $(SHAKTI_HOME)/bin/* . ;\
+	./out > /dev/null 2>&1 ;\
+	cat app_log
+
 .PHONY: generate_boot_files
 generate_boot_files: ## to generate boot files for simulation
 	@echo "XLEN=$(XLEN)" > boot/Makefile.inc
