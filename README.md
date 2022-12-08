@@ -56,5 +56,7 @@ continous support in maintaining and supporting this repository.
 - Snehashri S
 - Aditya Terkar
 
+For any queries, please contact shakti.iitm@gmail.com
+
 
 
