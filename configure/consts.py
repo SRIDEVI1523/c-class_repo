@@ -68,7 +68,7 @@ common_verilog:
   checkout: master
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 73-update-for-cclass
+  checkout: 5.0.0
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
