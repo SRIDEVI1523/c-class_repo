@@ -48,11 +48,13 @@ continous support in maintaining and supporting this repository.
 - Neel Gala
 - Vinod Ganesan
 - Paul George
+- Aditya Govardhan
 - Arjun Menon
 - Girinath P
 - Deepa N Sarma
 - Sadhana S
 - Snehashri S
+- Aditya Terkar
 
 
 
