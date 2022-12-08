@@ -72,7 +72,7 @@ check-mr-build:
         - make -j8 generate_verilog; make link_verilator generate_boot_files 
         - echo -e "section_end:`date +%s`:generate_verilog\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
         - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
-        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub --debug'  CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=csmith.list --test_opts="--timeout=10m" --sub --debug'  CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=csmith.list --final'
         - make clean_verif
         - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
