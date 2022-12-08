@@ -1,11 +1,11 @@
 
-length_check_fields=['reset_pc', 'physical_addr_size']
+length_check_fields=['reset_pc']
 
 bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
 +RTS -K40000M -RTS -check-assert  -keep-fires \
 -opt-undetermined-vals -remove-false-rules -remove-empty-rules \
 -remove-starved-rules -remove-dollar -unspecified-to X -show-schedule \
--show-module-use {2}'''
+-show-module-use -cross-info {2}'''
 
 bsc_defines = ''
 
@@ -53,13 +53,13 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: 8.3.0
+  checkout: 14.1.0
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: master
 devices:
   url: https://gitlab.com/shaktiproject/uncore/devices
-  checkout: 7.0.10
+  checkout: 8.0.1
 fabrics:
   url: https://gitlab.com/shaktiproject/uncore/fabrics
   checkout: 1.2.0
@@ -68,11 +68,17 @@ common_verilog:
   checkout: master
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 4.0.19
+  checkout: 5.0.0
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
 benchmarks:
   url: https://gitlab.com/shaktiproject/cores/benchmarks
-  checkout: master
+  checkout: c-class-chnages
+csrbox:
+  url: https://gitlab.com/shaktiproject/cores/csrbox
+  checkout: Floating_point
+riscv-config:
+  url: https://gitlab.com/shaktiproject/cores/riscv-config
+  checkout: No_hyp_reg
 '''

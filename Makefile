@@ -147,6 +147,10 @@ regress: ## To run regressions on the core.
 test: ## To run a single riscv-test on the core.
 	@SHAKTI_HOME=$$PWD CONFIG_LOG=0 perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/makeTest.pl $(opts)
 
+.PHONY: simonly
+simonly: ## To run a single riscv-test on the core.
+	@SHAKTI_HOME=$$PWD CONFIG_LOG=0 perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/simOnly.pl $(opts)
+
 .PHONY: torture
 torture: ## To run riscv-tortur on the core.
 	@SHAKTI_HOME=$$PWD perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/makeTorture.pl $(opts)
@@ -159,14 +163,29 @@ aapg: ## to generate and run aapf tests
 csmith: ## to generate and run csmith tests
 	@SHAKTI_HOME=$$PWD perl -I$(SHAKTI_HOME)/verification/verif-scripts $(SHAKTI_HOME)/verification/verif-scripts/makeCSmith.pl $(opts)
 
+.PHONY: benchmarks
+benchmarks: ## to run benchmarks
+	@make -C benchmarks hello
+	@echo "Running hello.. \n Output:"
+	@cd benchmarks/output; \
+	ln -sf $(SHAKTI_HOME)/bin/* . ;\
+	./out > /dev/null 2>&1 ;\
+	cat app_log
+	@make -C benchmarks coremarks
+	@echo "Running coremarks.. \n Output:"
+	@cd benchmarks/output; \
+	ln -sf $(SHAKTI_HOME)/bin/* . ;\
+	./out > /dev/null 2>&1 ;\
+	cat app_log
+
 .PHONY: generate_boot_files
 generate_boot_files: ## to generate boot files for simulation
-generate_boot_files: update_xlen
+	@echo "XLEN=$(XLEN)" > boot/Makefile.inc
 	@mkdir -p bin
-	@cd verification/dts/; make;
-	@cut -c1-8 verification/dts/boot.hex > bin/boot.MSB
+	@cd boot/; make;
+	@cut -c1-8 boot/boot.hex > bin/boot.MSB
 	@if [ "$(XLEN)" = "64" ]; then\
-	  cut -c9-16 verification/dts/boot.hex > bin/boot.LSB;\
+	  cut -c9-16 boot/boot.hex > bin/boot.LSB;\
     else cp bin/boot.MSB bin/boot.LSB;\
   fi
 

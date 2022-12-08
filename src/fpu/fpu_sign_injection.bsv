@@ -1,9 +1,8 @@
 //See LICENSE.iitm for license details
 /*
-Authors     : Vinod.G, Aditya Govardhan
-Email       : g.vinod1993@gmail.com
+
+Author      : IIT Madras
 Last Update : 27th November 2017
-See LICENSE for more details
 
 Description:
 This module performs the sign injection on the floating point value taken from the rs1 register.

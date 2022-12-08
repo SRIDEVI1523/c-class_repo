@@ -1,7 +1,7 @@
 //See LICENSE.iitm for license details
 /*
-Authors     : Vinod.G, Renuka Venkat
-Email       : g.vinod1993@gmail.com
+
+Author      : IIT Madras
 Last Update : 27th November 2017
 See License for More Details
 Description:

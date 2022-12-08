@@ -26,6 +26,18 @@ def load_yaml(foo):
         logger.error(error)
         raise SystemExit
 
+def dump_yaml(foo, outfile, no_anchors=False):
+    if no_anchors:
+        pyyaml.add_representer(int, hexint_presenter)
+        pyyaml.dump(foo, outfile, Dumper=NoAliasDumper)
+    else:
+        yaml = YAML(typ="rt")
+        yaml.default_flow_style = False
+        yaml.allow_unicode = True
+        yaml.compact(seq_seq=False, seq_map=False)
+        yaml.indent = 4
+        yaml.block_seq_indent = 2
+        yaml.dump(foo, outfile)
 
 class ColoredFormatter(logging.Formatter):
     """                                                                         
@@ -87,8 +99,36 @@ def config_cmdline_args():
     parser.add_argument('-ispec','--ispec',
                         type=str,
                         metavar='YAML',
-                        default='sample_config/default.yaml',
-                        help='The YAML which contains the specs.')
+                        default=None,
+                        help='The YAML which contains the ISA specs.',
+                        required=True)
+    parser.add_argument('-customspec','--customspec',
+                        type=str,
+                        metavar='YAML',
+                        default=None,
+                        help='The YAML which contains the Custom CSR specs.')
+    parser.add_argument('-customattr','--customattr',
+                        type=str,
+                        metavar='YAML',
+                        default=None,
+                        help='The YAML which contains the Custom CSRBOX Attributes specs.')
+    parser.add_argument('-cspec','--cspec',
+                        type=str,
+                        metavar='YAML',
+                        default=None,
+                        required=True,
+                        help='The YAML which contains the CORE specs.')
+    parser.add_argument('-gspec','--gspec',
+                        type=str,
+                        metavar='YAML',
+                        default=None,
+                        help='The YAML which contains the CSR Grouping specs.',
+                        required=True)
+    parser.add_argument('-dspec','--dspec',
+                        type=str,
+                        metavar='YAML',
+                        default=None,
+                        help='The YAML which contains the Debug specs.')
     parser.add_argument('--verbose',
                         action='store',
                         default='info',

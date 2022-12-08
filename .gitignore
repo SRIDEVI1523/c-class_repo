@@ -3,6 +3,8 @@ common_bsv
 common_verilog
 devices
 fabrics
+csrbox
+riscv-config
 obj_dir/
 bin/
 old_vars
@@ -40,3 +42,11 @@ run.log
 build/
 
 depends.mk
+
+csrbox_bsv/
+
+boot/c-class.dtb
+
+boot/config.c-class
+
+boot/shakti.dtb

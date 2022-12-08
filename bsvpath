@@ -1,10 +1,8 @@
 src/
+csrbox_bsv/
 src/predictors
-src/m_ext
+src/mbox
 src/fpu/
-src/m_ext/multiplier_designs
-src/csr
-src/csr/daisy_chain
 test_soc/
 benchmarks/
 fabrics/axi4
@@ -17,7 +15,7 @@ devices/bootrom
 devices/uart_v2
 devices/clint
 devices/bram
-devices/riscvDebug013
+devices/riscvdebug100
 devices/jtagdtm/
 devices/err_slave
 common_bsv/

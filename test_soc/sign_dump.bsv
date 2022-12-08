@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2018, IIT Madras All rights reserved.
+See LICENSE.iitm for license details
 
 Redistribution and use in source and binary forms, with or without modification, are permitted
 provided that the following conditions are met:
@@ -22,8 +22,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------------------------
 
-Author: Neel Gala
-Email id: neelgala@gmail.com
+Author: IIT Madras
 Details:
 
 --------------------------------------------------------------------------------------------------
@@ -43,21 +42,22 @@ package sign_dump;
 	import Semi_FIFOF:: *;
 
   interface Ifc_sign_dump;
-		interface AXI4_Master_IFC#(`paddr, ELEN, USERSPACE) master;
-		interface AXI4_Slave_IFC#(`paddr, ELEN, USERSPACE) slave;
+		interface AXI4_Master_IFC#(`paddr, `elen, USERSPACE) master;
+		interface AXI4_Slave_IFC#(`paddr, `elen, USERSPACE) slave;
   endinterface
 
   (*synthesize*)
   module mksign_dump(Ifc_sign_dump);
-    let word_count = 128/valueOf(ELEN);
+    
+    let word_count = 128/valueOf(`elen);
 
     Reg#(Bool) rg_start<- mkReg(False);
-    Reg#(Bit#(TLog#(TDiv#(128,ELEN)))) rg_word_count <- mkReg(fromInteger(word_count-1));
+    Reg#(Bit#(TLog#(TDiv#(128,`elen)))) rg_word_count <- mkReg(fromInteger(word_count-1));
     Reg#(Bit#(`paddr)) rg_total_count <- mkReg(0);
-		AXI4_Master_Xactor_IFC #(`paddr, ELEN, USERSPACE) m_xactor <- mkAXI4_Master_Xactor;
-		AXI4_Slave_Xactor_IFC #(`paddr, ELEN, USERSPACE) s_xactor <- mkAXI4_Slave_Xactor;
+		AXI4_Master_Xactor_IFC #(`paddr, `elen, USERSPACE) m_xactor <- mkAXI4_Master_Xactor;
+		AXI4_Slave_Xactor_IFC #(`paddr, `elen, USERSPACE) s_xactor <- mkAXI4_Slave_Xactor;
     
-    FIFOF#(Bit#(TLog#(TDiv#(ELEN,8)))) ff_lower_order_bits <- mkSizedFIFOF(8);
+    FIFOF#(Bit#(TLog#(TDiv#(`elen,8)))) ff_lower_order_bits <- mkSizedFIFOF(8);
 
     Reg#(Bit#(`paddr)) rg_start_address<- mkReg(0);    // 0x2000
     Reg#(Bit#(`paddr)) rg_end_address<- mkReg(0);      // 0x2008
@@ -95,9 +95,11 @@ package sign_dump;
         if(rg_start_address != truncate(w.wdata))
           rg_start<=True;
       end
+    `ifndef cocotb_sim
       else if (aw.awaddr[3:0]=='hc) begin
         $finish(0);        
       end
+    `endif
   	  s_xactor.i_wr_resp.enq (b);
     endrule
     
@@ -114,8 +116,8 @@ package sign_dump;
     rule receive_response(rg_cnt>=5 && rg_start);
 			let response <- pop_o (m_xactor.o_rd_data);	
       ff_lower_order_bits.deq();
-			Bit#(TLog#(TDiv#(ELEN,8))) lower_addr_bits= ff_lower_order_bits.first();
-			Bit#(TAdd#(TLog#(TDiv#(ELEN,8)),3)) lv_shift = {lower_addr_bits,3'd0};
+			Bit#(TLog#(TDiv#(`elen,8))) lower_addr_bits= ff_lower_order_bits.first();
+			Bit#(TAdd#(TLog#(TDiv#(`elen,8)),3)) lv_shift = {lower_addr_bits,3'd0};
 			let lv_data= response.rdata >> lv_shift;
     	$fwrite(dump,"%4h\n", lv_data[31:0]); 
       rg_total_count<=rg_total_count-1;

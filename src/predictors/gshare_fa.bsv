@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author : Neel Gala
-Email id : neelgala@gmail.com
+Author : IIT Madras
 Details: This module implements a fullt-associative GSHARE branch predictor with
 Return-Address-Stack support. It basically has the prediction and training phase. The comments on
 the respective methods describe their operations.
@@ -16,6 +15,7 @@ package gshare_fa;
   import ConfigReg :: * ;
   import Vector :: * ;
   import OInt :: * ;
+  import RegFile :: * ;
 
   // -- project imports
   `include "Logger.bsv"
@@ -101,8 +101,10 @@ package gshare_fa;
     method Action ma_bpu_enable (Bool e);
   endinterface
 
+`ifdef bpu_noinline
   (*synthesize*)
-  module mkbpu#(parameter Bit#(XLEN) hartid) (Ifc_bpu);
+`endif
+  module mkbpu#(parameter Bit#(`xlen) hartid) (Ifc_bpu);
 
     String bpu = "";
 
@@ -125,11 +127,17 @@ package gshare_fa;
     in case of compressed support since we are storing only one BTB per 4-byte align addresses.
     Each entry is `statesize-bits wide and represents a up/down saturated counter.
     The reset value is set to 1 */
-    Reg#(Bit#(`statesize)) rg_bht_arr[`bhtcols][`bhtdepth/`bhtcols];
+    /*Reg#(Bit#(`statesize)) rg_bht_arr[`bhtcols][`bhtdepth/`bhtcols];
     for(Integer i = 0; i < `bhtcols; i =  i + 1)
       for(Integer j = 0; j < `bhtdepth/`bhtcols ; j =  j + 1)
-        rg_bht_arr[i][j] <- mkReg(1);
-
+        rg_bht_arr[i][j] <- mkReg(1);*/
+    
+    RegFile#(Bit#(TLog#(TDiv#(`bhtdepth,`bhtcols))), Bit#(`statesize)) rg_bht_arr[`bhtcols];
+    for (Integer i = 0; i<`bhtcols; i = i + 1) begin
+      rg_bht_arr[i] <- mkRegFileWCF(0,fromInteger(valueOf(TDiv#(`bhtdepth,`bhtcols))-1));
+    end
+    /*doc:reg: */
+    Reg#(Bit#(TLog#(TDiv#(`bhtdepth, `bhtcols)))) rg_bht_index <- mkReg(0);
     /*doc : reg : This register points to the next entry in the Fully associative BTB that should
     be allocated for a new entry */
     Reg#(Bit#(TLog#(`btbdepth))) rg_allocate <- mkReg(0);
@@ -162,7 +170,11 @@ package gshare_fa;
     rule rl_initialize (rg_initialize);
       for(Integer i = 0; i < `btbdepth; i = i + 1)
         v_reg_btb_tag[i]<=unpack(0);
-      rg_initialize <= False;
+      for(Integer i = 0; i < `bhtcols ; i = i + 1)
+        rg_bht_arr[i].upd(rg_bht_index,1);
+      if (rg_bht_index == fromInteger(valueOf(TDiv#(`bhtdepth,`bhtcols))-1))
+        rg_initialize <= False;
+      rg_bht_index <= rg_bht_index + 1;
       rg_ghr[1] <= 0;
       rg_allocate <= 0;
     `ifdef bpu_ras
@@ -225,7 +237,7 @@ package gshare_fa;
       let bht_index_ = fn_hash(rg_ghr[0], r.pc);
       Bit#(`statesize) branch_state_ [`bhtcols];
       for(Integer i = 0; i < `bhtcols ; i = i + 1)
-        branch_state_[i] = rg_bht_arr[i][bht_index_];
+        branch_state_[i] = rg_bht_arr[i].sub(bht_index_);
 
       Bit#(`statesize) prediction_ = 1;
       Bit#(`vaddr) target_ = r.pc;
@@ -358,7 +370,7 @@ package gshare_fa;
       // we use the ghr version before the prediction to train the BHT
       let bht_index_ = fn_hash(d.history<<1, d.pc);
       if(d.ci == Branch && d.btbhit) begin
-        rg_bht_arr[d.pc[1]][bht_index_] <= d.state;
+        rg_bht_arr[d.pc[1]].upd(bht_index_, d.state);
         `logLevel( bpu, 4, $format("[%2d]BPU : Upd BHT entry: %d with state: %d",hartid,
                                                                               bht_index_, d.state))
       end

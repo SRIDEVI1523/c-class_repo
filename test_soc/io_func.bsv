@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2018, IIT Madras All rights reserved.
+See LICENSE.iitm for license details
 
 Redistribution and use in source and binary forms, with or without modification, are permitted
 provided that the following conditions are met:
@@ -22,8 +22,7 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISI
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------------------------
 
-Author: Neel Gala
-Email id: neelgala@gmail.com
+Author: IIT Madras
 Details:
 
 --------------------------------------------------------------------------------------------------

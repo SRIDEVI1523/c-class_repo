@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /* 
 
-Author: Neel Gala
-Email id: neelgala@gmail.com
+Author: IIT Madras
 Details:
 
 --------------------------------------------------------------------------------------------------
@@ -22,7 +21,9 @@ package bpu;
     import bimodal_nc :: *;
   `endif
 
+`ifdef bpu_noinline
   (*synthesize*)
+`endif
   module mkbpu(Ifc_bpu);
     let ifc();
   `ifdef gshare_nc

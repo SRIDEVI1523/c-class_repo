@@ -1,8 +1,7 @@
 //See LICENSE.iitm for license details
 /*
 
-Author: Neel Gala
-Email id: neelgala@gmail.com
+Author: IIT Madras
 */
 /*doc:overview:
 This module implements the pc-gen functionality. It incorporates the branch predictor as
@@ -43,12 +42,13 @@ needs to be handled and has explained in detail in the description of the rule: 
 package stage0;
 
   // -- library imports
-  import FIFO :: * ;
-  import FIFOF :: * ;
-  import SpecialFIFOs :: * ;
-  import GetPut :: * ;
-  import TxRx :: * ;
-  import icache_types :: * ;
+  import FIFO           :: * ;
+  import FIFOF          :: * ;
+  import SpecialFIFOs   :: * ;
+  import GetPut         :: * ;
+  import TxRx           :: * ;
+  import icache_types   :: * ;
+  import pipe_ifcs      :: * ;
 
   // -- project imports
   `include "Logger.bsv"
@@ -59,37 +59,18 @@ package stage0;
 `endif
 
   interface Ifc_stage0;
-
-    /*doc:method: this method will be enabled to indicate a flush from the execute stage*/
-    method Action ma_update_eEpoch ();
-
-    /*doc:method: this method will be enabled to indicate a flush from the write-back stage*/
-    method Action ma_update_wEpoch ();
-
-    /*doc:method: This method is fired either from a mis-prediction from the execute stage or a trap
-    from the write-back stage or due to an sfence or fence being committed. */
-    method Action ma_flush (Stage0Flush fl);
-
-`ifdef bpu
-    /*doc : method : method to training the BTB and BHT tables*/
-	  method Action ma_train_bpu (Training_data td);
-  `ifdef gshare
-    /*doc : method: This method is fired when there is a conditional misprediction */
-    method Action ma_mispredict (Tuple2#(Bool, Bit#(`histlen)) g);
+    interface Ifc_s0_common common;
+    interface Ifc_s0_icache icache;
+    interface Ifc_s0_tx tx;
+  `ifdef bpu
+    interface Ifc_s0_bpu s0_bpu;
   `endif
-    /*doc : method: This method captures if the bpu is enabled through csr or not*/
-    method Action ma_bpu_enable (Bool e);
-`endif
-
-    /*doc:subifc: This interface defines the request sent out from stage0 to the cache and stage1.*/
-    interface Get#(IMem_core_request#(`vaddr, `iesize)) to_icache;
-
-    /*doc:subifc: interface to send info to stage 1 about the next pc*/
-    interface TXe#(Stage0PC#(`vaddr)) tx_to_stage1;
   endinterface: Ifc_stage0
 
+`ifdef stage0_noinline
   (*synthesize*)
-  module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(XLEN) hartid) (Ifc_stage0);
+`endif
+  module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid) (Ifc_stage0);
     String stage0 = "";
   `ifdef bpu
     Ifc_bpu bpu <- mkbpu(hartid);
@@ -114,6 +95,9 @@ package stage0;
     /*doc:reg: This register is used in the initializing the pc with reset-pc being driven by SoC.*/
     Reg#(Bool) rg_initialize <- mkReg(True);
 
+    /*doc:wire: captures the condition when the reset sequence is done*/
+    Wire#(Bool) wr_reset_sequence_done <- mkWire();
+
   `ifdef ifence
     /*doc:reg: When true indicates that the flush occurred due to a fence*/
     Reg#(Bool) rg_fence[2] <- mkCReg(2, False);
@@ -122,6 +106,11 @@ package stage0;
   `ifdef supervisor
     /*doc:reg: When true indicates that the flush occurred due to a sfence*/
     Reg#(Bool) rg_sfence[2] <- mkCReg(2, False);
+  `endif
+
+  `ifdef hypervisor
+    /*doc:reg: When true indicates that the flush occurred due to a hfence*/
+    Reg#(Bool) rg_hfence[2] <- mkCReg(2, False);
   `endif
 
 `ifdef bpu
@@ -138,9 +127,10 @@ package stage0;
 
     /*doc:rule: This rule will fire only once immediately after reset is de-asserted. The rg_pc is
     initialized with the resetpc argument*/
-    rule rl_initialize (rg_initialize);
+    rule rl_initialize (rg_initialize && wr_reset_sequence_done);
       rg_initialize <= False;
       rg_pc[1] <= resetpc;
+      `logLevel( stage0, 0, $format("STAGE0: Setting PC:%h",resetpc))
     endrule
 
     /*doc:rule: This rule muxes between pc+4 and the prediction provided by the bpu.
@@ -167,16 +157,18 @@ package stage0;
     pc sequences are sent to the cache and stage1
 
     */
-    rule rl_gen_next_pc (tx_tostage1.u.notFull && !rg_initialize);
+    rule rl_gen_next_pc (tx_tostage1.u.notFull && !rg_initialize && wr_reset_sequence_done);
       `ifdef bpu
         PredictionResponse bpu_resp = ?;
       `endif
 
         let nextpc = (rg_pc[0] & signExtend(3'b100)) + 4;
+        `logLevel( stage0, 0, $format("STAGE0: nextpc: %h ",nextpc `ifdef ifence ," fencei:%b",rg_fence[0] `endif ))
 
       `ifdef bpu
         // bpu is flushed in case of ifence and not for sfence
-        if( `ifdef supervisor !rg_sfence[0] && `endif True) begin
+        if( `ifdef supervisor !rg_sfence[0] && `endif 
+            `ifdef hypervisor !rg_hfence[0] && `endif True) begin
           let bpuresp <- bpu.mav_prediction_response(PredictionRequest{pc: rg_pc[0]
                                     `ifdef ifence     ,fence: rg_fence[0] `endif
                                     `ifdef compressed , discard: (rg_pc[0][1]==1) `endif });
@@ -184,7 +176,7 @@ package stage0;
           // check for edge case
           Bool edgecase = bpuresp.btbresponse.hi && !bpuresp.instr16;
         `endif
-          if (bpuresp.btbresponse.prediction[`statesize - 1] == 1
+          if (bpuresp.btbresponse.prediction[`statesize - 1] == 1 && bpuresp.btbresponse.btbhit 
                                     `ifdef compressed && !edgecase `endif )
             nextpc = bpuresp.nextpc;
         `ifdef compressed
@@ -194,7 +186,7 @@ package stage0;
             rg_delayed_redirect[0] <= tagged Invalid;
           end
           // send pc+4 and store the target for the next round
-          else if(edgecase && bpuresp.btbresponse.prediction > 1)
+          else if(edgecase && bpuresp.btbresponse.prediction > 1 && !rg_fence[0])
             rg_delayed_redirect[0] <= tagged Valid bpuresp.nextpc;
         `endif
 
@@ -202,9 +194,12 @@ package stage0;
           `logLevel( stage0, 0, $format("[%2d]STAGE0: BPU response:",hartid,fshow(bpu_resp)))
         end
       `endif
+      `logLevel( stage0, 0, $format("STAGE0: nextpc1: %h ",nextpc))
 
       // don't update the pc in case fence or sfence instruction
-      if( `ifdef ifence !rg_fence[0] && `endif `ifdef supervisor !rg_sfence[0] && `endif True)
+      if( `ifdef ifence !rg_fence[0] && `endif 
+          `ifdef supervisor !rg_sfence[0] && `endif
+          `ifdef hypervisor !rg_hfence[0] && `endif True)
         rg_pc[0] <= nextpc ;
 
       `ifdef ifence
@@ -217,13 +212,21 @@ package stage0;
           rg_sfence[0] <= False;
       `endif
 
+      `ifdef hypervisor
+        if(rg_hfence[0])
+          rg_hfence[0] <= False;
+      `endif
+
         `logLevel( stage0, 0, $format("[%2d]STAGE0: Sending PC:%h to I$. ",hartid, rg_pc[0] & signExtend(3'b100)))
         ff_to_cache.enq(IMem_core_request{address  : rg_pc[0] & signExtend(3'b100),
                                         epochs  : curr_epoch
                   `ifdef supervisor    ,sfence  : rg_sfence[0]    `endif
+                  `ifdef hypervisor    ,hfence  : rg_hfence[0]    `endif
                   `ifdef ifence        ,fence   : rg_fence[0]     `endif });
 
-        if( `ifdef ifence !rg_fence[0] && `endif `ifdef supervisor !rg_sfence[0] && `endif True) begin
+        if( `ifdef ifence !rg_fence[0] && `endif 
+            `ifdef supervisor !rg_sfence[0] && `endif 
+            `ifdef hypervisor !rg_hfence[0] && `endif True) begin
           tx_tostage1.u.enq(Stage0PC{   address      : rg_pc[0] & signExtend(3'b100)
                     `ifdef compressed   ,discard     : rg_pc[0][1]==1        `endif
                     `ifdef bpu          ,btbresponse : bpu_resp.btbresponse `endif  });
@@ -231,41 +234,55 @@ package stage0;
         end
     endrule
 
-    interface to_icache = toGet(ff_to_cache);
+    interface icache = interface Ifc_s0_icache
+      interface to_icache = toGet(ff_to_cache);
+    endinterface;
 
-    interface tx_to_stage1 = tx_tostage1.e;
+    interface tx = interface Ifc_s0_tx
+      interface tx_to_stage1 = tx_tostage1.e;
+    endinterface;
 
-    method Action ma_update_eEpoch ();
-      rg_eEpoch <= ~rg_eEpoch;
-    endmethod
+    interface common = interface Ifc_s0_common
+      method Action ma_update_eEpoch ();
+        rg_eEpoch <= ~rg_eEpoch;
+      endmethod
+  
+      method Action ma_update_wEpoch ();
+        rg_wEpoch <= ~rg_wEpoch;
+      endmethod
+      method Action ma_reset_done(Bool _done);
+        wr_reset_sequence_done <= _done;
+      endmethod:ma_reset_done
 
-    method Action ma_update_wEpoch ();
-      rg_wEpoch <= ~rg_wEpoch;
-    endmethod
-
-    method Action ma_flush (Stage0Flush fl) if(!rg_initialize);
-      `logLevel( stage0, 1, $format("[%2d]STAGE0: Recieved Flush:",hartid,fshow(fl)))
-    `ifdef ifence
-      rg_fence[1] <= fl.fence;
+      method Action ma_flush (Stage0Flush fl) if(!rg_initialize && wr_reset_sequence_done);
+        `logLevel( stage0, 1, $format("[%2d]STAGE0: Recieved Flush:",hartid,fshow(fl)))
+      `ifdef ifence
+        rg_fence[1] <= fl.fence;
+      `endif
+      `ifdef supervisor
+        rg_sfence[1] <= fl.sfence;
+      `endif
+    `ifdef hypervisor
+      rg_hfence[1] <= fl.hfence;
     `endif
-    `ifdef supervisor
-      rg_sfence[1] <= fl.sfence;
+        rg_pc[1] <= fl.pc;
+    `ifdef bpu
+      `ifdef compressed
+        // reset any delayed-redirect
+        rg_delayed_redirect[1] <= tagged Invalid;
+      `endif
     `endif
-      rg_pc[1] <= fl.pc;
-  `ifdef bpu
-    `ifdef compressed
-      // reset any delayed-redirect
-      rg_delayed_redirect[1] <= tagged Invalid;
-    `endif
-  `endif
-    endmethod
+      endmethod
+    endinterface;
 
 `ifdef bpu
-    method ma_train_bpu   = bpu.ma_train_bpu;
-  `ifdef gshare
-    method ma_mispredict  = bpu.ma_mispredict;
-  `endif
-    method ma_bpu_enable  = bpu.ma_bpu_enable;
+    interface s0_bpu = interface Ifc_s0_bpu
+      method ma_train_bpu   = bpu.ma_train_bpu;
+    `ifdef gshare
+      method ma_mispredict  = bpu.ma_mispredict;
+    `endif
+      method ma_bpu_enable  = bpu.ma_bpu_enable;
+    endinterface;
 `endif
 
   endmodule: mkstage0
