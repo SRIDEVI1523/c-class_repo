@@ -71,9 +71,13 @@ check-mr-build:
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make link_verilator generate_boot_files 
         - echo -e "section_end:`date +%s`:generate_verilog\r\e[0Ksection_start:`date +%s`:csmith\r\e[0KCSMITH Regression"
-#        - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
-#        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub --debug'  CONFIG_ISA=RV64IMAFDC
-#        - make regress opts='--list=csmith.list --final'
+        - make csmith opts='--test_count=1' CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=csmith.list --test_opts="--mod-spike --timeout=10m" --sub --debug'  CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=csmith.list --final'
+        - make clean_verif
+        - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
+        - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
+        - make benchmarks
         - echo -e "section_end:`date +%s`:csmith\r\e[0Ksection_start:`date +%s`:riscv-test\r\e[0KRISC-V Tests Regression"
         - make regress opts='--filter=rv64 --test_opts="--timeout=120s" --sub --parallel 10' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--filter=rv64 --final'
@@ -82,10 +86,6 @@ check-mr-build:
         - make aapg opts='--config=rv64imafdc* --test_count=1' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=aapg.list --sub --test_opts="--timeout=15m"' CONFIG_ISA=RV64IMAFDC
         - make regress opts='--list=aapg.list --final' CONFIG_ISA=RV64IMAFDC
-        - make clean_verif
-        - echo -e "section_end:`date +%s`:aapg\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
-        - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
-        - make benchmarks
         - make clean_verif
         - echo -e "section_end:`date +%s`:benchmarks\r\e[0Ksection_start:`date +%s`:torture\r\e[0KTORTURE Regression"
         - make torture opts='--config=bringup --test_count=1' CONFIG_ISA=RV64IMAFDC
