@@ -40,4 +40,19 @@ continous support in maintaining and supporting this repository.
 1. InCore Semiconductors Pvt. Ltd.
 2. Silint Consulting Pvt. Ltd.
 
-## [Get Started](https://c-class.readthedocs.io/)
+## Get Started [here]](https://c-class.readthedocs.io/)
+
+## Contributors (in alphabetical order of last name):
+
+- Rahul Bodduna
+- Neel Gala
+- Vinod Ganesan
+- Paul George
+- Arjun Menon
+- Girinath P
+- Deepa N Sarma
+- Sadhana S
+- Snehashri S
+
+
+
