@@ -33,13 +33,6 @@ verilog compatible for FPGA and ASIC targets.
 All of the source code available in this repository is under the BSD license. 
 Please refer to LICENSE.iitm for more details.
 
-## Commercial Adoption
-The following industrial partners have adopted SHAKTI for commercialization purposes and provide
-continous support in maintaining and supporting this repository.
-
-1. InCore Semiconductors Pvt. Ltd.
-2. Silint Consulting Pvt. Ltd.
-
 ## Get Started [here](https://c-class.readthedocs.io/)
 
 ## Contributors (in alphabetical order of last name):
