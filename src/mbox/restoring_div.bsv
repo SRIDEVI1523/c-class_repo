@@ -129,6 +129,8 @@ module mkrestoring_div#(parameter Bit#(`xlen) hartid) (Ifc_restoring_div);
           rg_trap <= True;
       `endif
       Bit#(`xlen) reslt=quotient_remainder? truncate(rg_in1):'1;
+      Bit#(`xlen) product= `ifdef RV64 rg_wordop?signExtend(reslt[31:0]): `endif truncate(reslt);
+      rg_result <= product;
     end
     else if(rg_count == fromInteger(`DIVSTAGES)+ 1 ) begin
       rg_count <= 0;
