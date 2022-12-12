@@ -421,11 +421,13 @@ module mkfpu(Ifc_fpu);
 		else if((funct7[6:2] == `FDIV_f5) && opcode == `FP_OPCODE)begin// spfpu divider
 			rg_multicycle_op<=True;
         if(issp) begin
+            `logLevel(fpu, 0, $format("FPU: operand1: %h, operand2: %h", operand1, operand2))
             let {op1,op2,op3} <- setCanonicalNaN.func(operand1,operand2,'1);
             let {man1,man2,man3} <- getMant32.func(op1, op2,op3);
             let {exp1,exp2,exp3} <- getExp32.func(op1, op2,op3);
             let {f1,f2,f3}       <- condFlags32.func(tuple2(man1,exp1),tuple2(man2,exp2),tuple2(man3,exp3));
             inst_spfpu_divider._start(op1[31]^op2[31],man1,exp1,man2,exp2,funct3,tuple2(f1,f2));
+		`ifdef spfpu `logLevel( fpu, 0, $format("FPU:Giving inputs to the spfpu divider in1: %h, in2: %h", op1, op2)) `endif
         end
       `ifdef dpfpu
         else begin
@@ -433,9 +435,9 @@ module mkfpu(Ifc_fpu);
             let {exp3,exp4,exp5} <- getExp64.func(operand1,operand2,0);
             let {y1,y2,y3}       <- condFlags64.func(tuple2(man3,exp3),tuple2(man4,exp4),tuple2(0,0));
             inst_dpfpu_divider._start(operand1[63]^operand2[63],man3,exp3,man4,exp4,funct3, tuple2(y1,y2));
+		`ifdef spfpu `logLevel( fpu, 0, $format("FPU:Giving inputs to the dpfpu divider")) `endif
         end
       `endif
-		`ifdef spfpu `logLevel( fpu, 0, $format("FPU:Giving inputs to the spfpu divider")) `endif
 		end
 		else if((funct7[6:2] == `FSQRT_f5) && opcode == `FP_OPCODE)begin// sqrt
 			rg_multicycle_op<=True;

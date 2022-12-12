@@ -556,13 +556,13 @@ typedef struct{
   Access_type   memaccess;
 } MemoryOut deriving(Bits, Eq);
 
-instance FShow#(MemoryOut);
-  /*doc:func: */
-  function Fmt fshow (MemoryOut value);
-    Fmt result = $format("type: ",fshow(value.memaccess));
-    return result;
-  endfunction
-endinstance
+//instance FShow#(MemoryOut);
+//  /*doc:func: */
+//  function Fmt fshow (MemoryOut value);
+//    Fmt result = $format("type: ",fshow(value.memaccess));
+//    return result;
+//  endfunction
+//endinstance
 // ------------------------------------------------------------------------------------------
 
 typedef struct{
