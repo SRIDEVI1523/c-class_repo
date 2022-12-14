@@ -4,6 +4,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[2.0.1] - 2022-12-13
+--------------------
+
+- Added arith trap support.
+- Fixed a bug of nanboxing not properly transmitted to stage5.
+
 [2.0.0] - 2022-12-08
 --------------------
 
