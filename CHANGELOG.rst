@@ -4,7 +4,7 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-[2.0.0] - 2022-12-01
+[2.0.0] - 2022-12-08
 --------------------
 
 - Pipeline upgraded
@@ -14,6 +14,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 - Updates made to use newer devices
 - Configure scripts changes made to build csrbox and riscv-config and use them
 - Changes made to Debugger 1.00 
+- Verification updates and ci fixes
 
 
 [1.10.0] - 2022-10-19

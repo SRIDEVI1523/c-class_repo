@@ -68,13 +68,13 @@ common_verilog:
   checkout: master
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 4.0.19
+  checkout: 5.0.0
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
 benchmarks:
-  url: https://gitlab.com/incoresemi/core-generators/benchmarks
-  checkout: master
+  url: https://gitlab.com/shaktiproject/cores/benchmarks
+  checkout: c-class-chnages
 csrbox:
   url: https://gitlab.com/shaktiproject/cores/csrbox
   checkout: Floating_point
