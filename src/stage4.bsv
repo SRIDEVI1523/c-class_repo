@@ -353,8 +353,9 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
           tx_commitlog.u.enq(clogpkt);
         `endif
       end
-      else begin
+      else 
     `endif
+      begin 
         tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: _r.data, epochs: fuid.epochs
               `ifdef no_wawstalls ,id: fuid.id `endif
               `ifdef spfpu ,fflags: _r.fflags, rdtype: fuid.rdtype `endif });
