@@ -4,6 +4,11 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.0.1] - 2023-05-08
+--------------------
+
+- CI fix
+
 [3.0.0] - 2023-05-08
 --------------------
 
