@@ -15,9 +15,9 @@ c-class:
         - eval "$(pyenv virtualenv-init -)"
         - pyenv activate venv
         - source /tools/setup_cclass_new_spike.sh
-        - pip install --upgrade pip
-        - pip uninstall -r requirements.txt -y
-        - pip install -r requirements.txt
+#        - pip install --upgrade pip
+#        - pip uninstall -r requirements.txt -y
+#        - pip install -r requirements.txt
         - python -m configure.main  -ispec sample_config/c64/rv64i_isa.yaml   -customspec sample_config/c64/rv64i_custom.yaml   -cspec sample_config/c64/core64.yaml   -gspec sample_config/c64/csr_grouping64.yaml   -dspec sample_config/c64/rv64i_debug.yaml   --verbose debug
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make link_verilator generate_boot_files 
