@@ -42,6 +42,7 @@ Please refer to LICENSE.iitm for more details.
 - Vinod Ganesan
 - Paul George
 - Aditya Govardhan
+- Mouna Krishna
 - Arjun Menon
 - Girinath P
 - Deepa N Sarma

@@ -50,7 +50,7 @@ function String excause2str (Bit#(TSub#(`causesize,1)) cause);
     `Breakpoint            : return "Breakpoint-Trap";
   `ifdef arith_trap
     `Int_divide_by_zero    : return "Int_divide_by_zero";
-    `FP_invalid            : return "FP_invlid";
+    `FP_invalid            : return "FP_invalid";
     `FP_divide_by_zero     : return "FP_divide_by_zero";
     `FP_overflow           : return "FP_overflow";
     `FP_underflow          : return "FP_underflow";

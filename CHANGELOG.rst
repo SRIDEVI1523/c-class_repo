@@ -4,9 +4,10 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-[2.0.1] - 2022-12-13
+[3.0.0] - 2023-05-08
 --------------------
 
+- Hypervisor support release
 - Added arith trap support.
 - Fixed a bug of nanboxing not properly transmitted to stage5.
 
