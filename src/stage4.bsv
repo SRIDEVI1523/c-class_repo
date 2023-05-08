@@ -28,6 +28,7 @@ package stage4;
   import dcache_types :: * ;
   import pipe_ifcs    :: * ;
 
+  `include "trap.defines"
 
   `include "Logger.bsv"
 
@@ -72,6 +73,9 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
   `endif
   `ifdef muldiv
     RX#(Bit#(`xlen)) rx_mbox <- mkRX;
+    `ifdef arith_trap
+      RX#(Tuple2#(Bool, Bit#(`causesize))) rx_mbox_arith_trap_output <- mkRX; 
+    `endif
   `endif
   `ifdef spfpu
   RX#(XBoxOutput) rx_fbox <- mkRX;
@@ -209,7 +213,7 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
         else if (mem_response.entry_alloc) begin
           let lv_memop = WBMemop{ memaccess: memop.memaccess , io: mem_response.is_io,
               sb_id : mem_response.sb_id
-              `ifdef nanboxing ,nanboxing: memop.nanboxing `endif
+              `ifdef dpfpu ,nanboxing: unpack(memop.nanboxing) `endif
               `ifdef atomic ,atomic_rd_data: mem_response.word `endif };
           tx_memio.u.enq(lv_memop);
           fuid.insttype = MEMORY;
@@ -256,28 +260,54 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
      * The outputs from the mbox are transfered to the tx_baseout ISB for a regular commit in the
      * write-back stage
     */
-    rule rl_capture_muldiv(rx_fuid.u.first.insttype == MULDIV && rx_mbox.u.notEmpty());
+   rule rl_capture_muldiv(rx_fuid.u.first.insttype == MULDIV && rx_mbox.u.notEmpty() `ifdef arith_trap && rx_mbox_arith_trap_output.u.notEmpty() `endif );
       let mbox_result = rx_mbox.u.first;
       let fuid = fn_fu2cu(rx_fuid.u.first);
       rx_mbox.u.deq;
-      tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: mbox_result, epochs: fuid.epochs
-            `ifdef no_wawstalls ,id: fuid.id `endif
-            `ifdef spfpu ,fflags: 0, rdtype: IRF `endif });
-      fuid.insttype = BASE;
-      tx_fuid.u.enq(fuid);
-      rx_fuid.u.deq;
+      `ifdef arith_trap
+        let mbox_arith_trap_output = rx_mbox_arith_trap_output.u.first;
+        rx_mbox_arith_trap_output.u.deq;
+        if (tpl_1(mbox_arith_trap_output)) begin
+          fuid.insttype = TRAP;
+          TrapOut trapout = TrapOut {cause   : tpl_2(mbox_arith_trap_output), 
+                                     is_microtrap: False,
+                                     mtval : ?
+                                    };
+          tx_trapout.u.enq(trapout);
+          tx_fuid.u.enq(fuid);
+          rx_fuid.u.deq;
+          `ifdef rtldump
+            let clogpkt = rx_commitlog.u.first;
+            tx_commitlog.u.enq(clogpkt);
+          `endif
+        end
+        else begin 
+      `endif
+        tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: mbox_result, epochs: fuid.epochs
+              `ifdef no_wawstalls ,id: fuid.id `endif
+              `ifdef spfpu ,fflags: 0, rdtype: IRF `endif });
+        fuid.insttype = BASE;
+        tx_fuid.u.enq(fuid);
+        rx_fuid.u.deq;
+        `ifdef rtldump
+          let clogpkt = rx_commitlog.u.first;
+          CommitLogReg _pkt =?;
+          if (clogpkt.inst_type matches tagged REG .r)
+            _pkt = r;
+          _pkt.wdata = mbox_result;
+          clogpkt.inst_type = tagged REG _pkt;
+          tx_commitlog.u.enq(clogpkt);
+          rx_commitlog.u.deq;
+        `endif
+      `ifdef arith_trap
+        end
+      `endif
+
       `logLevel( stage4, 0, $format("[%2d]STAGE4: PC:%h",hartid,rx_fuid.u.first.pc))
       `logLevel( stage4, 0, $format("[%2d]STAGE4: Enquing MULDIV Output: ",hartid, fshow(mbox_result)))
-    `ifdef rtldump
-      let clogpkt = rx_commitlog.u.first;
-      CommitLogReg _pkt =?;
-      if (clogpkt.inst_type matches tagged REG .r)
-        _pkt = r;
-      _pkt.wdata = mbox_result;
-      clogpkt.inst_type = tagged REG _pkt;
-      tx_commitlog.u.enq(clogpkt);
-      rx_commitlog.u.deq;
-    `endif
+      `ifdef arith_trap
+        `logLevel(stage4, 0, $format("[%2d]STAGE4: MBOX: ArithTrap: ", hartid, fshow(mbox_arith_trap_output)))
+      `endif
     endrule:rl_capture_muldiv
   `endif
   `ifdef spfpu
@@ -291,25 +321,61 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
     let _r = rx_fbox.u.first;
     let fuid = fn_fu2cu(rx_fuid.u.first);
     rx_fbox.u.deq;
-    tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: _r.data, epochs: fuid.epochs
-          `ifdef no_wawstalls ,id: fuid.id `endif
-          `ifdef spfpu ,fflags: _r.fflags, rdtype: fuid.rdtype `endif });
-    fuid.insttype = BASE;
-    tx_fuid.u.enq(fuid);
-    rx_fuid.u.deq;
+    `ifdef arith_trap
+      Bool arith_trap = False;
+      Bit#(`causesize) arith_cause = 0;
+      if (_r.arith_trap_en == 1) begin
+        if(_r.fflags!=0)
+          arith_trap = True;
+        if (_r.fflags[4]==1)
+          arith_cause =`FP_invalid; //Invalid
+        else if (_r.fflags[3]==1)
+          arith_cause=`FP_divide_by_zero; //Divide_by_zero_float
+        else if (_r.fflags[2]==1)
+          arith_cause=`FP_overflow; //Overflow
+        else if (_r.fflags[1]==1)
+          arith_cause=`FP_underflow; //Underflow
+        else if (_r.fflags[0]==1)
+          arith_cause=`FP_inexact; //Inexact
+      end
+
+      if (arith_trap) begin
+        fuid.insttype = TRAP;
+        TrapOut trapout = TrapOut {cause   : arith_cause, 
+                                   is_microtrap: False,
+                                   mtval : ?
+                                  };
+        tx_trapout.u.enq(trapout);
+        tx_fuid.u.enq(fuid);
+        rx_fuid.u.deq;
+        `ifdef rtldump
+          let clogpkt = rx_commitlog.u.first;
+          tx_commitlog.u.enq(clogpkt);
+        `endif
+      end
+      else 
+    `endif
+      begin 
+        tx_baseout.u.enq(BaseOut {rd: rx_fuid.u.first.rd, rdvalue: _r.data, epochs: fuid.epochs
+              `ifdef no_wawstalls ,id: fuid.id `endif
+              `ifdef spfpu ,fflags: _r.fflags, rdtype: fuid.rdtype `endif });
+        fuid.insttype = BASE;
+        tx_fuid.u.enq(fuid);
+        rx_fuid.u.deq;
+      `ifdef rtldump
+        let clogpkt = rx_commitlog.u.first;
+        CommitLogReg _pkt =?;
+        if (clogpkt.inst_type matches tagged REG .r)
+          _pkt = r;
+        _pkt.wdata = _r.data;
+        _pkt.fflags = _r.fflags;
+        clogpkt.inst_type = tagged REG _pkt;
+        tx_commitlog.u.enq(clogpkt);
+        rx_commitlog.u.deq;
+      `endif
+    end
     `logLevel( stage4, 0, $format("[%2d]STAGE4: PC:%h",hartid,rx_fuid.u.first.pc))
     `logLevel( stage4, 0, $format("[%2d]STAGE4: Enquing FLOAT Output: ",hartid, fshow(_r)))
-  `ifdef rtldump
-    let clogpkt = rx_commitlog.u.first;
-    CommitLogReg _pkt =?;
-    if (clogpkt.inst_type matches tagged REG .r)
-      _pkt = r;
-    _pkt.wdata = _r.data;
-    _pkt.fflags = _r.fflags;
-    clogpkt.inst_type = tagged REG _pkt;
-    tx_commitlog.u.enq(clogpkt);
-    rx_commitlog.u.deq;
-  `endif
   endrule:rl_capture_float
 `endif
 
@@ -344,6 +410,9 @@ module mkstage4#(parameter Bit#(`xlen) hartid)(Ifc_stage4);
   `ifdef muldiv
     interface s4_mbox = interface Ifc_s4_muldiv
       interface rx_mbox_output = rx_mbox.e;
+      `ifdef arith_trap
+        interface rx_mbox_arith_trap_output = rx_mbox_arith_trap_output.e;
+      `endif
     endinterface;
   `endif
   `ifdef spfpu

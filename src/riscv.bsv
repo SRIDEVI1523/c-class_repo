@@ -35,7 +35,7 @@ package riscv;
 
   interface Ifc_riscv_csrs;
     method Bit#(`xlen) mv_csr_mstatus;
-    method Bit#(3) mv_cacheenable;
+    method Bit#(4) mv_cacheenable;
     method Bit#(2) mv_curr_priv;
 	`ifdef supervisor
 		method Bit#(`xlen) mv_csr_satp;
@@ -193,6 +193,9 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
   `ifdef muldiv
     Ifc_mbox mbox <- mkmbox(0);
     FIFOF#(Bit#(`xlen)) ff_mbox_out <- mkSizedBypassFIFOF(`isb_s3s4 );
+    `ifdef arith_trap
+      FIFOF#(Tuple2#(Bool, Bit#(`causesize))) ff_mbox_arith_trap_out <- mkSizedBypassFIFOF(`isb_s3s4 );
+    `endif
   `endif
   `ifdef debug
     /*doc:wire: */
@@ -246,6 +249,13 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
 
   `endif
   `ifdef muldiv
+    `ifdef arith_trap
+      rule rl_mbox_arith_en;
+        mbox.ma_arith_trap_en(stage5.csrs.mv_cacheenable[3]);
+      endrule
+      mkConnection(mbox.tx_arith_trap_output, ff_mbox_arith_trap_out);
+      mkConnection(ff_mbox_arith_trap_out, stage4.s4_mbox.rx_mbox_arith_trap_output);
+    `endif
     mkConnection(stage3.muldiv.ma_mbox_ready,mbox.mv_ready);
     mkConnection(stage3.muldiv.mv_mbox_inputs, mbox.ma_inputs);
     mkConnection(mbox.tx_output, ff_mbox_out);
@@ -256,6 +266,11 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     mkConnection(stage3.float.mv_fbox_inputs, fbox._start);
     mkConnection(fbox.tx_output, ff_fbox_out);
     mkConnection(ff_fbox_out, stage4.s4_fbox.rx_fbox_output);
+    `ifdef arith_trap
+      rule rl_fbox_arith_en;
+        fbox.rd_arith_excep_en(unpack(stage5.csrs.mv_cacheenable[3]));
+      endrule
+    `endif
   `endif
   `ifdef bpu
     /*doc:rule: */

@@ -48,6 +48,14 @@ function String excause2str (Bit#(TSub#(`causesize,1)) cause);
     `Ecall_from_user       : return "ECALL-User-Trap";
     `Ecall_from_supervisor : return "ECALL-Supervisor-Trap";
     `Breakpoint            : return "Breakpoint-Trap";
+  `ifdef arith_trap
+    `Int_divide_by_zero    : return "Int_divide_by_zero";
+    `FP_invalid            : return "FP_invalid";
+    `FP_divide_by_zero     : return "FP_divide_by_zero";
+    `FP_overflow           : return "FP_overflow";
+    `FP_underflow          : return "FP_underflow";
+    `FP_inexact            : return "FP_inexact";
+  `endif
     default: return "UNKNOWN EXCEPTION VALUE";
   endcase
 endfunction
@@ -560,6 +568,9 @@ instance FShow#(MemoryOut);
   /*doc:func: */
   function Fmt fshow (MemoryOut value);
     Fmt result = $format("type: ",fshow(value.memaccess));
+    `ifdef dpfpu
+      result = result + $format("nanboxing: %d", value.nanboxing);
+    `endif
     return result;
   endfunction
 endinstance
@@ -718,10 +729,9 @@ typedef struct{
 typedef struct{
   Bit#(ELEN)  data;
   Bool        valid;
-`ifdef arith_trap
-  Bool             trap;
-  Bit#(`causesize) cause;
-`endif
+  `ifdef arith_trap
+    Bit#(1) arith_trap_en;
+  `endif
 `ifdef spfpu
   Bit#(5) fflags;
 `endif
