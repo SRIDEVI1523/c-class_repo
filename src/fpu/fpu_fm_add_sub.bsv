@@ -676,18 +676,18 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          bit lv_round_up                          =   0;
          bit lv_inexact                           =   lv_guard | lv_round | lv_sticky;
 
-         if(lv_rounding_mode == 'b000)       
-            lv_round_up = lv_guard & (resultant_mantissa[iMPFPMAN2] | lv_round | lv_sticky);
-         else if(lv_rounding_mode == 'b100)    
-            lv_round_up = lv_guard ;//& (lv_round | lv_sticky | ~lv_resultant_sign);
-         else if(lv_rounding_mode == 'b010)    
-            lv_round_up = lv_inexact & (lv_resultant_sign);
-         else if(lv_rounding_mode == 'b011)    
-            lv_round_up = lv_inexact & (~lv_resultant_sign);
+         if(lv_rounding_mode == 'b000)      begin 
+            lv_round_up = lv_guard & (resultant_mantissa[iMPFPMAN2] | lv_round | lv_sticky);end
+         else if(lv_rounding_mode == 'b100)   begin 
+            lv_round_up = lv_guard ; end //& (lv_round | lv_sticky | ~lv_resultant_sign); 
+         else if(lv_rounding_mode == 'b010)  begin  
+            lv_round_up = lv_inexact & (lv_resultant_sign);end
+         else if(lv_rounding_mode == 'b011)  begin   
+            lv_round_up = lv_inexact & (~lv_resultant_sign); end
 
-        if(add_sub_subnormal == 1 && lv_inexact == 1)
-            lv_product_underflow = 1;
-
+    if(add_sub_subnormal == 1 && lv_inexact == 1)
+           begin  lv_product_underflow = 1;end    
+ 
          `ifdef verbose $display("lv_guard = %b lv_round = %b lv_sticky = %b", lv_guard, lv_round, lv_sticky); `endif
          `ifdef verbose $display("lv_round_up = %b", lv_round_up); `endif
          `ifdef verbose $display("lv_rounded_mantissa = %b", lv_rounded_mantissa); `endif
@@ -704,7 +704,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          else if(lv_res_man == 'b0 && lv_rounded_mantissa[fPMAN] == 1) begin
             resultant_exponent = resultant_exponent + 1;
          end
-
+                 
          Bit#(fpexp) lv_res_exp_temp         = resultant_exponent[fPEXP-1:0];
          Bit#(fpman) man_all_zeros           = '0;
          Bit#(TSub#(fpman,1)) man1_all_zeros = '0;
@@ -728,9 +728,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          else if(lv_result_is_zero[0] == 1) begin
              lv_final_output = {lv_result_is_zero[1],exp_all_zeros, man_all_zeros};
          end
-         else if(add_sub_is_zero[0] == 1) begin
-            lv_final_output = {add_sub_is_zero[1], exp_all_zeros , man_all_zeros};
-         end
          else if(lv_product_overflow == 1 || lv_res_exp_temp == '1) begin
             lv_inexact = 1;
             ex_overflow = 1;
@@ -744,12 +741,20 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
              lv_final_output={lv_resultant_sign,exp_all_ones,man_all_zeros};
            end
          end
+         else if(add_sub_is_zero[0] == 1) begin
+            lv_final_output = {add_sub_is_zero[1], exp_all_zeros , man_all_zeros};
+         end
          else begin
              lv_final_output = {lv_resultant_sign, out_exp, out_man};
          end
 
-         if(lv_product_underflow == 1'b1 && lv_rounded_mantissa[fPMAN]==1'b1 && lv_rounding_mode!=3'b011) //Tininess vanishing after rounding
-             lv_product_underflow = 0;
+         if(lv_product_underflow == 1'b1 && lv_rounded_mantissa[fPMAN]==1'b1) begin  //Tininess vanishing after rounding             
+             if (lv_round == 1  && lv_guard == 1) begin 
+             lv_product_underflow = 0; end 
+              else if(lv_sticky == 1  && lv_guard == 1 && ((lv_resultant_sign ==0  && lv_rounding_mode == 'b011) || (lv_resultant_sign ==1  && lv_rounding_mode == 'b010))) begin   
+              lv_product_underflow = 0; end
+             end
+              
        
          if(lv_result_is_invalid == 1) begin   //For effectively handling the flag cases between add,sub,mul and fused mul add
              ex_overflow  = 0;

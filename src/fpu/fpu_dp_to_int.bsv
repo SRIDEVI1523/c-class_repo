@@ -83,8 +83,18 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
                    if(lv_sign == 0)
                     final_result = zeroExtend(all_ones);
                    else begin
-                       if(lv_original_exponent == 'd31 && lv_manzero == 0)
-                           lv_invalid = 0;
+                     if(lv_original_exponent == 'd31) begin
+                       if (lv_manzero == 0)
+                         lv_invalid = 0;
+                       else if (lv_mantissa <= 1048576) begin
+                        if (rmm && lv_mantissa == 1048576) begin 
+                         lv_invalid = 1;
+                         lv_inexact = 0; end 
+                         else begin 
+                         lv_invalid = 0;
+                         lv_inexact = 1; end 
+                       end
+                     end
                     final_result = signExtend(32'h80000000);
                    end
                end

@@ -107,7 +107,7 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
 
     Reg#(Maybe#(Floating_output#(fpinp))) ff_final_out <- mkDReg(tagged Invalid); //Final Output FIFO
 
-    ConfigReg#(Stage_data#(fpman,fpexp)) rg_inter_stage <- mkConfigReg(?);         //Inter Stage register 
+    ConfigReg#(Stage_data#(fpman,fpexp)) rg_inter_stage <- mkConfigReg(?);         //Inter Stage register
     ConfigReg#(Bit#(6)) rg_state <-mkConfigReg(0);                  //State counter of the module
     Wire#(Bool) wr_flush <- mkDWire(False);
     (*mutually_exclusive = "rl_flush,rl_stage2,rl_inter_stage,rl_final_stage"*)

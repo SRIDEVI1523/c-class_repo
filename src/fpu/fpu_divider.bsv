@@ -112,7 +112,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
     Wire#(Floating_output#(fpinp)) wr_final_out <- mkWire();
 	Reg#(Stage1_type#(fpman,fpexp)) rg_stage1    <- mkRegU();       // instantiation of Stage 1 FIFO
     Reg#((Stage2_type#(fpexp2)))    rg_stage2    <- mkRegU();
-    Reg#((Stage3_type#(fpexp2,fpman))) rg_stage3 <- mkRegU();
+    Reg#((Stage3_type#(fpexp2,fpman))) rg_stage3 <- mkRegU(); 
     Reg#(Div_states) rg_state_handler            <- mkReg(Begin);
     Wire#(Bool) wr_flush <- mkDWire(False);
     let fPINP 	= valueOf(fpinp);
@@ -327,6 +327,9 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 		if((lv_sticky | lv_guard | lv_round) == 1)// if any of the sticky,guard or round bit is set, the value is inexact.
 			lv_inexact = 1;
 
+        if(lv_inexact == 1 && lv_quotient_is_subnormal == 1) //Was buried deep inside the SPEC. Phew! Maybe Wrong!!!
+            lv_underflow = 1;
+
 		// Following if-else condition determine the value of lv_round_up. If set, the mantissa needs to be incremented, else the mantissa remains unchanged.
 		if(lv_rounding_mode == 'b000) 
 			lv_round_up = lv_guard & (lv_round|lv_sticky|lv_quotient[3]);
@@ -349,17 +352,11 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
       `ifdef verbose $display("Exponent Incremented 1"); `endif
 			lv_exponent = lv_exponent + 1;
 			lv_rounded_quotient = lv_rounded_quotient >> 1;
-			lv_quotient_is_subnormal= 0;
 		end
 		if(lv_quotient[fPMAN+3] == 0 && lv_rounded_quotient[fPMAN] == 1) begin
       `ifdef verbose $display("Exponent Incremented 2"); `endif
 			lv_exponent = lv_exponent + 1;
-			lv_quotient_is_subnormal= 0;
 		end
-
-        if(lv_inexact == 1 && lv_quotient_is_subnormal == 1) //Was buried deep inside the SPEC. Phew! Maybe Wrong!!!
-            lv_underflow = 1;
-
     Bit#(fpexp) out_exp = lv_exponent[fPEXP-1:0];
     Bit#(fpman) out_man = lv_rounded_quotient[fPMAN-1:0];
     Bit#(fpexp) exp_all_zeros = '0;
@@ -371,7 +368,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
     Bit#(TSub#(fpman,1)) man_all_ones_1 = '1;
 	Bit#(fpinp) lv_final_output= 0;
 	Bit#(5) exception = 0;  
-     
+    
 		// result is infinity
         if(lv_infinity == 1) begin              
 			lv_final_output = {lv_sign, exp_all_ones, man_all_zeros};
@@ -394,8 +391,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
       lv_final_output={lv_sign,exp_all_zeros,man_all_zeros};
         // result is underflow
     else if(lv_underflow == 1) begin
-       
-      lv_final_output= {lv_sign,exp_all_zeros,lv_rounded_quotient[fPMAN-1:0]};       	//TODO to verify if it needs to be lv_rounded_quotient[22:1] and lv_inexact bit.
+      lv_final_output= {lv_sign,out_exp,lv_rounded_quotient[fPMAN-1:0]};       	//TODO to verify if it needs to be lv_rounded_quotient[22:1] and lv_inexact bit.
     	exception[1] = 1;//Underflow;
         exception[0] = 1;
     end
@@ -463,7 +459,9 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 	  else if(lv_op2_is_zero==1) begin            				//op 1 is neither NaN nor infinity, and op2 is zero
       lv_inf=1;                          						//result is infinity
      	lv_dz=1;                                				//setting the divide by zero flag
-      $display("Divide_by_zero");
+      `ifdef verbose 
+        $display("Divide_by_zero"); 
+      `endif
     end
     else if(lv_op2_is_infinity == 1 || lv_op1_is_zero == 1)   	//{op1 and op2 are not NaN} (and) {op1 is zero and op2 is not zero (or) op2 is infinity and op1 is not infinity}
       lv_zero=1;                                  				//result is zero

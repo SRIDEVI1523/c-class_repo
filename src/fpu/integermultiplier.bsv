@@ -21,7 +21,7 @@ package integermultiplier;
                 Add#(regwidth1,regwidth,regwidth_twice1)
               );
 
-    Reg#(Bit#(regwidth_twice1)) partial_prod <-mkReg(0);
+    Reg#(Bit#(regwidth_twice1)) partial_prod <-mkReg(0); 
     Reg#(Bit#(regwidth_log1)) rg_state_counter <-mkDReg(0);//Register for state machine counter
     let rEGWIDTH = valueOf(regwidth);
     let lOOP = valueOf(loop); 

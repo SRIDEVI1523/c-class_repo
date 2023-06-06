@@ -113,13 +113,18 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
         else if (exponent <= 'd896) begin  //Denormal number //Set sticky bit!!!
             `ifdef verbose $display("Denormal lv_sticky : %b", lv_sticky); `endif
             let shiftDist = 'd896 - exponent;
-            man = {1'b1,mantissa[51:27],23'd0} >> shiftDist;
-            if(man[23:0] != 0)
-                lv_sticky = 1;
+            man = {1'b1,mantissa[51:27],23'd0} >> shiftDist; 
+            if(man/*[23:0]*/ != 0) begin
+                lv_sticky = | mantissa[26:0];
             `ifdef verbose $display("lv_guard : %b shiftDist : %d",lv_guard, shiftDist); `endif
             expo = '0;
-            denormal = 1;
-            `ifdef verbose $display("expo : %b man : %b",expo,man); `endif
+            if (exponent == 'd896 && man[48:24] == 25'h1ffffff  && ((rounding_mode == 'b010 && sign == 1)||(rounding_mode == 'b011 && sign == 0)|| (rounding_mode != 'b001))) begin
+             denormal = 0;
+             exception[0]=1; end 
+             else  begin 
+              denormal = 1; end  
+            
+            end
         end
         else begin      //Normal number
             expo = truncate(exponent - 'd896);
@@ -136,7 +141,11 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
             exception[1] = 1;
             exception[0] = 1;
         end
-            exception[0] = exception[0] | lv_inexact;
+            if(exponent == 'd1150 && mantissa[51:28] == 24'hffffff && (mantissa[27] ==1 || lv_sticky == 1)  && ((rounding_mode == 'b010 && sign == 1)||(rounding_mode == 'b011 && sign == 0)|| (rounding_mode != 'b001)))begin
+              exception[2] = 1; end
+              
+            exception[0] = exception[0] | lv_inexact; 
+            
       if(flags[2]==0 && flags[0] == 0 && flags[1]==0 && flags[3] == 0) begin
         if(rounding_mode == 'b000) 
 			lv_round_up = lv_guard & (lv_round|lv_sticky|man[26]);
