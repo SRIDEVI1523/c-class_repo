@@ -35,9 +35,9 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
         Bool rup = (rounding_mode == 3'b011);
         Bool rmm = (rounding_mode == 3'b100);
         Bit#(12) lv_exp = {1'b0,lv_exponent};
-		`ifdef verbose $display("sign = %b exponent = %h mantissa = %h zero_flag = %b invalid_flag = %b infinity: %b Denormal : %b", lv_sign, lv_exponent, lv_mantissa, lv_zero, lv_invalid, lv_infinity, lv_denormal); `endif
+		//`ifdef verbose $display("sign = %b exponent = %h mantissa = %h zero_flag = %b invalid_flag = %b infinity: %b Denormal : %b", lv_sign, lv_exponent, lv_mantissa, lv_zero, lv_invalid, lv_infinity, lv_denormal); `endif
 		Int#(11) lv_original_exponent = unpack(truncate(lv_exp - 1023));  // removing the bias
-        `ifdef verbose $display("lv_original_exponent : %d flags: %b",lv_original_exponent,flags); `endif
+        //`ifdef verbose $display("lv_original_exponent : %d flags: %b",lv_original_exponent,flags); `endif
         Bit#(ELEN) final_result = 0;
 		Bit#(TAdd#(52, ELEN)) final_man = {'0,1'b1,lv_mantissa};
         
@@ -69,21 +69,21 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
                 if(lv_infinity == 1 || lv_invalid == 1) begin
                    final_result = (lv_sign==1) ?(lv_invalid==1? zeroExtend(all_ones) : signExtend(32'h80000000)) : zeroExtend(all_ones); 
                 end
-               else if(lv_original_exponent < 'd31) begin
+               else if(lv_original_exponent < 'h1f /*'d31*/) begin
                    final_man = final_man << lv_original_exponent;
                    Bit#(32) y = final_man[83:52];
                    final_result = signExtend(y);
                    lv_mantissa = final_man[51:0];
                    to_round = True;
                end
-               else if(lv_original_exponent >= 'd31) begin
-                   `ifdef verbose $display("Overflow");`endif
+               else if(lv_original_exponent >=  'h1f /*'d31*/) begin
+                   //`ifdef verbose $display("Overflow");`endif
                    //lv_overflow = 1;
                      lv_invalid = 1;
                    if(lv_sign == 0)
                     final_result = zeroExtend(all_ones);
                    else begin
-                     if(lv_original_exponent == 'd31) begin
+                     if(lv_original_exponent == 'h1f /*'d31*/) begin
                        if (lv_manzero == 0)
                          lv_invalid = 0;
                        else if (lv_mantissa <= 1048576) begin
@@ -103,16 +103,16 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
                Bit#(32) all_ones = '1;
                if(lv_infinity == 1 || lv_invalid == 1)
                    final_result = (lv_sign==1) ? (lv_invalid==1? signExtend(all_ones) : '0) : signExtend(all_ones); 
-               else if(lv_original_exponent < 'd32) begin
+               else if(lv_original_exponent < 'h20 /*'d32*/) begin
                    final_man = final_man << lv_original_exponent;
                    Bit#(32) y = final_man[83:52];
-                   `ifdef verbose $display("final_man = %d",final_man); `endif
+                   //`ifdef verbose $display("final_man = %d",final_man); `endif
                    final_result = signExtend(y);
                    lv_mantissa = final_man[51:0];
                    to_round = True;
                end
-               else if(lv_original_exponent >= 'd32) begin
-                   `ifdef verbose $display("Overflow");`endif
+               else if(lv_original_exponent >= 'h20 /*'d32*/) begin
+                   //`ifdef verbose $display("Overflow");`endif
                    //lv_overflow = 1;
                      lv_invalid = 1;
                    if(lv_sign == 0)
@@ -127,22 +127,22 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
                 Bit#(63) all_ones = '1;
                if(lv_infinity == 1 || lv_invalid == 1)
                    final_result = (lv_sign==1) ?(lv_invalid==1? zeroExtend(all_ones) : signExtend(64'h8000000000000000)) : zeroExtend(all_ones); 
-               else if(lv_original_exponent < 'd63) begin
+               else if(lv_original_exponent < 'h3f /*'d63*/) begin
                    final_man = final_man << lv_original_exponent;
-                   `ifdef verbose $display("final_man : %b",final_man);`endif
+                   //`ifdef verbose $display("final_man : %b",final_man);`endif
                    Bit#(64) y = zeroExtend(final_man[115:52]);
                    final_result = y;
                    lv_mantissa = final_man[51:0];
                    to_round = True;
                end
-               else if(lv_original_exponent >= 'd63) begin
-                   `ifdef verbose $display("Overflow");`endif
+               else if(lv_original_exponent >= 'h3f /*'d63*/) begin
+                   //`ifdef verbose $display("Overflow");`endif
                    //lv_overflow = 1;
                      lv_invalid = 1;
                    if(lv_sign == 0)
                     final_result = zeroExtend(all_ones);
                    else begin
-                       if(lv_original_exponent == 'd63 && lv_manzero == 0)
+                       if(lv_original_exponent == 'h3f /*'d63*/ && lv_manzero == 0)
                            lv_invalid = 0;
                     final_result = signExtend(64'h8000000000000000);
                    end
@@ -152,16 +152,16 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
                Bit#(64) all_ones = '1;
                if(lv_infinity == 1 || lv_invalid == 1)
                    final_result = (lv_sign==1) ? (lv_invalid==1? signExtend(all_ones) : '0) : signExtend(all_ones); 
-               else if(lv_original_exponent < 'd64) begin
+               else if(lv_original_exponent < 'h40 /*'d64*/) begin
                    final_man = final_man << lv_original_exponent;
-                   `ifdef verbose $display("final_man = %d",final_man); `endif
+                   //`ifdef verbose $display("final_man = %d",final_man); `endif
                    Bit#(64) y = zeroExtend(final_man[115:52]);
                    final_result = y;
                    lv_mantissa = final_man[51:0];
                    to_round = True;
                end
-               else if(lv_original_exponent >= 'd64) begin
-                   `ifdef verbose $display("Overflow");`endif
+               else if(lv_original_exponent >= 'h40 /*'d64*/) begin
+                   //`ifdef verbose $display("Overflow");`endif
                    //lv_overflow = 1;
                     lv_invalid = 1;
                    if(lv_sign == 0)
@@ -184,7 +184,7 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
 	    else if(rdn) lv_round_up = lv_inexact1 & (lv_sign);								//Round down to -infinity
 	    else if(rup) lv_round_up = lv_inexact1 & (~lv_sign);								//Round up to +infinity
         lv_inexact = lv_inexact | lv_inexact1;
-        `ifdef verbose $display("lv_inexact: %b lv_guard: %b lv_round : %b lv_sticky: %b lv_sign %b",lv_inexact,lv_guard,lv_round,lv_sticky,lv_sign); `endif
+        //`ifdef verbose $display("lv_inexact: %b lv_guard: %b lv_round : %b lv_sticky: %b lv_sign %b",lv_inexact,lv_guard,lv_round,lv_sticky,lv_sign); `endif
             if(lv_round_up == 1) begin 
                 lv_invalid = 1;
                 if(convert_long == 0 && convert_unsigned == 0 && lv_original_exponent == 30 && final_result[30:0] == '1 && lv_sign == 0)  //Overflow..  Beyond representable number after rounding
@@ -202,14 +202,14 @@ module mkfpu_dp_to_int(Ifc_fpu_dp_to_int);
                     final_result = signExtend(final_result[31:0]);
                 end
             end
-        `ifdef verbose $display("rounding_mode == %b",rounding_mode); `endif
-		`ifdef verbose $display("round_up = %b", lv_round_up); `endif
+        //`ifdef verbose $display("rounding_mode == %b",rounding_mode); `endif
+		//`ifdef verbose $display("round_up = %b", lv_round_up); `endif
 
 			if(convert_unsigned == 0 && lv_sign == 1)begin		//Negating the output if floating point number is negative and converted to signed word/long
 				final_result = ~final_result + 1;
 				if(convert_long == 0 && final_result[31]==1)
                     final_result = signExtend(final_result[31:0]);
-                `ifdef verbose $display("Negating output final_result : %b", final_result); `endif
+                //`ifdef verbose $display("Negating output final_result : %b", final_result); `endif
 			end
             else if(convert_unsigned == 1 && lv_sign == 1) begin	//TODO What happens when negative floating point is converted to unsigned int, right now rounded to zero
 				final_result = 0;
@@ -311,9 +311,9 @@ Wrapper3#(Tuple2#(Bit#(23), Bit#(8)),Tuple2#(Bit#(23), Bit#(8)), Tuple2#(Bit#(23
             let {exp1,exp2,exp3}   <- getExp64.func(wr_operand1, 0,0);
             let {flags1,flags2,flags3} <- condFlags64.func(tuple2(man1,exp1),tuple2(man2,exp2),tuple2(0,0));
             let sign1 = wr_operand1[63];
-`ifdef verbose $display("input %b %b %b given at %0d", sign1, exp1, man1, state_clock); `endif
+//`ifdef verbose $display("input %b %b %b given at %0d", sign1, exp1, man1, state_clock); `endif
  	let x<-	converter._start(sign1,exp1,man1, 0, 0, 3'b000,flags1);
- 		`ifdef verbose $display("output %h fflags : %h at %h", x.final_result, x.fflags, state_clock); `endif
+ 		//`ifdef verbose $display("output %h fflags : %h at %h", x.final_result, x.fflags, state_clock); `endif
  	endrule
 
 

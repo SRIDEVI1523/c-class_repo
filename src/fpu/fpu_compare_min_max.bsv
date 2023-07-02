@@ -84,7 +84,7 @@ module mkfpu_compare_min_max(Ifc_fpu_compare_min_max#(fpinp, fpman, fpexp))
 		Bit#(fpinp) lv_result = 0;
 	   bit lv_invalid = 0;
 		bit lv_zero = 0;
-      `ifdef verbose $display("operand1 : %h operand2: %h",operand1,operand2);  `endif
+     // `ifdef verbose $display("operand1 : %h operand2: %h",operand1,operand2);  `endif
 
       bit lv_op1_is_qNan=flags1[2];
       bit lv_op2_is_qNan=flags2[2];
@@ -102,7 +102,7 @@ module mkfpu_compare_min_max(Ifc_fpu_compare_min_max#(fpinp, fpman, fpexp))
 			lv_zero = 1;
     
 		Bit#(2) lv_compare_result = fn_comparator(sign1,exponent1,mantissa1,sign2,exponent2,mantissa2);
-            `ifdef verbose $display("lv_compare_result : %b sign1 %b exponent1 %b mantissa1 %b sign2 %b exponent2 %b mantissa2 %b",lv_compare_result,sign1,exponent1,mantissa1,sign2,exponent2,mantissa2); `endif
+           // `ifdef verbose $display("lv_compare_result : %b sign1 %b exponent1 %b mantissa1 %b sign2 %b exponent2 %b mantissa2 %b",lv_compare_result,sign1,exponent1,mantissa1,sign2,exponent2,mantissa2); `endif
 			if(cmp_or_min_max=='b0) begin						//checking if compare instruction
     		if(lv_invalid==1)begin
                 if(which_cmp_instr!=3'b010)
@@ -115,12 +115,12 @@ module mkfpu_compare_min_max(Ifc_fpu_compare_min_max#(fpinp, fpman, fpexp))
                             lv_result=0;
     		end
 				else if(which_cmp_instr==3'b010) begin				//FEQ.D, FEQ.S
-					`ifdef verbose $display("FEQ"); `endif
+					//`ifdef verbose $display("FEQ"); `endif
 					if(lv_compare_result==2'b11 || lv_zero==1)	//checking if op1=op2
 						lv_result[0]=1;					//writing result
 				end
 				else if(which_cmp_instr==3'b001) begin				//FLT.D, FLT.S
-					`ifdef verbose $display("FLT lv_compare_result %b", lv_compare_result); `endif
+					//`ifdef verbose $display("FLT lv_compare_result %b", lv_compare_result); `endif
 					if(lv_compare_result==2'b01 && lv_zero==0)	//checking if op1<op2
 												//Also, if op1 is -0 and op2 is +0, lv_result[0] should be zero. lv_compare_is_zero takes care of that
 						lv_result[0]=1;					//writing result

@@ -27,9 +27,9 @@ package integermultiplier;
     let lOOP = valueOf(loop); 
     
     method ActionValue#(Maybe#(Bit#(regwidth_twice))) _start(Bit#(regwidth) inp1, Bit#(regwidth) inp2); 
-        `ifdef verbose $display("Taken inputs in multiplier. rs1: %h rs2: %h",inp1,inp2); `endif
-      `ifdef verbose $display("Register State Counter %h", rg_state_counter);`endif
-      `ifdef verbose $display("partial_prod %h", partial_prod);`endif
+        //`ifdef verbose $display("Taken inputs in multiplier. rs1: %h rs2: %h",inp1,inp2); `endif
+      //`ifdef verbose $display("Register State Counter %h", rg_state_counter);`endif
+      //`ifdef verbose $display("partial_prod %h", partial_prod);`endif
       if(rg_state_counter==0)begin
 	     partial_prod<=zeroExtend(inp2);
          rg_state_counter<=rg_state_counter+1;
@@ -40,7 +40,7 @@ package integermultiplier;
 	      Bit#(regwidth1) accum=partial_prod[2*rEGWIDTH:rEGWIDTH]+zeroExtend(temp);
           Bit#(regwidth) partial_prod_temp = partial_prod[rEGWIDTH-1:0];
 	      Bit#(regwidth_twice1) temp1 ={accum,partial_prod_temp}>>lOOP;
-	      `ifdef verbose $display("multiplication. Partial :%h Counter: %d",temp1,rg_state_counter);`endif
+	      //`ifdef verbose $display("multiplication. Partial :%h Counter: %d",temp1,rg_state_counter);`endif
 	      if(rg_state_counter==(fromInteger(rEGWIDTH)/fromInteger(lOOP)))begin
 	         rg_state_counter<=0;
 	         return tagged Valid temp1[2*rEGWIDTH-1:0];
@@ -62,7 +62,7 @@ package integermultiplier;
    rule give_inputs;
    let x <- mul._start(inp1,inp2);
    if(x matches tagged Valid .res) begin
-       `ifdef verbose $display("Output is %b",res);`endif
+       //`ifdef verbose $display("Output is %b",res);`endif
        $finish(0);
    end
    endrule

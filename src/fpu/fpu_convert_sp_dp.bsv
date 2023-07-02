@@ -39,19 +39,19 @@ function Bit#(69) floatDouble(Bit#(1) sign, Bit#(8) exponent, Bit#(23) mantissa,
         return {5'b0,sign,63'b0};
     else if (flags[2] == 1 || flags[0] == 1) begin
         exception[4] = flags[0];
-        return {exception,1'b0,11'd-1,1'b1,51'b0};
+        return {exception,1'b0,11'h7FF /*11'd-1*/,1'b1,51'b0};
     end
     else if (flags[1] == 1)
-        return {exception,sign,11'd-1,52'd0}; 
+        return {exception,sign,11'h7FF /*11'd-1*/,52'b0}; 
     else begin
         if(flags[4]==0) begin   //Normal numbers
-            Bit#(11) expo = zeroExtend(exponent) + 'd896;
+            Bit#(11) expo = zeroExtend(exponent) +  'h380;//'d896
             Bit#(52) mant = zeroExtendLSB(mantissa);
             return {exception,sign,expo,mant};
         end
         else begin  //Denormal numbers
             let lv_zeros = countZerosMSB(mantissa);
-            Bit#(11) expo = 'd896 - zeroExtend(pack(lv_zeros));   //What if lv_zeros is so much?
+            Bit#(11) expo =  'h380 /*'d896*/ - zeroExtend(pack(lv_zeros));   //What if lv_zeros is so much?
             Bit#(52) man = zeroExtendLSB(mantissa << lv_zeros);
             man = man<<1;  //To throw off implicit bit
             return {exception,sign, expo, man};
@@ -63,34 +63,34 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
     =actionvalue
     Bit#(5) exception = 0;
     bit denormal = 0;
-    `ifdef verbose $display("sign : %b exponent : %b mantissa : %b flags : %b",sign,exponent,mantissa, flags); `endif
+    //`ifdef verbose $display("sign : %b exponent : %b mantissa : %b flags : %b",sign,exponent,mantissa, flags); `endif
     if (flags[3]==1) begin
         return {5'b0,sign,31'b0};
     end
     else if (flags[2] == 1 || flags[0] == 1) begin
         exception[4] = flags[0];
-        return {exception,1'b0,8'd-1,1'b1,22'b0};
+        return {exception,1'b0, 8'hFF  /*8'd-1*/,1'b1,22'b0};
     end
     else if (flags[1] == 1)
-        return {exception,sign,8'd-1,23'd0};
-    else if (exponent > 'd1150) begin
+        return {exception,sign,8'hFF  /*8'd-1*/,23'b0};
+    else if (exponent > 'h47E /*'d1150*/) begin
          exception[2] = 1;
          exception[0] = 1;
-        `ifdef verbose $display("overflow");  `endif
+        //`ifdef verbose $display("overflow");  `endif
         if(rounding_mode == 3'b001) //Round to zero 
-            return {exception,sign,7'd-1,1'b0,23'd-1};  //Highest positive number 7f7fffff
+            return {exception,sign,7'h7F /*7'd-1*/,1'b0,23'h7FFFFF  /*23'd-1*/};  //Highest positive number 7f7fffff
         else if (rounding_mode == 3'b010)  //Round down
             if(sign == 0)
-                return {exception,1'b0,7'd-1,1'b0,23'd-1};
+                return {exception,1'b0,7'h7F /*7'd-1*/,1'b0,23'h7FFFFF  /*23'd-1*/};
             else
-                return {exception,1'b1,8'd-1,23'd0};
+                return {exception,1'b1,8'hFF  /*8'd-1*/,23'b0};
         else if (rounding_mode == 3'b011 && sign == 1)
-            return {exception,1'b1,7'd-1,1'b0,23'd-1};
+            return {exception,1'b1,7'h7F /*7'd-1*/,1'b0,23'h7FFFFF  /*23'd-1*/};
         else
-            return {exception,sign,8'd-1,23'd0};
+            return {exception,sign,8'hFF  /*8'd-1*/,23'b0};
     end
     else begin
-        `ifdef verbose $display("sign : %b exponent %b mantissa %b rounding %b flags %b",sign,exponent,mantissa,rounding_mode,flags); `endif
+        //`ifdef verbose $display("sign : %b exponent %b mantissa %b rounding %b flags %b",sign,exponent,mantissa,rounding_mode,flags); `endif
         Bit#(32) res = 0;
         Bit#(49) man = 0;
         Bit#(8)  expo = 0;
@@ -98,8 +98,8 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
         bit lv_guard = 0;
         bit lv_denormal_roundup = 0;
         let lv_sticky = |mantissa[26:0];
-        `ifdef verbose $display("exponent : %d",exponent); `endif
-        if (exponent <= 'd872) begin    //1023-127-24 Underflow
+        //`ifdef verbose $display("exponent : %d",exponent); `endif
+        if (exponent <= 'h368 /*'d872*/) begin    //1023-127-24 Underflow
             if(rounding_mode == 3'b010 && sign == 1) //Round Down
                 res = {1'b1,30'b0,1'b1};
             else if(rounding_mode == 3'b011 && sign == 0)
@@ -110,15 +110,15 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
             exception[1] = 1;
             exception[0] = 1;
         end
-        else if (exponent <= 'd896) begin  //Denormal number //Set sticky bit!!!
-            `ifdef verbose $display("Denormal lv_sticky : %b", lv_sticky); `endif
-            let shiftDist = 'd896 - exponent;
+        else if (exponent <= 'h380 /*'d896*/) begin  //Denormal number //Set sticky bit!!!
+            //`ifdef verbose $display("Denormal lv_sticky : %b", lv_sticky); `endif
+            let shiftDist = 'h380 /*'d896*/ - exponent;
             man = {1'b1,mantissa[51:27],23'd0} >> shiftDist; 
             if(man/*[23:0]*/ != 0) begin
                 lv_sticky = | mantissa[26:0];
-            `ifdef verbose $display("lv_guard : %b shiftDist : %d",lv_guard, shiftDist); `endif
+            //`ifdef verbose $display("lv_guard : %b shiftDist : %d",lv_guard, shiftDist); `endif
             expo = '0;
-            if (exponent == 'd896 && man[48:24] == 25'h1ffffff  && ((rounding_mode == 'b010 && sign == 1)||(rounding_mode == 'b011 && sign == 0)|| (rounding_mode != 'b001))) begin
+            if (exponent == 'h380 /*'d896*/ && man[48:24] == 25'h1ffffff  && ((rounding_mode == 'b010 && sign == 1)||(rounding_mode == 'b011 && sign == 0)|| (rounding_mode != 'b001))) begin
              denormal = 0;
              exception[0]=1; end 
              else  begin 
@@ -127,9 +127,9 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
             end
         end
         else begin      //Normal number
-            expo = truncate(exponent - 'd896);
+            expo = truncate(exponent - 'h380 /*'d896*/);
             man = zeroExtendLSB(mantissa[51:27]);
-            `ifdef verbose $display("expo : %b man : %b",expo,man); `endif
+            //`ifdef verbose $display("expo : %b man : %b",expo,man); `endif
         end
         lv_guard = man[25];
         let lv_round = man[24];
@@ -141,7 +141,7 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
             exception[1] = 1;
             exception[0] = 1;
         end
-            if(exponent == 'd1150 && mantissa[51:28] == 24'hffffff && (mantissa[27] ==1 || lv_sticky == 1)  && ((rounding_mode == 'b010 && sign == 1)||(rounding_mode == 'b011 && sign == 0)|| (rounding_mode != 'b001)))begin
+            if(exponent == 'h47E /*'d1150*/ && mantissa[51:28] == 24'hffffff && (mantissa[27] ==1 || lv_sticky == 1)  && ((rounding_mode == 'b010 && sign == 1)||(rounding_mode == 'b011 && sign == 0)|| (rounding_mode != 'b001)))begin
               exception[2] = 1; end
               
             exception[0] = exception[0] | lv_inexact; 
@@ -155,9 +155,9 @@ function ActionValue#(Bit#(37)) doubleFloat(Bit#(1) sign, Bit#(11) exponent, Bit
 			lv_round_up = (lv_guard|lv_round|lv_sticky) & ~sign;
 		else if(rounding_mode == 'b010)
             lv_round_up = (lv_guard|lv_round|lv_sticky) & sign;
-        `ifdef verbose $display("lv_roundup : %b",lv_round_up); `endif
+        //`ifdef verbose $display("lv_roundup : %b",lv_round_up); `endif
         Bit#(24) fman = zeroExtend(man[48:26]);
-        `ifdef verbose $display("fman: %b",fman); `endif
+        //`ifdef verbose $display("fman: %b",fman); `endif
         if(lv_round_up == 1)
             fman = fman + 1;
         if(fman[23] == 1)
@@ -174,7 +174,7 @@ endactionvalue;
 `endif
 module mkfpu_convert_sp_dp(Ifc_fpu_convert_sp_dp);
 	method ActionValue#(Floating_output#(64))_start(Bit#(1) sign, Bit#(8) exponent, Bit#(23) mantissa, Bit#(3) rounding_mode, Bit#(5) flags);
-            `ifdef verbose $display("sign : %b exponent %b mantissa %b rounding_mode %b flags %b",sign,exponent,mantissa,rounding_mode,flags); `endif
+            //`ifdef verbose $display("sign : %b exponent %b mantissa %b rounding_mode %b flags %b",sign,exponent,mantissa,rounding_mode,flags); `endif
             let x = floatDouble(sign,exponent,mantissa,rounding_mode,flags); 
             return Floating_output{
                                           final_result : x[63:0],
@@ -188,7 +188,7 @@ endmodule
 `endif
 module mkfpu_convert_dp_sp(Ifc_fpu_convert_dp_sp);
 	method ActionValue#(Floating_output#(32)) _start(Bit#(1) sign, Bit#(11) exponent, Bit#(52) mantissa, Bit#(3) rounding_mode, Bit#(5) flags);
-            `ifdef verbose $display("sign : %b exponent %b mantissa %b rounding_mode %b flags %b",sign,exponent,mantissa,rounding_mode,flags); `endif
+            //`ifdef verbose $display("sign : %b exponent %b mantissa %b rounding_mode %b flags %b",sign,exponent,mantissa,rounding_mode,flags); `endif
             let x<- doubleFloat(sign,exponent,mantissa,rounding_mode,flags);
             return Floating_output{
                                           final_result : x[31:0],
@@ -282,10 +282,10 @@ Wrapper3#(Tuple2#(Bit#(23), Bit#(8)),Tuple2#(Bit#(23), Bit#(8)), Tuple2#(Bit#(23
            let {man1,man2,man3}     <- getMant64.func(wr_operand1, 0,0);
            let {exp1,exp2,exp3}     <- getExp64.func(wr_operand1, 0,0);
            let {x1,x2,x3}           <- condFlags64.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
-           `ifdef verbose $display("sign: %b exponent : %b mantissa : %b",wr_operand1[63],exp1,man1); `endif
-           `ifdef verbose $display("exponent: %d",exp1); `endif
+           //`ifdef verbose $display("sign: %b exponent : %b mantissa : %b",wr_operand1[63],exp1,man1); `endif
+           //`ifdef verbose $display("exponent: %d",exp1); `endif
           let x <- cvt._start(wr_operand1[63],exp1,man1,3'b011,x1);
-		  `ifdef verbose $display("Output= %h fflags %h" , x.final_result,x.fflags,$time); `endif
+		  //`ifdef verbose $display("Output= %h fflags %h" , x.final_result,x.fflags,$time); `endif
     endrule
 
     

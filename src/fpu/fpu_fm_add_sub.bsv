@@ -213,7 +213,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          // bit lv_product_is_subnormal = 0;
 
          bit lv_sticky = lv_product_mantissa[0];
-         `ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
+         //`ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
 
          /*
           if exponent is > bias then obviously none of the numbers are subnormal
@@ -221,7 +221,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
           the overflow conditions are handled in the following if condition accordingly
          */
 
-         `ifdef verbose $display("lv_actual_product_exponent = %d",lv_actual_product_exponent); `endif
+         //`ifdef verbose $display("lv_actual_product_exponent = %d",lv_actual_product_exponent); `endif
          bit exp_overflow_bit  = pack(lv_actual_product_exponent)[fPEXP]; //Says if Exponent Overflows
          bit exp_underflow_bit = pack(lv_actual_product_exponent)[fPEXP+1];  //Says if Exponent Underflows
          Bit#(fpexp) expo_temp = pack(lv_actual_product_exponent)[fPEXP-1:0];
@@ -235,7 +235,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
 	 	    if(muladd == 0 ||(muladd==1 && ((lv_product_sign^lv_operand3[fPINP-1]^operation) == 0)))  
 	 		   lv_product_overflow = 1;
             //When the product overflows, the FMA result is an overflow
-            `ifdef verbose $display("lv_product_overflow!!!"); `endif
+            //`ifdef verbose $display("lv_product_overflow!!!"); `endif
          end
 
          /*
@@ -251,7 +251,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
             //if(lv_actual_product_exponent_temp < unpack(-bias_temp-fromInteger(fPMAN)-1)) begin
                if((muladd == 1'b0  || (muladd==1'b1 && (add_flags[3]==1'b1 || add_flags[4]==1'b1))) && lv_product_is_zero == 1'b0)
                 lv_product_underflow = 1;
-               `ifdef verbose $display("lv_product_underflow!!!"); `endif
+               //`ifdef verbose $display("lv_product_underflow!!!"); `endif
             end
             /*
              if msb of product is 1 then the case is 1x.xxxx
@@ -310,14 +310,14 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
                 lv_sticky = lv_product_mantissa[0];
                 lv_product_exponent = lv_product_exponent_inc_shift;
 
-                `ifdef verbose $display("possible_shift",possible_shift); `endif
+                //`ifdef verbose $display("possible_shift",possible_shift); `endif
                /*if(mul==1 && lv_product_is_zero==0)
                    lv_product_underflow = 1;*/
                //Handling sticky
 
-               `ifdef verbose $display("lv_product_exponent : %d bin : %b",lv_product_exponent,lv_product_exponent); `endif
-               `ifdef verbose $display("lv_product_mantissa = %b lv_product_exponent : %d since exp < -126", lv_product_mantissa,lv_product_exponent); `endif
-               `ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
+               //`ifdef verbose $display("lv_product_exponent : %d bin : %b",lv_product_exponent,lv_product_exponent); `endif
+               //`ifdef verbose $display("lv_product_mantissa = %b lv_product_exponent : %d since exp < -126", lv_product_mantissa,lv_product_exponent); `endif
+               //`ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
                // lv_product_is_subnormal = 1;
             end
 
@@ -499,9 +499,9 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          mantissa2 = mantissa_to_shift;
          end
          quiet_nan_two = quiet_nan_two & ~add_flags[0];
-         `ifdef verbose $display("sign2 = %b exponent2 = %b mantissa2 = %b", sign2, resultant_exponent, mantissa2); `endif
-         `ifdef verbose $display("sign3 = %b exponent3 = %b mantissa3 = %b", sign3, resultant_exponent, mantissa3); `endif
-         `ifdef verbose $display(); `endif
+         //`ifdef verbose $display("sign2 = %b exponent2 = %b mantissa2 = %b", sign2, resultant_exponent, mantissa2); `endif
+         //`ifdef verbose $display("sign3 = %b exponent3 = %b mantissa3 = %b", sign3, resultant_exponent, mantissa3); `endif
+         //`ifdef verbose $display(); `endif
          bit man2_gt_man3 = 0;
          if(mantissa2 > mantissa3) man2_gt_man3 = 1;   //Can this be optimized? 
          bit lv_resultant_sign = (man2_gt_man3 & sign2) | (~man2_gt_man3 & (operation ^ sign3));  // Using Karnaugh maps
@@ -632,11 +632,11 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          else if(resultant_mantissa[fMAMAN-2] != 1'b1) begin
             if((zeroExtend(lv_zeros_on_left) - 1) > resultant_exponent_sub) begin
             //if((zeroExtend(lv_zeros_on_left) - 1) > (resultant_exponent - 1)) begin
-               `ifdef verbose $display("resultant_exponent : %d",resultant_exponent); `endif
+               //`ifdef verbose $display("resultant_exponent : %d",resultant_exponent); `endif
                //resultant_mantissa = resultant_mantissa << (resultant_exponent - 1);
                resultant_mantissa = resultant_mantissa_norm_expo;
                resultant_exponent = 0;
-               `ifdef verbose $display("add_sub subnormal!!!"); `endif
+               //`ifdef verbose $display("add_sub subnormal!!!"); `endif
                add_sub_subnormal = 1;
             end
             else begin
@@ -648,11 +648,11 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          end
 
 
-         `ifdef verbose $display("resultant_exponent : %b",resultant_exponent); `endif
+         //`ifdef verbose $display("resultant_exponent : %b",resultant_exponent); `endif
          Bit#(TSub#(fpexp,1)) bias = '1;
          bit ex_overflow = 0;
          Int#(fpexp2) res_exp_int = unpack(resultant_exponent) - zeroExtend(unpack(bias));
-         `ifdef verbose $display("resultant_exponent : %d res_exp_int : %d",resultant_exponent, res_exp_int); `endif
+         //`ifdef verbose $display("resultant_exponent : %d res_exp_int : %d",resultant_exponent, res_exp_int); `endif
          
          if(res_exp_int > zeroExtend(unpack(bias))) begin
              lv_product_overflow = 1;
@@ -662,7 +662,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
              ex_overflow = 1;*/
          else if(resultant_exponent[fPEXP+1] == 1 && lv_product_is_zero == 0) begin
              lv_product_underflow = 1;
-             `ifdef verbose $display("Underflow"); `endif
+             //`ifdef verbose $display("Underflow"); `endif
          end
          /*`ifdef verbose $display("resultant_sign = %b resultant_exponent = %b resultant_mantissa = %b", resultant_sign, resultant_exponent, resultant_mantissa); `endif
          `ifdef verbose $display(); `endif
@@ -688,14 +688,14 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
     if(add_sub_subnormal == 1 && lv_inexact == 1)
            begin  lv_product_underflow = 1;end    
  
-         `ifdef verbose $display("lv_guard = %b lv_round = %b lv_sticky = %b", lv_guard, lv_round, lv_sticky); `endif
-         `ifdef verbose $display("lv_round_up = %b", lv_round_up); `endif
-         `ifdef verbose $display("lv_rounded_mantissa = %b", lv_rounded_mantissa); `endif
+         //`ifdef verbose $display("lv_guard = %b lv_round = %b lv_sticky = %b", lv_guard, lv_round, lv_sticky); `endif
+         //`ifdef verbose $display("lv_round_up = %b", lv_round_up); `endif
+         //`ifdef verbose $display("lv_rounded_mantissa = %b", lv_rounded_mantissa); `endif
 
           if(lv_round_up == 1) 
              lv_rounded_mantissa = lv_rounded_mantissa + 1;
 
-         `ifdef verbose $display("lv_rounded_mantissa = %b after roundup", lv_rounded_mantissa); `endif
+         //`ifdef verbose $display("lv_rounded_mantissa = %b after roundup", lv_rounded_mantissa); `endif
 
          if(lv_rounded_mantissa[fPMAN+1] == 1) begin
             resultant_exponent = resultant_exponent + 1;
@@ -765,13 +765,13 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          end
 
          Bit#(5) fflags={lv_result_is_invalid,1'b0,ex_overflow,lv_product_underflow,lv_inexact};
-         `ifdef verbose $display("lv_inv : %b ex_overflow: %b lv_inexact : %b",lv_result_is_invalid,ex_overflow,lv_inexact); `endif
+         //`ifdef verbose $display("lv_inv : %b ex_overflow: %b lv_inexact : %b",lv_result_is_invalid,ex_overflow,lv_inexact); `endif
          ff_final_out <= Floating_output{
                                  final_result   :        lv_final_output,
                                  fflags         :        fflags
                                         };
 
-         `ifdef verbose $display("FMA: Result: %h fflags: %8h",lv_final_output, {24'b0,fflags}); `endif
+         //`ifdef verbose $display("FMA: Result: %h fflags: %8h",lv_final_output, {24'b0,fflags}); `endif
     endrule
 	
     method Action _start(Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand1, Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand2,Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul, bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
@@ -816,8 +816,8 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
              lv_zero = 1;                                                  //If they are not infinity - Checked for Zero, if it is then product is zero (0*x = 0)
 
 
-         `ifdef verbose $display("lv_inv : %h lv_inf : %h lv_zero : %h",lv_inv,lv_inf,lv_zero);  `endif
-         `ifdef verbose $display("flags1 : %b flags2 : %b flags3 : %b",flags1,flags2,flags3); `endif
+         //`ifdef verbose $display("lv_inv : %h lv_inf : %h lv_zero : %h",lv_inv,lv_inf,lv_zero);  `endif
+         //`ifdef verbose $display("flags1 : %b flags2 : %b flags3 : %b",flags1,flags2,flags3); `endif
    
          /*
             When normal and denormal number is multiplied, exponent is
@@ -830,7 +830,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          Bit#(fpexp2) lv_summed_exponent =  exp1_temp + exp2_temp - zeroExtend(bias) + zeroExtend(lv_op1_subnormal) + zeroExtend(lv_op2_subnormal);
          Bit#(1) lv_sign                 =  sign1 ^ sign2;
 
-         `ifdef verbose $display("lv_summed_exponent = %b", lv_summed_exponent/*, lv_actual_exponent*/); `endif
+         //`ifdef verbose $display("lv_summed_exponent = %b", lv_summed_exponent/*, lv_actual_exponent*/); `endif
 
          Bit#(impfpman2) x = zeroExtend({~lv_op1_subnormal, lv_mantissa1})*zeroExtend({~lv_op2_subnormal, lv_mantissa2});    //Single Cycle Int Mul
          rg_state_handler <= Stage1;
@@ -952,13 +952,13 @@ module mkTb_fpu_fm_add_sub(Empty);
              let sign2 = operand2[31];
              let sign3 = operand3[31];
              uut._start(tuple3(sign1,exp1,man1),tuple3(sign2,exp2,man2),tuple3(sign3,exp3,man3),3'b0,1'b0,1'b0,1'b0,1'b1,x);
-`ifdef verbose $display("giving inputs at %0d", rg_clock); `endif
+//`ifdef verbose $display("giving inputs at %0d", rg_clock); `endif
 
     endrule
 
     rule rl_finish;
         let res = uut.get_result();
-        `ifdef verbose $display("Output = %h at %0d",res.final_result[31:0], rg_clock); `endif
+        //`ifdef verbose $display("Output = %h at %0d",res.final_result[31:0], rg_clock); `endif
     endrule
 
 endmodule

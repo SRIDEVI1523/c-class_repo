@@ -68,14 +68,14 @@ endinterface
 
     method ActionValue#(Floating_output#(64)) _start(Bit#(64) inp_int, Bit#(1) unsigned_bit, Bit#(1) long, Bit#(3) rounding_mode);
 			Floating_output#(64) wr_final_out=?;
-        `ifdef verbose $display($time,"Giving inputs: %h unsigned %b long %b rounding %b", inp_int, unsigned_bit, long, rounding_mode); `endif
+        //`ifdef verbose $display($time,"Giving inputs: %h unsigned %b long %b rounding %b", inp_int, unsigned_bit, long, rounding_mode); `endif
         if((inp_int == 0 && long==1) || (inp_int[31:0] == 0 && long == 0))
                     wr_final_out = Floating_output{ final_result : 64'b0,
                                                      fflags       : 5'b0
                                            } ;
         else if(long == 0) begin
                 Bit#(32) inp32 = inp_int[31:0];
-                `ifdef verbose $display("inp_int : %b",inp32); `endif
+                //`ifdef verbose $display("inp_int : %b",inp32); `endif
                 Bool ubit = (unsigned_bit == 1);
                 Bit#(1) lv_sign = ubit? 0 : inp32[31];
                 Bool sbit = (lv_sign==1);
@@ -94,7 +94,7 @@ endinterface
                                                     };
             end
             else begin
-                 `ifdef verbose $display("inp_int : %b",inp_int); `endif
+                 //`ifdef verbose $display("inp_int : %b",inp_int); `endif
                 Bool ubit = (unsigned_bit == 1);
                 Bit#(1) lv_sign = ubit? 0 : inp_int[63];
                 Bool sbit = (lv_sign==1);

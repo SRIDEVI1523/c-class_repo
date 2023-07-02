@@ -153,7 +153,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 	rule rl_stage3(rg_state_handler == Stage2 && !wr_flush);
         let int_out = int_div.result_();
         Bit#(TSub#(fpexp,1)) bias = '1;
-        `ifdef verbose $display("Int Data %h", int_out); `endif
+        //`ifdef verbose $display("Int Data %h", int_out); `endif
 		Bit#(fpman4) lv_quotient 	= int_out[fPMAN+3:0];	//Quotient from the integer divider
 		Bit#(fpman5) lv_remainder 	= int_out[aCC-1:fPMAN5]; //Remainder from the integer divider
 		Bit#(fpexp2) lv_exponent 	= rg_stage2.exponent;
@@ -174,7 +174,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
         //Change-1 Removing not_required variable
        // Int#(fpman) lv_actual_exponent_temp = signExtend(lv_actual_exponent); 
 		let msb_zeros = pack(countZerosMSB(lv_quotient));
-    `ifdef verbose $display("MSB Zeros: %d",msb_zeros); `endif
+    //`ifdef verbose $display("MSB Zeros: %d",msb_zeros); `endif
 		let lsb_zeros = 0;
 
 		// lv_quotient_is_subnormal construct is like a flag which can be used in difficult situations
@@ -188,7 +188,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 		*/
 		if(lv_actual_exponent > unpack({3'b0,bias} + 1)) begin //CHECK THIS CASE WITHOUT FAIL - OPTIMIZE IT
 			lv_overflow = 1;
-			`ifdef verbose $display("lv_overflow!!!"); `endif
+			//`ifdef verbose $display("lv_overflow!!!"); `endif
 		end
 		/*     
                 -bias -fPMAN 
@@ -204,7 +204,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 			lv_quotient = 1;
 			lv_exponent = 0;
 			//When the exponent is < -151, sticky bit is automatically set to one
-			`ifdef verbose $display("lv_underflow!!!"); `endif
+			//`ifdef verbose $display("lv_underflow!!!"); `endif
 		end
 		 	
 		else begin
@@ -213,7 +213,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
             //Change-x it's enough if possible shift is reduced from lv_exponent - reducing again from bias is actually redundant and incurs another adder
             //Same Experiment here, do all the if-else parallely and just use the if and else for assignments
 			Int#(fpexp2) possible_shift = 1-unpack(lv_exponent);
-			`ifdef verbose $display("possible_shift = %0d", possible_shift); `endif
+			//`ifdef verbose $display("possible_shift = %0d", possible_shift); `endif
 			
             lsb_zeros = pack(countZerosLSB(lv_quotient));
 			
@@ -241,10 +241,10 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
                 lv_sticky   = lv_quotient[0];
                 lv_exponent = lv_exponent_inc_shift;
 
-				`ifdef verbose $display("lv_quotient = %h since exp < -126", lv_quotient); `endif
-				`ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
+				//`ifdef verbose $display("lv_quotient = %h since exp < -126", lv_quotient); `endif
+				//`ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
 
-              `ifdef verbose  $display("lv_exponent : %b",lv_exponent); `endif
+              //`ifdef verbose  $display("lv_exponent : %b",lv_exponent); `endif
 				lv_quotient_is_subnormal = 1;
 			end
 
@@ -314,7 +314,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
         let lv_quotient_is_subnormal = rg_stage3.lv_quotient_is_subnormal;
         let quiet_nan = rg_stage3.quiet_nan;
        
-        `ifdef verbose $display("lv_quotient = %h, lv_remainder = %h, lv_exponent = %h", lv_quotient, lv_remainder, lv_exponent); `endif
+        //`ifdef verbose $display("lv_quotient = %h, lv_remainder = %h, lv_exponent = %h", lv_quotient, lv_remainder, lv_exponent); `endif
 
 		bit lv_guard = lv_quotient[2];  
 		bit lv_round = lv_quotient[1];			
@@ -349,12 +349,12 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 		end
 
 		if(lv_rounded_quotient[fPMAN+1] == 1 ) begin
-      `ifdef verbose $display("Exponent Incremented 1"); `endif
+      //`ifdef verbose $display("Exponent Incremented 1"); `endif
 			lv_exponent = lv_exponent + 1;
 			lv_rounded_quotient = lv_rounded_quotient >> 1;
 		end
 		if(lv_quotient[fPMAN+3] == 0 && lv_rounded_quotient[fPMAN] == 1) begin
-      `ifdef verbose $display("Exponent Incremented 2"); `endif
+      //`ifdef verbose $display("Exponent Incremented 2"); `endif
 			lv_exponent = lv_exponent + 1;
 		end
     Bit#(fpexp) out_exp = lv_exponent[fPEXP-1:0];
@@ -429,8 +429,8 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
         let condFlags2 = tpl_2(flags);
         Int#(fpexp) actual_exponent1 = unpack(lv_exponent1 - {1'b0,bias});
 		Int#(fpexp) actual_exponent2 = unpack(lv_exponent2 - {1'b0,bias});
-        `ifdef verbose $display("Exp1: %h, Man1: %h, Exp2: %h Man2: %h",lv_exponent1,lv_mantissa1,lv_exponent2,lv_mantissa2); `endif
-        `ifdef verbose $display("condFlags1 : %b condFlags2: %b",condFlags1,condFlags2); `endif
+        //`ifdef verbose $display("Exp1: %h, Man1: %h, Exp2: %h Man2: %h",lv_exponent1,lv_mantissa1,lv_exponent2,lv_mantissa2); `endif
+        //`ifdef verbose $display("condFlags1 : %b condFlags2: %b",condFlags1,condFlags2); `endif
 		Bit#(1) lv_inf = 0;
 		Bit#(1) lv_inv = 0;
 		Bit#(1) lv_zero = 0;
@@ -445,7 +445,7 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 		Bit#(1) lv_op1_is_infinity = condFlags1[1];
 		Bit#(1) lv_op2_is_infinity = condFlags2[1];
 
-		`ifdef verbose $display("op1 is subnormal = %b , op2 is subnormal = %b", lv_op1_subnormal, lv_op2_subnormal); `endif
+		//`ifdef verbose $display("op1 is subnormal = %b , op2 is subnormal = %b", lv_op1_subnormal, lv_op2_subnormal); `endif
 	//	`ifdef verbose $display("sign1 = %b exponent1 = %b actual_exponent1 = %0d mantissa1 = %b.%b", _operand1[31], _operand1[fPINP-2:fPMAN], actual_exponent1, ~lv_op1_subnormal, _operand1[fPMAN-1:0]); `endif
 //		`ifdef verbose $display("sign2 = %b exponent2 = %b actual_exponent2 = %0d mantissa2 = %b.%b", _operand2[31], _operand2[fPEXP-1:fPMAN], actual_exponent2, ~lv_op2_subnormal, _operand2[fPMAN-1:0]); `endif
 
@@ -459,9 +459,9 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 	  else if(lv_op2_is_zero==1) begin            				//op 1 is neither NaN nor infinity, and op2 is zero
       lv_inf=1;                          						//result is infinity
      	lv_dz=1;                                				//setting the divide by zero flag
-      `ifdef verbose 
-        $display("Divide_by_zero"); 
-      `endif
+      //`ifdef verbose 
+     //   $display("Divide_by_zero"); 
+      //`endif
     end
     else if(lv_op2_is_infinity == 1 || lv_op1_is_zero == 1)   	//{op1 and op2 are not NaN} (and) {op1 is zero and op2 is not zero (or) op2 is infinity and op1 is not infinity}
       lv_zero=1;                                  				//result is zero
@@ -491,8 +491,8 @@ module mkfpu_divider(Ifc_fpu_divider#(fpinp,fpman,fpexp))
 
 
 		Int#(fpexp2) lv_actual_exponent = unpack(lv_exponent - {3'b0,bias});
-		`ifdef verbose $display("lv_sign: %h lv_exponent = %h, lv_actual_exponent = %d",lv_sign, lv_exponent, lv_actual_exponent); `endif
-    `ifdef verbose $display("lv_inv: %b lv_inf %b lv_dz %b lv_zero %b",lv_inv,lv_inf,lv_dz,lv_zero); `endif
+		//`ifdef verbose $display("lv_sign: %h lv_exponent = %h, lv_actual_exponent = %d",lv_sign, lv_exponent, lv_actual_exponent); `endif
+    //`ifdef verbose $display("lv_inv: %b lv_inf %b lv_dz %b lv_zero %b",lv_inv,lv_inf,lv_dz,lv_zero); `endif
       rg_state_handler <= Stage1; 
 	  rg_stage1 <= Stage1_type  {	    exponent		: lv_exponent,
     	  			               			           	dividend		: man1,
