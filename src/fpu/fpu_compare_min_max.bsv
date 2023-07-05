@@ -202,14 +202,14 @@ module mkfpu_compare_min_max(Ifc_fpu_compare_min_max#(fpinp, fpman, fpexp))
    endrule
 
    rule rl_start_1(rg_clock=='d0);
-     `ifdef verbose $display("Giving Inputs to the compare module"); `endif
+    // `ifdef verbose $display("Giving Inputs to the compare module"); `endif
      inst._start(rg_operand1, rg_operand2, 3'b000, 0);
    endrule
 
    rule rl_display_result;
      let abc = inst.result_();
   //   inst._deque_buffer();
-     `ifdef verbose $display("Final Result = %h", abc.final_result); `endif
+   //  `ifdef verbose $display("Final Result = %h", abc.final_result); `endif
    endrule
 
    rule end_clock(rg_clock == 'd10);

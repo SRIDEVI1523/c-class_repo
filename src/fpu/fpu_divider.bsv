@@ -577,13 +577,13 @@ module mkTb_fpu_divider(Empty);
             let {man1,man2} =  getMantissa(rg_operand1, rg_operand2);
             let {exp1,exp2} =  getExp(rg_operand1, rg_operand2);
             let {x1,x2}           =  condFlags(tuple2(man1,exp1),tuple2(man2,exp2));
-		 `ifdef verbose $display("Giving inputs rg_operand 1 : %h rg_operand 2 : %h through testbench",rg_operand1,rg_operand2,$time); `endif
+		// `ifdef verbose $display("Giving inputs rg_operand 1 : %h rg_operand 2 : %h through testbench",rg_operand1,rg_operand2,$time); `endif
 		divider._start(rg_operand1[63]^rg_operand2[63],man1,exp1,man2,exp2,3'b100,tuple2(x1,x2));
 	endrule
 
 	rule rl_display_result;
          let abc = divider.final_result_();
-         `ifdef verbose $display("output: %h fflags: %h",abc.final_result, abc.fflags); `endif
+        // `ifdef verbose $display("output: %h fflags: %h",abc.final_result, abc.fflags); `endif
 	endrule
 
 	rule rl_finish_(rg_clock=='d60);
