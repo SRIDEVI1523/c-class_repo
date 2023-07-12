@@ -101,52 +101,52 @@ module mkfpu_fclass(Ifc_fpu_fclass#(fpinp,fpman,fpexp))
         Bool zero    = (flags[3] == 1);
 		if(sbit && inf)  //negtive infinity
 		begin	
-		result_fclass = 'd1;	
+		result_fclass = 'h1 /*'d1*/;	
 		end
 
 		else if(sbit && normal)  //negative normal
 		begin	
-		result_fclass = 'd2;
+		result_fclass = 'h2 /*'d2*/;
 	    end
 		
 		else if(sbit && subnormal) //negative subnormal
 		begin	
-		result_fclass = 'd4;
+		result_fclass = 'h4 /*'d4*/;
 		end
 
 		else if(sbit && zero)  //-0
 		begin
-		result_fclass = 'd8;
+		result_fclass = 'h8 /*'d8*/;
 		end
 
 		else if(!sbit && zero) // +0
 		begin
-		result_fclass = 'd16;
+		result_fclass = 'h10 /*'d16*/;
 		end
 
 		else if( !sbit && subnormal) //positive subnormal	
 		begin	
-		result_fclass = 'd32;
+		result_fclass = 'h20 /*'d32*/;
 	    end
 
 		else if(!sbit && normal)  //positive normal
 		begin
-		result_fclass = 'd64;
+		result_fclass = 'h40 /*'d64*/;
 		end
 
 		else if(!sbit && inf) //positive infinity
 		begin
-		result_fclass = 'd128;	
+		result_fclass = 'h80 /*'d128*/;	
 		end
 
 		else if (flags[0]==1) //Signaling NaN	
 		begin
-  		result_fclass = 'd256; 
+  		result_fclass = 'h100 /*'d256*/; 
 		end
 
 		else  //quiet NaN	
 		begin
-		  result_fclass = 'd512; 
+		  result_fclass = 'h200 /*'d512*/; 
 		end
 
 			

@@ -172,10 +172,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
     
     rule rl_flush(wr_flush);
          rg_state_handler <= Begin;
-         //ff_input_register <= tagged Invalid;
-         //ff_stage2         <= tagged Invalid;
-         //ff_stage4         <= tagged Invalid;
-         //ff_stage5         <= tagged Invalid;
     endrule
     
     rule rl_stage1_after_input_stage(rg_state_handler == Stage1 && !wr_flush);
@@ -204,16 +200,13 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          let                      lsb_zeros                        =  0;
 
          //Change-2 Removing Redundant Variables
-         //Bit#(fpman)              bias_temp                        =  zeroExtend(bias);
-         //Int#(fpman)              lv_actual_product_exponent_temp  =  signExtend(lv_actual_product_exponent);
          //`ifdef verbose $display("lv_actual_product_exponent_temp : %d",lv_actual_product_exponent_temp); `endif
          rg_state_handler <= Stage2;
 
          // lv_product_is_subnormal construct is like a flag which can be used in difficult situations
-         // bit lv_product_is_subnormal = 0;
 
          bit lv_sticky = lv_product_mantissa[0];
-         `ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
+         //`ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
 
          /*
           if exponent is > bias then obviously none of the numbers are subnormal
@@ -221,7 +214,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
           the overflow conditions are handled in the following if condition accordingly
          */
 
-         `ifdef verbose $display("lv_actual_product_exponent = %d",lv_actual_product_exponent); `endif
+         //`ifdef verbose $display("lv_actual_product_exponent = %d",lv_actual_product_exponent); `endif
          bit exp_overflow_bit  = pack(lv_actual_product_exponent)[fPEXP]; //Says if Exponent Overflows
          bit exp_underflow_bit = pack(lv_actual_product_exponent)[fPEXP+1];  //Says if Exponent Underflows
          Bit#(fpexp) expo_temp = pack(lv_actual_product_exponent)[fPEXP-1:0];
@@ -230,12 +223,11 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
 
          //Change-1 -- Reducing the size of the Muxes from EXP size to just a bunch of 1bits and a Or-tree
          //Change-1 was wrong apparently, according to Paranoia!! Should see why! Rolling back
-         //if((exp_overflow_bit==1'b1 && exp_underflow_bit==1'b0) || (is_msb_zeros==1'b0 && exp_and==1'b1)) begin
 	     if(lv_actual_product_exponent > zeroExtend(unpack(bias)) || (msb_zeros == 0 && lv_actual_product_exponent == zeroExtend(unpack(bias)))) begin
 	 	    if(muladd == 0 ||(muladd==1 && ((lv_product_sign^lv_operand3[fPINP-1]^operation) == 0)))  
 	 		   lv_product_overflow = 1;
             //When the product overflows, the FMA result is an overflow
-            `ifdef verbose $display("lv_product_overflow!!!"); `endif
+            //`ifdef verbose $display("lv_product_overflow!!!"); `endif
          end
 
          /*
@@ -248,10 +240,9 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
              //Thought-1 -- Can something be done to reduce the countZerosMSB and countZerosLSB              
              //Cannot reduce this mux to 1-bit but can reduce size since it's unwanted
             if(lv_actual_product_exponent < unpack(-zeroExtend(bias)-fromInteger(fPMAN)-1)) begin
-            //if(lv_actual_product_exponent_temp < unpack(-bias_temp-fromInteger(fPMAN)-1)) begin
                if((muladd == 1'b0  || (muladd==1'b1 && (add_flags[3]==1'b1 || add_flags[4]==1'b1))) && lv_product_is_zero == 1'b0)
                 lv_product_underflow = 1;
-               `ifdef verbose $display("lv_product_underflow!!!"); `endif
+               //`ifdef verbose $display("lv_product_underflow!!!"); `endif
             end
             /*
              if msb of product is 1 then the case is 1x.xxxx
@@ -263,7 +254,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
             */
              //Change-4 Using the previously computed msb_zeros. Synthesis will detect this anyhow, but still. Fanout?
             if(is_msb_zeros==1'b0) begin
-            //if(msb_zeros == 0) begin
                lv_product_mantissa        =  lv_product_mantissa >> 1;	 			
                lv_product_exponent        =  lv_product_exponent + 1;
                lv_actual_product_exponent =  lv_actual_product_exponent + 1;
@@ -272,13 +262,11 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
             // possible shift is positive when exponent is lesser than -126
 
             //Change-5 Possible shift needn't use lv_actual_product_exponent -- It's enough if exponent is used I guess
-//            Int#(fpexp2) possible_shift   =  1-zeroExtend(unpack(bias))-(lv_actual_product_exponent);
             Int#(fpexp2) possible_shift   =  1-unpack(lv_product_exponent);
 
             //Experiment-1 -- Do all the operations parallely and use the if-else for just assignments
               lsb_zeros = pack(countZerosLSB(lv_product_mantissa));
               let lv_product_mantissa_shiftR     = (lv_product_mantissa >> pack(possible_shift));
-              //lv_product_mantissa_shiftR         = {lv_product_mantissa_shiftR[iMPFPMAN2:1], lv_product_mantissa_shiftR[0] | lv_sticky};
               let lv_product_exponent_inc_shift     = lv_product_exponent + pack(possible_shift);
            
               let shift_neg = ~pack(possible_shift)+1; 
@@ -310,15 +298,10 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
                 lv_sticky = lv_product_mantissa[0];
                 lv_product_exponent = lv_product_exponent_inc_shift;
 
-                `ifdef verbose $display("possible_shift",possible_shift); `endif
-               /*if(mul==1 && lv_product_is_zero==0)
-                   lv_product_underflow = 1;*/
-               //Handling sticky
-
-               `ifdef verbose $display("lv_product_exponent : %d bin : %b",lv_product_exponent,lv_product_exponent); `endif
-               `ifdef verbose $display("lv_product_mantissa = %b lv_product_exponent : %d since exp < -126", lv_product_mantissa,lv_product_exponent); `endif
-               `ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
-               // lv_product_is_subnormal = 1;
+                //`ifdef verbose $display("possible_shift",possible_shift); `endif
+               //`ifdef verbose $display("lv_product_exponent : %d bin : %b",lv_product_exponent,lv_product_exponent); `endif
+               //`ifdef verbose $display("lv_product_mantissa = %b lv_product_exponent : %d since exp < -126", lv_product_mantissa,lv_product_exponent); `endif
+               //`ifdef verbose $display("and thus the sticky bit = %b", lv_sticky); `endif
             end
 
             /*
@@ -331,7 +314,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
                if((shift_neg) < zeroExtend(msb_zeros - 1)) begin
                    lv_product_mantissa = lv_product_mantissa_shiftL_expo;
                    lv_product_exponent = lv_product_exponent_sub_shift;
-                              // lv_product_is_subnormal = 1;
                end
                /*
                if exponent affords to give away enough such that shifting left leads to 01.xxxx and exponent >= -126
@@ -339,7 +321,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
                else begin
                     lv_product_mantissa = lv_product_mantissa_shiftL_zerosMSB;
                     lv_product_exponent = lv_product_exponent_sub_zerosMSB;
-               // lv_product_is_subnormal = 0;
                end
             end
          end
@@ -407,10 +388,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          //Change-6 Avoiding exponent3==0 mux, but does that help?
          if(lv_op3_is_infinity==0 && lv_op3_is_invalid ==0 && lv_op3_is_zero==0) begin
              mantissa3 =  zeroExtendLSB({1'b0,expo3_zero,lv_man3});
-         /*   if(exponent3 == '0)
-                mantissa3 = zeroExtendLSB({2'b0,lv_man3});
-            else
-                mantissa3 = zeroExtendLSB({2'b01,lv_man3});*/
          end
 		
          exponent3 = exponent3 + zeroExtend(op3_is_subnormal);
@@ -499,9 +476,9 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          mantissa2 = mantissa_to_shift;
          end
          quiet_nan_two = quiet_nan_two & ~add_flags[0];
-         `ifdef verbose $display("sign2 = %b exponent2 = %b mantissa2 = %b", sign2, resultant_exponent, mantissa2); `endif
-         `ifdef verbose $display("sign3 = %b exponent3 = %b mantissa3 = %b", sign3, resultant_exponent, mantissa3); `endif
-         `ifdef verbose $display(); `endif
+         //`ifdef verbose $display("sign2 = %b exponent2 = %b mantissa2 = %b", sign2, resultant_exponent, mantissa2); `endif
+         //`ifdef verbose $display("sign3 = %b exponent3 = %b mantissa3 = %b", sign3, resultant_exponent, mantissa3); `endif
+         //`ifdef verbose $display(); `endif
          bit man2_gt_man3 = 0;
          if(mantissa2 > mantissa3) man2_gt_man3 = 1;   //Can this be optimized? 
          bit lv_resultant_sign = (man2_gt_man3 & sign2) | (~man2_gt_man3 & (operation ^ sign3));  // Using Karnaugh maps
@@ -543,7 +520,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          let          quiet_nan_three       =  ff_stage4.quiet_nan_three;
          let          lv_product_underflow  =  ff_stage4.product_underflow;
          let          lv_product_is_zero    =  ff_stage4.lv_product_is_zero;
-         //ff_stage4 <= tagged Invalid;
 
          Bit#(fmaman) resultant_mantissa = 0;
          Bit#(fmaman) add_mantissa = mantissa2 + mantissa3;
@@ -609,7 +585,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
         let lv_product_is_zero    = ff_stage5.lv_product_is_zero;
         let lv_zeros_on_left      = ff_stage5.lv_zeros_on_left;
         bit add_sub_subnormal = 0;
-        //ff_stage5 <= tagged Invalid;
         rg_state_handler <= Begin;
          bit lv_sticky = resultant_mantissa[0];
 
@@ -623,46 +598,39 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
 
 
          if(resultant_mantissa[fMAMAN-1] == 1'b1) begin
-            //resultant_mantissa = resultant_mantissa >> 1;
             resultant_mantissa = {resultant_mantissa_unnormalized[fMAMAN-1:1], lv_sticky | resultant_mantissa_unnormalized[0]};
             resultant_exponent = resultant_exponent_inc;
-            //resultant_exponent = resultant_exponent + 1;
          end
 
          else if(resultant_mantissa[fMAMAN-2] != 1'b1) begin
             if((zeroExtend(lv_zeros_on_left) - 1) > resultant_exponent_sub) begin
-            //if((zeroExtend(lv_zeros_on_left) - 1) > (resultant_exponent - 1)) begin
-               `ifdef verbose $display("resultant_exponent : %d",resultant_exponent); `endif
-               //resultant_mantissa = resultant_mantissa << (resultant_exponent - 1);
+               //`ifdef verbose $display("resultant_exponent : %d",resultant_exponent); `endif
                resultant_mantissa = resultant_mantissa_norm_expo;
                resultant_exponent = 0;
-               `ifdef verbose $display("add_sub subnormal!!!"); `endif
+               //`ifdef verbose $display("add_sub subnormal!!!"); `endif
                add_sub_subnormal = 1;
             end
             else begin
-               //resultant_mantissa = resultant_mantissa << (lv_zeros_on_left - 1);
-               //resultant_exponent = resultant_exponent - (zeroExtend(lv_zeros_on_left) - 1);
                resultant_mantissa = resultant_mantissa_norm_zerosMSB;
                resultant_exponent = resultant_exponent_sub_zerosMSB;
             end
          end
 
 
-         `ifdef verbose $display("resultant_exponent : %b",resultant_exponent); `endif
+         //`ifdef verbose $display("resultant_exponent : %b",resultant_exponent); `endif
          Bit#(TSub#(fpexp,1)) bias = '1;
          bit ex_overflow = 0;
          Int#(fpexp2) res_exp_int = unpack(resultant_exponent) - zeroExtend(unpack(bias));
-         `ifdef verbose $display("resultant_exponent : %d res_exp_int : %d",resultant_exponent, res_exp_int); `endif
+         //`ifdef verbose $display("resultant_exponent : %d res_exp_int : %d",resultant_exponent, res_exp_int); `endif
          
          if(res_exp_int > zeroExtend(unpack(bias))) begin
              lv_product_overflow = 1;
              ex_overflow = 1;
          end
-      /*   else if(res_exp_int == zeroExtend(unpack(bias)))
-             ex_overflow = 1;*/
+   
          else if(resultant_exponent[fPEXP+1] == 1 && lv_product_is_zero == 0) begin
              lv_product_underflow = 1;
-             `ifdef verbose $display("Underflow"); `endif
+             //`ifdef verbose $display("Underflow"); `endif
          end
          /*`ifdef verbose $display("resultant_sign = %b resultant_exponent = %b resultant_mantissa = %b", resultant_sign, resultant_exponent, resultant_mantissa); `endif
          `ifdef verbose $display(); `endif
@@ -676,26 +644,26 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          bit lv_round_up                          =   0;
          bit lv_inexact                           =   lv_guard | lv_round | lv_sticky;
 
-         if(lv_rounding_mode == 'b000)       
-            lv_round_up = lv_guard & (resultant_mantissa[iMPFPMAN2] | lv_round | lv_sticky);
-         else if(lv_rounding_mode == 'b100)    
-            lv_round_up = lv_guard ;//& (lv_round | lv_sticky | ~lv_resultant_sign);
-         else if(lv_rounding_mode == 'b010)    
-            lv_round_up = lv_inexact & (lv_resultant_sign);
-         else if(lv_rounding_mode == 'b011)    
-            lv_round_up = lv_inexact & (~lv_resultant_sign);
+         if(lv_rounding_mode == 'b000)      begin 
+            lv_round_up = lv_guard & (resultant_mantissa[iMPFPMAN2] | lv_round | lv_sticky);end
+         else if(lv_rounding_mode == 'b100)   begin 
+            lv_round_up = lv_guard ; end //& (lv_round | lv_sticky | ~lv_resultant_sign); 
+         else if(lv_rounding_mode == 'b010)  begin  
+            lv_round_up = lv_inexact & (lv_resultant_sign);end
+         else if(lv_rounding_mode == 'b011)  begin   
+            lv_round_up = lv_inexact & (~lv_resultant_sign); end
 
-        if(add_sub_subnormal == 1 && lv_inexact == 1)
-            lv_product_underflow = 1;
-
-         `ifdef verbose $display("lv_guard = %b lv_round = %b lv_sticky = %b", lv_guard, lv_round, lv_sticky); `endif
-         `ifdef verbose $display("lv_round_up = %b", lv_round_up); `endif
-         `ifdef verbose $display("lv_rounded_mantissa = %b", lv_rounded_mantissa); `endif
+    if(add_sub_subnormal == 1 && lv_inexact == 1)
+           begin  lv_product_underflow = 1;end    
+ 
+         //`ifdef verbose $display("lv_guard = %b lv_round = %b lv_sticky = %b", lv_guard, lv_round, lv_sticky); `endif
+         //`ifdef verbose $display("lv_round_up = %b", lv_round_up); `endif
+         //`ifdef verbose $display("lv_rounded_mantissa = %b", lv_rounded_mantissa); `endif
 
           if(lv_round_up == 1) 
              lv_rounded_mantissa = lv_rounded_mantissa + 1;
 
-         `ifdef verbose $display("lv_rounded_mantissa = %b after roundup", lv_rounded_mantissa); `endif
+         //`ifdef verbose $display("lv_rounded_mantissa = %b after roundup", lv_rounded_mantissa); `endif
 
          if(lv_rounded_mantissa[fPMAN+1] == 1) begin
             resultant_exponent = resultant_exponent + 1;
@@ -704,7 +672,7 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          else if(lv_res_man == 'b0 && lv_rounded_mantissa[fPMAN] == 1) begin
             resultant_exponent = resultant_exponent + 1;
          end
-
+                 
          Bit#(fpexp) lv_res_exp_temp         = resultant_exponent[fPEXP-1:0];
          Bit#(fpman) man_all_zeros           = '0;
          Bit#(TSub#(fpman,1)) man1_all_zeros = '0;
@@ -728,9 +696,6 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          else if(lv_result_is_zero[0] == 1) begin
              lv_final_output = {lv_result_is_zero[1],exp_all_zeros, man_all_zeros};
          end
-         else if(add_sub_is_zero[0] == 1) begin
-            lv_final_output = {add_sub_is_zero[1], exp_all_zeros , man_all_zeros};
-         end
          else if(lv_product_overflow == 1 || lv_res_exp_temp == '1) begin
             lv_inexact = 1;
             ex_overflow = 1;
@@ -744,12 +709,20 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
              lv_final_output={lv_resultant_sign,exp_all_ones,man_all_zeros};
            end
          end
+         else if(add_sub_is_zero[0] == 1) begin
+            lv_final_output = {add_sub_is_zero[1], exp_all_zeros , man_all_zeros};
+         end
          else begin
              lv_final_output = {lv_resultant_sign, out_exp, out_man};
          end
 
-         if(lv_product_underflow == 1'b1 && lv_rounded_mantissa[fPMAN]==1'b1 && lv_rounding_mode!=3'b011) //Tininess vanishing after rounding
-             lv_product_underflow = 0;
+         if(lv_product_underflow == 1'b1 && lv_rounded_mantissa[fPMAN]==1'b1) begin  //Tininess vanishing after rounding             
+             if (lv_round == 1  && lv_guard == 1) begin 
+             lv_product_underflow = 0; end 
+              else if(lv_sticky == 1  && lv_guard == 1 && ((lv_resultant_sign ==0  && lv_rounding_mode == 'b011) || (lv_resultant_sign ==1  && lv_rounding_mode == 'b010))) begin   
+              lv_product_underflow = 0; end
+             end
+              
        
          if(lv_result_is_invalid == 1) begin   //For effectively handling the flag cases between add,sub,mul and fused mul add
              ex_overflow  = 0;
@@ -760,278 +733,225 @@ module mkfpu_fm_add_sub(Ifc_fpu_fm_add_sub#(fpinp,fpman,fpexp))
          end
 
          Bit#(5) fflags={lv_result_is_invalid,1'b0,ex_overflow,lv_product_underflow,lv_inexact};
-         `ifdef verbose $display("lv_inv : %b ex_overflow: %b lv_inexact : %b",lv_result_is_invalid,ex_overflow,lv_inexact); `endif
+         //`ifdef verbose $display("lv_inv : %b ex_overflow: %b lv_inexact : %b",lv_result_is_invalid,ex_overflow,lv_inexact); `endif
          ff_final_out <= Floating_output{
                                  final_result   :        lv_final_output,
                                  fflags         :        fflags
                                         };
 
-         `ifdef verbose $display("FMA: Result: %h fflags: %8h",lv_final_output, {24'b0,fflags}); `endif
+         //`ifdef verbose $display("FMA: Result: %h fflags: %8h",lv_final_output, {24'b0,fflags}); `endif
     endrule
 	
-    method Action _start(Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand1, Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand2,Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul, bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
-		
+	    method Action _start(Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand1, Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand2,Tuple3#(Bit#(1),Bit#(fpexp),Bit#(fpman)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul, bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
+			
 
-         Bit#(TSub#(fpexp,1)) bias       =  '1;                                   //Bias for the exponent: 127 for SP and 1023 for DP
-         Bit#(1) sign1                   =  tpl_1(_operand1);
-         Bit#(1) sign2                   =  tpl_1(_operand2);
-         Bit#(1) sign3                   =  tpl_1(_operand3);
-         Bit#(fpexp) lv_exponent1        =  tpl_2(_operand1);
-         Bit#(fpexp) lv_exponent2        =  tpl_2(_operand2);
-         Bit#(fpexp) lv_exponent3        =  tpl_2(_operand3);
-         Bit#(fpman) lv_mantissa1        =  tpl_3(_operand1);
-         Bit#(fpman) lv_mantissa2        =  tpl_3(_operand2);
-         Bit#(fpman) lv_mantissa3        =  tpl_3(_operand3);
-         Bit#(5) flags1                  =  tpl_1(flags);
-         Bit#(5) flags2                  =  tpl_2(flags);
-         Bit#(5) flags3                  =  tpl_3(flags);
-         Bit#(1) lv_op1_is_zero          =  flags1[3];                             //1 when operand1=0
-         Bit#(1) lv_op2_is_zero          =  flags2[3];                             //1 when operand2=0
-         Bit#(1) lv_op1_infinity         =  flags1[1];                             //1 when operand1=inf
-         Bit#(1) lv_op2_infinity         =  flags2[1];                             //1 when operand2=inf
-         Bit#(1) lv_op1_subnormal        =  flags1[4] | flags1[3];                 //1 when operand1 is subnormal
-         Bit#(1) lv_op2_subnormal        =  flags2[4] | flags2[3];                 //1 when operand2 is subnormal
-         Bit#(1) lv_inf                  =  0;                                     //Bit indicating infinity
-         Bit#(1) lv_inv                  =  0;                                     //Invalid Bit
-         Bit#(1) lv_zero                 =  0;                                     //Zero bit
-         bit quiet_nan_two               = (flags1[2] & ~flags2[0]) | (flags2[2] & ~flags1[0]);
+		 Bit#(TSub#(fpexp,1)) bias       =  '1;                                   //Bias for the exponent: 127 for SP and 1023 for DP
+		 Bit#(1) sign1                   =  tpl_1(_operand1);
+		 Bit#(1) sign2                   =  tpl_1(_operand2);
+		 Bit#(1) sign3                   =  tpl_1(_operand3);
+		 Bit#(fpexp) lv_exponent1        =  tpl_2(_operand1);
+		 Bit#(fpexp) lv_exponent2        =  tpl_2(_operand2);
+		 Bit#(fpexp) lv_exponent3        =  tpl_2(_operand3);
+		 Bit#(fpman) lv_mantissa1        =  tpl_3(_operand1);
+		 Bit#(fpman) lv_mantissa2        =  tpl_3(_operand2);
+		 Bit#(fpman) lv_mantissa3        =  tpl_3(_operand3);
+		 Bit#(5) flags1                  =  tpl_1(flags);
+		 Bit#(5) flags2                  =  tpl_2(flags);
+		 Bit#(5) flags3                  =  tpl_3(flags);
+		 Bit#(1) lv_op1_is_zero          =  flags1[3];                             //1 when operand1=0
+		 Bit#(1) lv_op2_is_zero          =  flags2[3];                             //1 when operand2=0
+		 Bit#(1) lv_op1_infinity         =  flags1[1];                             //1 when operand1=inf
+		 Bit#(1) lv_op2_infinity         =  flags2[1];                             //1 when operand2=inf
+		 Bit#(1) lv_op1_subnormal        =  flags1[4] | flags1[3];                 //1 when operand1 is subnormal
+		 Bit#(1) lv_op2_subnormal        =  flags2[4] | flags2[3];                 //1 when operand2 is subnormal
+		 Bit#(1) lv_inf                  =  0;                                     //Bit indicating infinity
+		 Bit#(1) lv_inv                  =  0;                                     //Invalid Bit
+		 Bit#(1) lv_zero                 =  0;                                     //Zero bit
+		 bit quiet_nan_two               = (flags1[2] & ~flags2[0]) | (flags2[2] & ~flags1[0]);
 
-         if((((flags1[0] | flags1[2])==1) || (flags2[0] | flags2[2])==1))  //If either of the operands are NaN's (Quiet or Signalling - Not distinguishing between them here) 
-             lv_inv = 1;
-         else if(lv_op1_infinity==1 || lv_op2_infinity==1) begin           //If either of the operands are Infinity
-             if(lv_op1_is_zero == 1 || lv_op2_is_zero ==1) begin                 //Provided atleast one of the operands are infinity, if either of them are zero, then res is NaN (0*inf)
-                 lv_inv = 1;
-             end
-             else begin
-                 lv_inf = 1;                                                //Else result is infinity - inf +/- op2 = inf
-                 quiet_nan_two = 0;
-             end
-         end
-         else if(lv_op1_is_zero == 1 || lv_op2_is_zero == 1)
-             lv_zero = 1;                                                  //If they are not infinity - Checked for Zero, if it is then product is zero (0*x = 0)
-
-
-         `ifdef verbose $display("lv_inv : %h lv_inf : %h lv_zero : %h",lv_inv,lv_inf,lv_zero);  `endif
-         `ifdef verbose $display("flags1 : %b flags2 : %b flags3 : %b",flags1,flags2,flags3); `endif
-   
-         /*
-            When normal and denormal number is multiplied, exponent is
-            (biased_exponent - bias) + (1 - bias) + bias = biased_exponent - bias + 1;
-            either _operand1[30:23] == 0 or _operand2[30:23] == 0 for the above if condition so no harm in adding both
-         */
-
-         Bit#(fpexp2) exp1_temp          =  {2'b0,lv_exponent1};
-         Bit#(fpexp2) exp2_temp          =  {2'b0,lv_exponent2};
-         Bit#(fpexp2) lv_summed_exponent =  exp1_temp + exp2_temp - zeroExtend(bias) + zeroExtend(lv_op1_subnormal) + zeroExtend(lv_op2_subnormal);
-         Bit#(1) lv_sign                 =  sign1 ^ sign2;
-
-         `ifdef verbose $display("lv_summed_exponent = %b", lv_summed_exponent/*, lv_actual_exponent*/); `endif
-
-         Bit#(impfpman2) x = zeroExtend({~lv_op1_subnormal, lv_mantissa1})*zeroExtend({~lv_op2_subnormal, lv_mantissa2});    //Single Cycle Int Mul
-         rg_state_handler <= Stage1;
-         ff_input_register<= Input_data_type{  
-                                                           product_mantissa    :          x,
-                                                           lv_summed_exponent  :          lv_summed_exponent,
-                                                           sign                :          lv_sign,
-                                                           _operand3           :          {sign3,lv_exponent3,lv_mantissa3},
-                                                           rounding_mode       :          rounding_mode,
-                                                           infinity            :          lv_inf,
-                                                           add_flags           :          flags3,
-                                                           invalid             :          lv_inv,
-                                                           zero                :          lv_zero,
-                                                           _operation          :          operation,
-                                                           _negate             :          _negate,
-                                                           mul                 :          mul,
-                                                           muladd              :          muladd,
-                                                           quiet_nan_two       :          quiet_nan_two,
-                                                           inp_denormal        :          lv_op1_subnormal | lv_op2_subnormal
-                                                         };
-    endmethod
+		 if((((flags1[0] | flags1[2])==1) || (flags2[0] | flags2[2])==1))  //If either of the operands are NaN's (Quiet or Signalling - Not distinguishing between them here) 
+		     lv_inv = 1;
+		 else if(lv_op1_infinity==1 || lv_op2_infinity==1) begin           //If either of the operands are Infinity
+		     if(lv_op1_is_zero == 1 || lv_op2_is_zero ==1) begin                 //Provided atleast one of the operands are infinity, if either of them are zero, then res is NaN (0*inf)
+			 lv_inv = 1;
+		     end
+		     else begin
+			 lv_inf = 1;                                                //Else result is infinity - inf +/- op2 = inf
+			 quiet_nan_two = 0;
+		     end
+		 end
+		 else if(lv_op1_is_zero == 1 || lv_op2_is_zero == 1)
+		     lv_zero = 1;                                                  //If they are not infinity - Checked for Zero, if it is then product is zero (0*x = 0)
 
 
-   method Floating_output#(fpinp) get_result();
-       return ff_final_out;
-   endmethod
-    method Action flush;
-        wr_flush <= True;
-    endmethod
-endmodule
+		 //`ifdef verbose $display("lv_inv : %h lv_inf : %h lv_zero : %h",lv_inv,lv_inf,lv_zero);  `endif
+		 //`ifdef verbose $display("flags1 : %b flags2 : %b flags3 : %b",flags1,flags2,flags3); `endif
+	   
+
+		 Bit#(fpexp2) exp1_temp          =  {2'b0,lv_exponent1};
+		 Bit#(fpexp2) exp2_temp          =  {2'b0,lv_exponent2};
+		 Bit#(fpexp2) lv_summed_exponent =  exp1_temp + exp2_temp - zeroExtend(bias) + zeroExtend(lv_op1_subnormal) + zeroExtend(lv_op2_subnormal);
+		 Bit#(1) lv_sign                 =  sign1 ^ sign2;
+
+		 //`ifdef verbose $display("lv_summed_exponent = %b", lv_summed_exponent/*, lv_actual_exponent*/); `endif
+
+		 Bit#(impfpman2) x = zeroExtend({~lv_op1_subnormal, lv_mantissa1})*zeroExtend({~lv_op2_subnormal, lv_mantissa2});    //Single Cycle Int Mul
+		 rg_state_handler <= Stage1;
+		 ff_input_register<= Input_data_type{  
+			                                           product_mantissa    :          x,
+			                                           lv_summed_exponent  :          lv_summed_exponent,
+			                                           sign                :          lv_sign,
+			                                           _operand3           :          {sign3,lv_exponent3,lv_mantissa3},
+			                                           rounding_mode       :          rounding_mode,
+			                                           infinity            :          lv_inf,
+			                                           add_flags           :          flags3,
+			                                           invalid             :          lv_inv,
+			                                           zero                :          lv_zero,
+			                                           _operation          :          operation,
+			                                           _negate             :          _negate,
+			                                           mul                 :          mul,
+			                                           muladd              :          muladd,
+			                                           quiet_nan_two       :          quiet_nan_two,
+			                                           inp_denormal        :          lv_op1_subnormal | lv_op2_subnormal
+			                                         };
+	    endmethod
 
 
-module mkTb_fpu_fm_add_sub(Empty);
+	   method Floating_output#(fpinp) get_result();
+	       return ff_final_out;
+	   endmethod
+	    method Action flush;
+		wr_flush <= True;
+	    endmethod
+	endmodule
 
-	Ifc_fpu_fm_add_sub#(32,23,8) uut <- mkfpu_fm_add_sub();
 
-    function Tuple3#(Bit#(5), Bit#(5), Bit#(5)) condFlags (Tuple2#(Bit#(m), Bit#(e)) x, Tuple2#(Bit#(m), Bit#(e)) y, Tuple2#(Bit#(m),Bit#(e)) z);
-        let s = valueOf(m);
-        let man1  = tpl_1(x);
-        let expo1 = tpl_2(x);
-        let man2  = tpl_1(y);
-        let expo2 = tpl_2(y);
-        let man3  = tpl_1(z);
-        let expo3 = tpl_2(z);
-        Bit#(5) flags1, flags2,flags3;
-        Bool expZ1 = (expo1 == 0);
-        Bool manZ1 = (man1  == 0);
-        Bool expO1 = (expo1 == '1);
-        Bool manO1 = (man1  == '1);
-        Bool topB1 = (man1[s-1] == 1);
-        Bool expZ2 = (expo2 == 0);
-        Bool manZ2 = (man2  == 0);
-        Bool expO2 = (expo2 == '1);
-        Bool manO2 = (man2  == '1);
-        Bool topB2 = (man2[s-1] == 1 && man2 !=0);
-        Bool expZ3 = (expo3 == 0);
-        Bool manZ3 = (man3  == 0);
-        Bool expO3 = (expo3 == '1);
-        Bool manO3 = (man3  == '1);
-        Bool topB3 = (man3[s-1] == 1 && man3 !=0);
-        flags1 = {pack(expZ1 && !manZ1),pack(manZ1 && expZ1),pack(expO1 && topB1),pack(expO1 && manZ1),pack(expO1 && !topB1 && !manZ1)}; //Denormal, isZero, QNaN, Infinity, SNaN
-        flags2 = {pack(expZ2 && !manZ2),pack(manZ2 && expZ2),pack(expO2 && topB2),pack(expO2 && manZ2),pack(expO2 && !topB2 && !manZ2)}; //Denormal, isZero, QNaN, Infinity, SNaN
-        flags3 = {pack(expZ3 && !manZ3),pack(manZ3 && expZ3),pack(expO3 && topB3),pack(expO3 && manZ3),pack(expO3 && !topB3 && !manZ3)}; //Denormal, isZero, QNaN, Infinity, SNaN
-        return tuple3(flags1,flags2,flags3);
-    endfunction
+	module mkTb_fpu_fm_add_sub(Empty);
 
-    function Tuple3#(Bit#(m),Bit#(m), Bit#(m)) getMantissa (Bit#(n) op1, Bit#(n) op2, Bit#(n) op3)
-        provisos(Add#(TAdd#(m,1),e,n),
-                 Add#(7,a__,e)
-                );
-        let expo = valueOf(e);
-        let man  = valueOf(m);
-        return tuple3(op1[man-1:0],op2[man-1:0],op3[man-1:0]);
-    endfunction
+		Ifc_fpu_fm_add_sub#(32,23,8) uut <- mkfpu_fm_add_sub();
 
-    function Tuple3#(Bit#(e), Bit#(e), Bit#(e)) getExp (Bit#(n) op1, Bit#(n) op2, Bit#(n) op3)
-        provisos(Add#(TAdd#(m,1),e,n),
-                 Add#(7,a__,e)
-                );
-        let inp = valueOf(n);
-        let man  = valueOf(m);
-        return tuple3(op1[inp-2:man], op2[inp-2:man], op3[inp-2:man]);
-    endfunction
+	    function Tuple3#(Bit#(5), Bit#(5), Bit#(5)) condFlags (Tuple2#(Bit#(m), Bit#(e)) x, Tuple2#(Bit#(m), Bit#(e)) y, Tuple2#(Bit#(m),Bit#(e)) z);
+		let s = valueOf(m);
+		let man1  = tpl_1(x);
+		let expo1 = tpl_2(x);
+		let man2  = tpl_1(y);
+		let expo2 = tpl_2(y);
+		let man3  = tpl_1(z);
+		let expo3 = tpl_2(z);
+		Bit#(5) flags1, flags2,flags3;
+		Bool expZ1 = (expo1 == 0);
+		Bool manZ1 = (man1  == 0);
+		Bool expO1 = (expo1 == '1);
+		Bool manO1 = (man1  == '1);
+		Bool topB1 = (man1[s-1] == 1);
+		Bool expZ2 = (expo2 == 0);
+		Bool manZ2 = (man2  == 0);
+		Bool expO2 = (expo2 == '1);
+		Bool manO2 = (man2  == '1);
+		Bool topB2 = (man2[s-1] == 1 && man2 !=0);
+		Bool expZ3 = (expo3 == 0);
+		Bool manZ3 = (man3  == 0);
+		Bool expO3 = (expo3 == '1);
+		Bool manO3 = (man3  == '1);
+		Bool topB3 = (man3[s-1] == 1 && man3 !=0);
+		flags1 = {pack(expZ1 && !manZ1),pack(manZ1 && expZ1),pack(expO1 && topB1),pack(expO1 && manZ1),pack(expO1 && !topB1 && !manZ1)}; //Denormal, isZero, QNaN, Infinity, SNaN
+		flags2 = {pack(expZ2 && !manZ2),pack(manZ2 && expZ2),pack(expO2 && topB2),pack(expO2 && manZ2),pack(expO2 && !topB2 && !manZ2)}; //Denormal, isZero, QNaN, Infinity, SNaN
+		flags3 = {pack(expZ3 && !manZ3),pack(manZ3 && expZ3),pack(expO3 && topB3),pack(expO3 && manZ3),pack(expO3 && !topB3 && !manZ3)}; //Denormal, isZero, QNaN, Infinity, SNaN
+		return tuple3(flags1,flags2,flags3);
+	    endfunction
 
-    function Bool isNaNBox(Bit#(64) op);
-        return (op[63:32]=='1);
-    endfunction
+	    function Tuple3#(Bit#(m),Bit#(m), Bit#(m)) getMantissa (Bit#(n) op1, Bit#(n) op2, Bit#(n) op3)
+		provisos(Add#(TAdd#(m,1),e,n),
+			 Add#(7,a__,e)
+			);
+		let expo = valueOf(e);
+		let man  = valueOf(m);
+		return tuple3(op1[man-1:0],op2[man-1:0],op3[man-1:0]);
+	    endfunction
 
-    function Tuple3#(Bit#(32),Bit#(32),Bit#(32)) setCanNaN (Bit#(64) op1, Bit#(64) op2, Bit#(64) op3);
-        return tuple3(isNaNBox(op1)? truncate(op1) : 32'h7fc00000, isNaNBox(op2)? truncate(op2) : 32'h7fc00000, isNaNBox(op3)? truncate(op3) : 32'h7fc00000);
-    endfunction
-    
-    Wrapper3#(Tuple2#(Bit#(23), Bit#(8)),Tuple2#(Bit#(23), Bit#(8)), Tuple2#(Bit#(23), Bit#(8)),  Tuple3#(Bit#(5),Bit#(5),Bit#(5)))    condFlags32     <- mkUniqueWrapper3(condFlags);
-    Wrapper3#(Tuple2#(Bit#(52), Bit#(11)),Tuple2#(Bit#(52), Bit#(11)),Tuple2#(Bit#(52), Bit#(11)), Tuple3#(Bit#(5),Bit#(5),Bit#(5)))   condFlags64     <- mkUniqueWrapper3(condFlags);
-    Wrapper3#(Bit#(32),Bit#(32),Bit#(32),Tuple3#(Bit#(23),Bit#(23),Bit#(23)))                                                          getMant32       <- mkUniqueWrapper3(getMantissa);
-    Wrapper3#(Bit#(32),Bit#(32),Bit#(32),Tuple3#(Bit#(8),Bit#(8),Bit#(8)))                                                             getExp32        <- mkUniqueWrapper3(getExp);
-    Wrapper3#(Bit#(64),Bit#(64),Bit#(64),Tuple3#(Bit#(52),Bit#(52),Bit#(52)))                                                          getMant64       <- mkUniqueWrapper3(getMantissa);
-    Wrapper3#(Bit#(64),Bit#(64),Bit#(64),Tuple3#(Bit#(11),Bit#(11),Bit#(11)))                                                          getExp64        <- mkUniqueWrapper3(getExp);
-    Wrapper3#(Bit#(64),Bit#(64),Bit#(64),Tuple3#(Bit#(32),Bit#(32),Bit#(32)))                                                          setCanonicalNaN <- mkUniqueWrapper3(setCanNaN);
+	    function Tuple3#(Bit#(e), Bit#(e), Bit#(e)) getExp (Bit#(n) op1, Bit#(n) op2, Bit#(n) op3)
+		provisos(Add#(TAdd#(m,1),e,n),
+			 Add#(7,a__,e)
+			);
+		let inp = valueOf(n);
+		let man  = valueOf(m);
+		return tuple3(op1[inp-2:man], op2[inp-2:man], op3[inp-2:man]);
+	    endfunction
 
-    Reg#(Bit#(32)) rg_clock <-mkReg(0);
-    //Reg#(Bit#(64)) operand1 <- mkReg(64'h17fffffffffff860);
-    //Reg#(Bit#(64)) operand2 <- mkReg(64'h0000000000000200);
-    //Reg#(Bit#(64)) operand3 <- mkReg(64'h000000000000005f);
-    Reg#(Bit#(32)) operand1 <- mkReg(32'h31f36ab4);
-    Reg#(Bit#(32)) operand2 <- mkReg(32'h08835f4d);
-    Reg#(Bit#(32)) operand3 <- mkReg(32'h0);
+	    function Bool isNaNBox(Bit#(64) op);
+		return (op[63:32]=='1);
+	    endfunction
 
-    rule rl_count_clock ;
-      	rg_clock<=rg_clock+1;
-      	if(rg_clock=='d20) $finish(0);
-    endrule
+	    function Tuple3#(Bit#(32),Bit#(32),Bit#(32)) setCanNaN (Bit#(64) op1, Bit#(64) op2, Bit#(64) op3);
+		return tuple3(isNaNBox(op1)? truncate(op1) : 32'h7fc00000, isNaNBox(op2)? truncate(op2) : 32'h7fc00000, isNaNBox(op3)? truncate(op3) : 32'h7fc00000);
+	    endfunction
+	    
+	    Wrapper3#(Tuple2#(Bit#(23), Bit#(8)),Tuple2#(Bit#(23), Bit#(8)), Tuple2#(Bit#(23), Bit#(8)),  Tuple3#(Bit#(5),Bit#(5),Bit#(5)))    condFlags32     <- mkUniqueWrapper3(condFlags);
+	    Wrapper3#(Tuple2#(Bit#(52), Bit#(11)),Tuple2#(Bit#(52), Bit#(11)),Tuple2#(Bit#(52), Bit#(11)), Tuple3#(Bit#(5),Bit#(5),Bit#(5)))   condFlags64     <- mkUniqueWrapper3(condFlags);
+	    Wrapper3#(Bit#(32),Bit#(32),Bit#(32),Tuple3#(Bit#(23),Bit#(23),Bit#(23)))                                                          getMant32       <- mkUniqueWrapper3(getMantissa);
+	    Wrapper3#(Bit#(32),Bit#(32),Bit#(32),Tuple3#(Bit#(8),Bit#(8),Bit#(8)))                                                             getExp32        <- mkUniqueWrapper3(getExp);
+	    Wrapper3#(Bit#(64),Bit#(64),Bit#(64),Tuple3#(Bit#(52),Bit#(52),Bit#(52)))                                                          getMant64       <- mkUniqueWrapper3(getMantissa);
+	    Wrapper3#(Bit#(64),Bit#(64),Bit#(64),Tuple3#(Bit#(11),Bit#(11),Bit#(11)))                                                          getExp64        <- mkUniqueWrapper3(getExp);
+	    Wrapper3#(Bit#(64),Bit#(64),Bit#(64),Tuple3#(Bit#(32),Bit#(32),Bit#(32)))                                                          setCanonicalNaN <- mkUniqueWrapper3(setCanNaN);
 
-    rule rl_input1(rg_clock==1);
-             let {man1,man2,man3}   <- getMant32.func(operand1,operand2, operand3);
-             let {exp1,exp2,exp3}   <- getExp32.func(operand1,operand2, operand3);
-             let x <- condFlags32.func(tuple2(man1,exp1),tuple2(man2,exp2),tuple2(man3,exp3));
-             let sign1 = operand1[31];
-             let sign2 = operand2[31];
-             let sign3 = operand3[31];
-             uut._start(tuple3(sign1,exp1,man1),tuple3(sign2,exp2,man2),tuple3(sign3,exp3,man3),3'b0,1'b0,1'b0,1'b0,1'b1,x);
-`ifdef verbose $display("giving inputs at %0d", rg_clock); `endif
+	    Reg#(Bit#(32)) rg_clock <-mkReg(0);
+	    Reg#(Bit#(32)) operand1 <- mkReg(32'h31f36ab4);
+	    Reg#(Bit#(32)) operand2 <- mkReg(32'h08835f4d);
+	    Reg#(Bit#(32)) operand3 <- mkReg(32'h0);
 
-    endrule
+	    rule rl_count_clock ;
+	      	rg_clock<=rg_clock+1;
+	      	if(rg_clock=='d20) $finish(0);
+	    endrule
 
-    rule rl_finish;
-        let res = uut.get_result();
-        `ifdef verbose $display("Output = %h at %0d",res.final_result[31:0], rg_clock); `endif
-    endrule
+	    rule rl_input1(rg_clock==1);
+		     let {man1,man2,man3}   <- getMant32.func(operand1,operand2, operand3);
+		     let {exp1,exp2,exp3}   <- getExp32.func(operand1,operand2, operand3);
+		     let x <- condFlags32.func(tuple2(man1,exp1),tuple2(man2,exp2),tuple2(man3,exp3));
+		     let sign1 = operand1[31];
+		     let sign2 = operand2[31];
+		     let sign3 = operand3[31];
+		     uut._start(tuple3(sign1,exp1,man1),tuple3(sign2,exp2,man2),tuple3(sign3,exp3,man3),3'b0,1'b0,1'b0,1'b0,1'b1,x);
+	//`ifdef verbose $display("giving inputs at %0d", rg_clock); `endif
 
-endmodule
+	    endrule
 
-`ifdef fpu_hierarchical
-(*synthesize*)
-module mkfpu_fm_add_sub32(Ifc_fpu_fm_add_sub32);
-	Ifc_fpu_fm_add_sub#(32,23,8) uut <- mkfpu_fm_add_sub();
+	    rule rl_finish;
+		let res = uut.get_result();
+		//`ifdef verbose $display("Output = %h at %0d",res.final_result[31:0], rg_clock); `endif
+	    endrule
 
-   method Action _start(Tuple3#(Bit#(1),Bit#(8),Bit#(23)) _operand1, Tuple3#(Bit#(1),Bit#(8),Bit#(23)) _operand2,Tuple3#(Bit#(1),Bit#(8),Bit#(23)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul, bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
-        uut._start(_operand1,_operand2,_operand3,rounding_mode,operation,_negate,mul,muladd,flags);
-   endmethod
-    method Floating_output#(32) get_result();
-        return uut.get_result();
-    endmethod
-    method Action flush;
-        uut.flush();
-    endmethod
-endmodule
+	endmodule
 
-(*synthesize*)
-module mkfpu_fm_add_sub64(Ifc_fpu_fm_add_sub64);
-	Ifc_fpu_fm_add_sub#(64,52,11) uut <- mkfpu_fm_add_sub();
-   method Action _start(Tuple3#(Bit#(1),Bit#(11),Bit#(52)) _operand1, Tuple3#(Bit#(1),Bit#(11),Bit#(52)) _operand2,Tuple3#(Bit#(1),Bit#(11),Bit#(52)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul,bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
-        uut._start(_operand1,_operand2,_operand3,rounding_mode,operation,_negate,mul,muladd, flags);
-   endmethod
-    method Floating_output#(64) get_result();
-        return uut.get_result();
-    endmethod
-    method Action flush;
-        uut.flush();
-    endmethod
-endmodule
-`endif
+	`ifdef fpu_hierarchical
+	(*synthesize*)
+	module mkfpu_fm_add_sub32(Ifc_fpu_fm_add_sub32);
+		Ifc_fpu_fm_add_sub#(32,23,8) uut <- mkfpu_fm_add_sub();
 
-//module mkTb_fpu_fm_add_sub_2 (Empty);
-//	
-////	RegFile #(Bit #(16), Bit #(100))  input_data <- mkRegFileFullLoad("./testcases/fma_inp_nor.txt");
-////    RegFile #(Bit #(16), Bit #(68))  input_data <- mkRegFileFullLoad("./testcases/mul_denormal_testcases.txt");
-//    RegFile #(Bit #(16), Bit #(68))  input_data <- mkRegFileFullLoad("./testcases/Add_normal_testcases.hex");
-//	Reg #(Bit #(16)) index <- mkReg(0);
-// 
-//	Ifc_fpu_fm_add_sub#(32,23,8,16) multiplier <- mkfpu_fm_add_sub();
-//	Reg #(Bit #(32)) state_clock <- mkReg(1);
-//    Reg #(Bit #(1))  rg_state <- mkReg(0);
-//
-//	Reg#(int) cnt <- mkReg(0);                  //File Variable
-//	let fh <- mkReg(InvalidFile) ;				//File handler		
-//
-//	//rule for file creation
-//	rule open (cnt == 0 ) ;
-//		File tb_mul_output <- $fopen("tb_madd_output.hex", "w+"); 
-//		fh <= tb_mul_output;
-//		cnt <= 1 ;
-//	endrule
-//
-//	rule state_clock_count;
-//		state_clock <= state_clock + 1;
-//	endrule
-//
-//	rule take_input_in (rg_state == 0);
-//	//	multiplier._start(input_data.sub(index)[99:68],input_data.sub(index)[67:36],input_data.sub(index)[35:4],0,input_data.sub(index)[2:0],0,0);
-//	//	multiplier._start(input_data.sub(index)[67:36],input_data.sub(index)[35:4],32'b0,0,input_data.sub(index)[2:0],0,0);
-//		multiplier._start(32'h3f800000, input_data.sub(index)[67:36],input_data.sub(index)[35:4],0,input_data.sub(index)[2:0],0,0);
-//		index <= index + 1;
-//	    rg_state <= 1;
-//	endrule
-//
-//	rule display_output (rg_state == 1);
-//        let abc = multiplier.get_result();
-//		$fwrite(fh, "%h\n", abc.final_result[31:0]);
-//		rg_state <= 0;
-//	endrule
-//
-//	rule end_testing (index == 16562);
-//		$finish(0);
-//	endrule : end_testing
-//
-//endmodule
+	   method Action _start(Tuple3#(Bit#(1),Bit#(8),Bit#(23)) _operand1, Tuple3#(Bit#(1),Bit#(8),Bit#(23)) _operand2,Tuple3#(Bit#(1),Bit#(8),Bit#(23)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul, bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
+		uut._start(_operand1,_operand2,_operand3,rounding_mode,operation,_negate,mul,muladd,flags);
+	   endmethod
+	    method Floating_output#(32) get_result();
+		return uut.get_result();
+	    endmethod
+	    method Action flush;
+		uut.flush();
+	    endmethod
+	endmodule
 
-endpackage
+	(*synthesize*)
+	module mkfpu_fm_add_sub64(Ifc_fpu_fm_add_sub64);
+		Ifc_fpu_fm_add_sub#(64,52,11) uut <- mkfpu_fm_add_sub();
+	   method Action _start(Tuple3#(Bit#(1),Bit#(11),Bit#(52)) _operand1, Tuple3#(Bit#(1),Bit#(11),Bit#(52)) _operand2,Tuple3#(Bit#(1),Bit#(11),Bit#(52)) _operand3, Bit#(3) rounding_mode, bit operation, bit _negate, bit mul,bit muladd, Tuple3#(Bit#(5),Bit#(5),Bit#(5)) flags);
+		uut._start(_operand1,_operand2,_operand3,rounding_mode,operation,_negate,mul,muladd, flags);
+	   endmethod
+	    method Floating_output#(64) get_result();
+		return uut.get_result();
+	    endmethod
+	    method Action flush;
+		uut.flush();
+	    endmethod
+	endmodule
+	`endif
+
+	endpackage

@@ -96,21 +96,21 @@ endfunction
 
 	rule stage_1(rg_state == 1 && !wr_flush);
 		rg_state <= rg_state + 1;
-        `ifdef verbose $display("Int Data %h rg_state %d",rg_inter_stage[55:0], rg_state); `endif
+        //`ifdef verbose $display("Int Data %h rg_state %d",rg_inter_stage[55:0], rg_state); `endif
         let x <- wfn_divide_step.func(rg_inter_stage,0,0);
 		rg_inter_stage <= x;
 	endrule
 
 	rule recursive_stage(rg_state > 1 && rg_state <= ((fromInteger(fPMAN4-5)>>1) +1) && !wr_flush );
 	rg_state <= rg_state + 1;
-    `ifdef verbose $display($time,"\t Int Data %h rg_state %d", rg_inter_stage[55:0], rg_state);`endif
+    //`ifdef verbose $display($time,"\t Int Data %h rg_state %d", rg_inter_stage[55:0], rg_state);`endif
         let x<- wfn_divide_step.func(rg_inter_stage,0,0);
         rg_inter_stage <=  x;
 	endrule
 
 	rule end_stage(rg_state == ((fromInteger(fPMAN4-5)>>1)+2) && !wr_flush);
         rg_state <= 0;
-        `ifdef verbose $display($time,"\t End stage Int Data %h rg_state %d fpman4[0] %d", rg_inter_stage[55:0], rg_state, fromInteger(fPMAN4)[0]);`endif
+        //`ifdef verbose $display($time,"\t End stage Int Data %h rg_state %d fpman4[0] %d", rg_inter_stage[55:0], rg_state, fromInteger(fPMAN4)[0]);`endif
         let x <- wfn_divide_step.func(rg_inter_stage,1,fromInteger(fPMAN4)[0]);
 		wr_final_out <= x;
 	endrule
@@ -119,7 +119,7 @@ endfunction
 		rg_state <= rg_state + 1;
         Bit#(fpman4) man_all_zeros = '0;
         Bit#(op_fpman) packed_div = {_denominator,{2'b0,_numerator},man_all_zeros};
-    `ifdef verbose $display("Numerator: %h Denominator: %h",_numerator,_denominator);`endif
+    //`ifdef verbose $display("Numerator: %h Denominator: %h",_numerator,_denominator);`endif
         let x <- wfn_divide_step.func(packed_div,0,0);
 		rg_inter_stage <= x;
 	endmethod
@@ -148,7 +148,7 @@ endmodule
 
      rule rl_finish;
       let temp = instance_divider.result_();
- 		  `ifdef verbose $display("Quotient=%h remainder=%h at %0d",temp[26:0],temp[53:27], rg_clock);`endif
+ 		  //`ifdef verbose $display("Quotient=%h remainder=%h at %0d",temp[26:0],temp[53:27], rg_clock);`endif
      endrule
      
      rule rl_count_clock ;

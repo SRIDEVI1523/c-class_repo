@@ -107,7 +107,7 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
 
     Reg#(Maybe#(Floating_output#(fpinp))) ff_final_out <- mkDReg(tagged Invalid); //Final Output FIFO
 
-    ConfigReg#(Stage_data#(fpman,fpexp)) rg_inter_stage <- mkConfigReg(?);         //Inter Stage register 
+    ConfigReg#(Stage_data#(fpman,fpexp)) rg_inter_stage <- mkConfigReg(?);         //Inter Stage register
     ConfigReg#(Bit#(6)) rg_state <-mkConfigReg(0);                  //State counter of the module
     Wire#(Bool) wr_flush <- mkDWire(False);
     (*mutually_exclusive = "rl_flush,rl_stage2,rl_inter_stage,rl_final_stage"*)
@@ -145,9 +145,9 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
         result_mantissa = result_mantissa <<1; //Shifting result_mantissa to make space to store the next bit
         rg_state <= rg_state +1;               //Incrementing state counter
 
-        `ifdef verbose $display("****************************************State = %d", rg_state); `endif
-        `ifdef verbose $display("Remainder =%h", lv_remainder);`endif
-        `ifdef verbose $display("Mantissa = %h",result_mantissa);`endif
+        //`ifdef verbose $display("****************************************State = %d", rg_state); `endif
+        //`ifdef verbose $display("Remainder =%h", lv_remainder);`endif
+        //`ifdef verbose $display("Mantissa = %h",result_mantissa);`endif
 
         //Storing the required values in register
 
@@ -195,9 +195,9 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
         result_mantissa = result_mantissa <<1;      //Making space for the next bit
         rg_state <= rg_state +1;                    //Incrementing state counter
 
-        `ifdef verbose $display("****************************************State = %d", rg_state);`endif
-        `ifdef verbose $display("Remainder =%h", lv_remainder);`endif
-        `ifdef verbose $display("Mantissa = %h",result_mantissa);`endif
+        //`ifdef verbose $display("****************************************State = %d", rg_state);`endif
+        //`ifdef verbose $display("Remainder =%h", lv_remainder);`endif
+        //`ifdef verbose $display("Mantissa = %h",result_mantissa);`endif
 
         //Storing required values in register for next iteration
         rg_inter_stage <= Stage_data { mantissa:mantissa ,
@@ -263,16 +263,16 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
            
         Bit#(TAdd#(fpman3,1)) lv_extended_mantissa = {1'b0,result_mantissa};
 		if (lv_roundup==1) begin
-			lv_extended_mantissa = lv_extended_mantissa + 'd4;    //If roundup then add 4 as the LSB for final mantissa is 3rd bit 
+			lv_extended_mantissa = lv_extended_mantissa +  'h4 /*'d4*/;    //If roundup then add 4 as the LSB for final mantissa is 3rd bit 
 			if (lv_extended_mantissa[fPMAN3]==1)                        //When mantissa overflows
 				result_exponent = result_exponent +1;           	//Increment exponent by 1
         end
         
         //Here most exceptions are taken care of in first stage, so module doesn't perform all iterations
 
-        `ifdef verbose $display("****************************************State = %d", rg_state);`endif
-        `ifdef verbose $display("Remainder =%h", lv_remainder);`endif
-        `ifdef verbose $display("Mantissa = %h",lv_extended_mantissa);`endif
+        //`ifdef verbose $display("****************************************State = %d", rg_state);`endif
+        //`ifdef verbose $display("Remainder =%h", lv_remainder);`endif
+        //`ifdef verbose $display("Mantissa = %h",lv_extended_mantissa);`endif
         Bit#(fpexp) exp_out = result_exponent[fPEXP-1:0];
         Bit#(fpman) man_out = lv_extended_mantissa[fPMAN+1:2];
         Bit#(fpinp) final_result = {lv_sign, exp_out, man_out};  //Setting the final result 
@@ -301,7 +301,7 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
         else
         	mantissa = {1'b0,1'b1,lv_mantissa,man4_zeros};              //Extend mantissa to 48 bits as we need 24 bit output mantissa (Each iteartion use 2 bits of the opearand)
         
-     //   `ifdef verbose $display("sign = %b exponent = %b mantissa = %b.%b", sign, exponent, mantissa[eXT-1], _operand1[fPMAN-1:0]);`endif
+     //   //`ifdef verbose $display("sign = %b exponent = %b mantissa = %b.%b", sign, exponent, mantissa[eXT-1], _operand1[fPMAN-1:0]);`endif
         // Int#(9) actual_exponent = unpack(exponent - 'b001111111);
        // `ifdef verbose $display("actual_exponent = %0d", actual_exponent);`endif
         
@@ -320,8 +320,8 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
         
         // Bit#(8) result_exponent = (exponent >>1) +'d63 + zeroExtend(exponent[0]);  //Calculating the result exponent
         Bit#(fpexp1) result_exponent = (exponent >> 1) + (zeroExtend((bias-1)>>1)) + zeroExtend(exponent[0]);  //Calculating the result exponent
-        `ifdef verbose $display("Flags %h lv_mantissa : %h lv_exponent :%h lv_sign : %b",condFlags,lv_mantissa,lv_exponent,sign); `endif
-        `ifdef verbose $display("Result_exponent %h bias %d exponent >> 1 %h exponent[0] %h",result_exponent,(bias-1) >> 1,exponent >> 1, exponent[0]);`endif
+        //`ifdef verbose $display("Flags %h lv_mantissa : %h lv_exponent :%h lv_sign : %b",condFlags,lv_mantissa,lv_exponent,sign); `endif
+        //`ifdef verbose $display("Result_exponent %h bias %d exponent >> 1 %h exponent[0] %h",result_exponent,(bias-1) >> 1,exponent >> 1, exponent[0]);`endif
         //Determining remainder
         if (lv_remainder[fPMAN5]==1) begin //When r <0
             lv_remainder = {lv_remainder[fPMAN3:0],mantissa[eXT-1],mantissa[eXT-2]} + {1'b0,lv_root[fPMAN3-1:0],1'b1,1'b1};  
@@ -329,7 +329,7 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
         else begin
             lv_remainder = {lv_remainder[fPMAN3:0],mantissa[eXT-1],mantissa[eXT-2]} - {1'b0,lv_root[fPMAN3-1:0],1'b0,1'b1};
         end
-        `ifdef verbose $display("lv_remainder: %h",lv_remainder);`endif
+        //`ifdef verbose $display("lv_remainder: %h",lv_remainder);`endif
 
         //Determining quotient
         if (lv_remainder[fPMAN5]==1) begin //When r <0
@@ -371,20 +371,20 @@ module mkfpu_sqrt(Ifc_fpu_sqrt#(fpinp,fpman,fpexp))
         end                
         else if(lv_inf == 1) begin                                                                          
             ff_final_out <= tagged Valid Floating_output{   final_result:{1'b0, exp_all_ones , man_all_zeros},                      //Infinity
-                                                fflags : 'd0};
+                                                fflags : 'h0 /*'d0*/};
         end
         else if (lv_zero == 1) begin 
             ff_final_out <= tagged Valid Floating_output{   final_result:{sign, exp_all_zeros,man_all_zeros},                             //Zeros
-                                                fflags : 'd0};
+                                                fflags : 'h0 /*'d0*/};
         end   
         else begin
             //State counter incremented only when it does not meet any above exceptional cases
             rg_state <= rg_state+1;  //Increment the State_counter for next iteration
         end
 
-        `ifdef verbose $display("****************************************State = %0d", rg_state);`endif
-        `ifdef verbose $display("Remainder = %b", lv_remainder);`endif
-        `ifdef verbose $display("Mantissa = %b",result_mantissa);`endif
+        //`ifdef verbose $display("****************************************State = %0d", rg_state);`endif
+        //`ifdef verbose $display("Remainder = %b", lv_remainder);`endif
+        //`ifdef verbose $display("Mantissa = %b",result_mantissa);`endif
 
         //Storing required data in FIFO stage1 for next iteration
         rg_inter_stage <= Stage_data{    mantissa : mantissa,

@@ -612,11 +612,11 @@ module mkfpu(Ifc_fpu);
 
   //method TXe#(XBoxOutput) tx_output;
   //  let res = tx_fbox_out.u.first;
-  //  /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
-  //  csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
-  //  written below */
-  //`ifdef arith_trap
-  //  if(wr_arith_en==1'b1) begin
+  //   /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
+  //   csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
+  //   written below */
+  // `ifdef arith_trap
+  //   if(wr_arith_en==1'b1) begin
   //      if(res.fflags!=0)
   //        res.trap = True;
   //      if (res.fflags[4]==1)
@@ -629,13 +629,13 @@ module mkfpu(Ifc_fpu);
   //        res.cause=`FP_underflow; //Underflow
   //      else if (res.fflags[0]==1)
   //        res.cause=`FP_inexact; //Inexact
-  //    end
-  //  else
+  //     end
+  //   else
   //     res.trap=False;
-	//`endif
+	// `endif
   //  return res;
 
-  //endmethod
+	// endmethod
   method tx_output = tx_fbox_out.e;
   method fpu_ready = pack(!(rg_multicycle_op || ff_input.notEmpty));
 	method Action flush;
