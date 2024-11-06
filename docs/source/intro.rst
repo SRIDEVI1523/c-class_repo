@@ -35,11 +35,3 @@ License
 -------
 All of the source code available in this repository is under the BSD license. 
 Please refer to LICENSE.* files for more details.
-
-Commercial Adoption
--------------------
-The following industrial partners have adopted SHAKTI for commercialization purposes and provide
-continous support in maintaining and supporting this repository.
-
-1. InCore Semiconductors Pvt. Ltd.
-2. Silint Consulting Pvt. Ltd.
