@@ -4,6 +4,13 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.0.3] - 2024-11-07
+--------------------
+
+- Modifying test SoC interface
+- Fixed a bug of ebreaks/u field being readonly in dcsr
+
+
 [3.0.2] - 2023-07-06
 --------------------
 
