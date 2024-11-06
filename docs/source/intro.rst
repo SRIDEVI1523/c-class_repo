@@ -35,3 +35,10 @@ License
 -------
 All of the source code available in this repository is under the BSD license. 
 Please refer to LICENSE.* files for more details.
+
+Commercial Adoption
+-------------------
+The following startups have adopted SHAKTI C-Class for commercialization purposes:
+
+1. InCore Semiconductors Pvt. Ltd.
+2. Mindgrove Technologies Pvt. Ltd. 
