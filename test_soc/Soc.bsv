@@ -60,10 +60,17 @@ package Soc;
       return slave_num;
     endfunction:fn_slave_map
 
-  interface Ifc_Soc;
-  `ifdef rtldump
+    `ifdef rtldump
+  interface Ifc_soc_sb;
     interface Sbread sbread;
     method Maybe#(CommitLogPacket) commitlog;
+  endinterface
+`endif
+
+  
+  interface Ifc_Soc;
+  `ifdef rtldump
+  interface Ifc_soc_sb soc_sb;
   `endif
     interface RS232 uart_io;
   `ifdef debug
@@ -166,9 +173,10 @@ package Soc;
     endrule: rl_connect_clint_msip
 
   `ifdef rtldump
-    // TODO parameterize this
+  interface soc_sb = interface Ifc_soc_sb
     interface commitlog= ccore[0].commitlog;
     interface sbread = ccore[0].sbread;
+  endinterface;
   `endif
     interface uart_io=uart.io;
   `ifdef debug

@@ -198,7 +198,7 @@ package TbSoc;
 
       let generate_dump <- $test$plusargs("rtldump");
       let stime <- $stime;
-      if (soc.commitlog matches tagged Valid .idump) begin
+      if (soc.soc_sb.commitlog matches tagged Valid .idump) begin
     `ifndef openocd `ifndef cocotb_sim
       if(idump.instruction=='h00006f||idump.instruction =='h00a001)
         $finish(0);

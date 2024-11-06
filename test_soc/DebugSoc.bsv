@@ -28,11 +28,18 @@ package DebugSoc ;
   `include "Logger.bsv"
   // TODO remove below
   `include "Soc.defines"
-  interface Ifc_DebugSoc;
+
   `ifdef rtldump
-     interface Sbread sbread;
-     method Maybe#(CommitLogPacket) commitlog;
-  `endif
+  interface Ifc_soc_sb;
+    interface Sbread sbread;
+    method Maybe#(CommitLogPacket) commitlog;
+  endinterface
+`endif
+
+  interface Ifc_DebugSoc;
+    `ifdef rtldump
+    interface Ifc_soc_sb soc_sb;
+    `endif
     interface RS232 uart_io;
       // ------------- JTAG IOs ----------------------//
     (*always_enabled,always_ready*)                                                               
@@ -154,9 +161,12 @@ package DebugSoc ;
     method Bit#(1)wire_tdo;                                                                       
       return tdo.crossed();                                                                       
     endmethod
+
     `ifdef rtldump
-      interface sbread  =soc.sbread;
-      method commitlog = soc.commitlog;
+    interface soc_sb = interface Ifc_soc_sb
+      interface sbread  =soc.soc_sb.sbread;
+      method commitlog = soc.soc_sb.commitlog;
+      endinterface;
     `endif
     interface uart_io = soc.uart_io;
 
