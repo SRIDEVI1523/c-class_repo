@@ -2,7 +2,7 @@
 length_check_fields=['reset_pc']
 
 bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
-+RTS -K40000M -RTS -check-assert  -keep-fires \
++RTS -K4000M -RTS -check-assert  -keep-fires \
 -opt-undetermined-vals -remove-false-rules -remove-empty-rules \
 -remove-starved-rules -remove-dollar -unspecified-to X -show-schedule \
 -show-module-use -cross-info {2}'''
@@ -56,7 +56,7 @@ caches_mmu:
   checkout: 14.1.0
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
-  checkout: master
+  checkout: 2.0.0
 devices:
   url: https://gitlab.com/shaktiproject/uncore/devices
   checkout: 8.0.1
@@ -65,7 +65,7 @@ fabrics:
   checkout: 1.2.0
 common_verilog:
   url: https://gitlab.com/shaktiproject/common_verilog
-  checkout: master
+  checkout: 2.0.0
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
   checkout: 5.0.0
@@ -77,8 +77,8 @@ benchmarks:
   checkout: c-class-chnages
 csrbox:
   url: https://gitlab.com/shaktiproject/cores/csrbox
-  checkout: Floating_point
+  checkout: 1.8.0
 riscv-config:
   url: https://gitlab.com/shaktiproject/cores/riscv-config
-  checkout: No_hyp_reg
+  checkout: 3.6.0
 '''
