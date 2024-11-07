@@ -9,6 +9,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 
 - Modifying test SoC interface
 - Fixed a bug of ebreaks/u field being readonly in dcsr
+- Update configure/const.py: dependent repos with versions
 
 
 [3.0.2] - 2023-07-06
