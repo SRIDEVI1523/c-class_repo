@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: icache_fix
+  checkout: 14.2.5
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: 2.0.0
