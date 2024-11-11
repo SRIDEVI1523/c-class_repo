@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: 14.1.0
+  checkout: 14.2.5
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: 2.0.0
@@ -68,7 +68,7 @@ common_verilog:
   checkout: 2.0.0
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 5.0.0
+  checkout: 5.0.1
   recursive: True
   patch:
     - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]

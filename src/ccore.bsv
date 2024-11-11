@@ -200,7 +200,8 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_cco
 		Bool bus_error = !(fab_resp.rresp == AXI4_OKAY);
     imem.put_read_mem_resp.put(ICache_mem_readresp{data   : truncate(fab_resp.rdata),
                                                last   : fab_resp.rlast,
-                                               err    : bus_error});
+                                               err    : bus_error,
+                                               io     : (fab_resp.rid==1)});
 		`logLevel( core, 1, $format("[%2d]CORE : IMEM Line Response ",hartid, fshow(fab_resp)))
 	endrule:rl_handle_imem_line_resp
 

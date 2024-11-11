@@ -4,6 +4,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.0.4] - 2024-11-11
+--------------------
+
+- Fixed bug in icache
+- Update to new verification tag
+
 [3.0.3] - 2024-11-07
 --------------------
 
