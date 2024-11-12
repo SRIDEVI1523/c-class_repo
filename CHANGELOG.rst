@@ -4,6 +4,11 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.0.5] - 2024-11-12
+--------------------
+
+- Reduced ci run for release
+
 [3.0.4] - 2024-11-11
 --------------------
 
