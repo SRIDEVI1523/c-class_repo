@@ -382,9 +382,6 @@ package TbSoc;
 
           if (d.access == Store  `ifdef atomic || (d.access == Atomic && d.atomic_op[3:0] != 5) `endif ) begin
             if (d.size == 0) begin
-              if (store_data[7:4]==0)
-                $fwrite(dump, " 0x%1h", store_data[3:0]);
-              else
                 $fwrite(dump, " 0x%2h", store_data[7:0]);
             end
             if (d.size == 1)

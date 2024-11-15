@@ -119,7 +119,7 @@ package sign_dump;
 			Bit#(TLog#(TDiv#(`elen,8))) lower_addr_bits= ff_lower_order_bits.first();
 			Bit#(TAdd#(TLog#(TDiv#(`elen,8)),3)) lv_shift = {lower_addr_bits,3'd0};
 			let lv_data= response.rdata >> lv_shift;
-    	$fwrite(dump,"%4h\n", lv_data[31:0]); 
+    	$fwrite(dump,"%8h\n", lv_data[31:0]); 
       rg_total_count<=rg_total_count-1;
       if (response.rresp!=AXI4_OKAY)begin
         $display($time, "\tSIGNATUREDUMP got Bus Error");
