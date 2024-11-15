@@ -340,7 +340,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   `ifdef perfmonitors
     wr_count_exestalls <= 1;
   `endif
-    `logLevel( stage3, stall, $format("[%2d]STAGE3: Structural stall in EXE", hartid))
+    `logLevel( stage3, 0, $format("[%2d]STAGE3: Structural stall in EXE", hartid))
   endrule:rl_structural_stalls
 
   /*doc:rule: This rule performs the operand bypass for each operand. For each operand, this rule
@@ -354,7 +354,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   * initiate execution.
   */
   rule rl_perform_fwding(rx_meta.u.notEmpty);
-    `logLevel( stage3, pc, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
+    `logLevel( stage3, 0, $format("[%2d]STAGE3: PC:%h",hartid, meta.pc))
     
     // ----------------------- check for WAW hazard ------------------------------------------- //
     let sb_index = {`ifdef spfpu pack(meta.rdtype==FRF), `endif meta.rd };
@@ -415,7 +415,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     wr_op3_avail_probe <= _op3_avail;
   `endif
     if (lv_waw_stall)begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: WAW Stall", hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: WAW Stall", hartid))
       `logLevel( stage3, 0, $format("[%2d]STAGE3: ",hartid, fshow(sboard.mv_board)))
     end
     else begin
@@ -470,7 +470,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting of op1",hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting of op1",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
@@ -542,7 +542,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     end
     // stall until operands are available.
     else begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting of operands",hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting of operands",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
@@ -670,7 +670,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting for operands",hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting for operands",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     end
   endrule:rl_exe_base_memory
@@ -812,7 +812,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting for operands",hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting for operands",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
@@ -857,7 +857,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: Waiting for operands",hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: Waiting for operands",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
@@ -923,7 +923,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     `endif
     end
     else begin
-      `logLevel( stage3, stall, $format("[%2d]STAGE3: FBOX Waiting for operands",hartid))
+      `logLevel( stage3, 0, $format("[%2d]STAGE3: FBOX Waiting for operands",hartid))
       `logLevel( stage3, 4, $format("[%2d]STAGE3: SBD: ",hartid,fshow(sboard.mv_board)))
     `ifdef perfmonitors
       wr_count_rawstalls <= 1;
