@@ -65,6 +65,8 @@ bsc_compile_options:
   top_dir: test_soc
   open_ocd: False
   cocotb_sim: False
+  static_check: True
+  verbosity: 2
 verilator_configuration:
   coverage: none
   trace: false
