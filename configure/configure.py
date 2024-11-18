@@ -207,7 +207,6 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
 
     if foo['bsc_compile_options']['static_check']:
         macros += ' static_check'
-    else:
         verbos = foo['bsc_compile_options']['verbosity']
         macros += ' VERBOSITY='+str(verbos)
 
