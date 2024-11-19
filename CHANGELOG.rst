@@ -4,6 +4,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.0.6] - 2024-11-19
+--------------------
+
+- Updated for static_check support
+- Upstreamed verification
+
 [3.0.5] - 2024-11-12
 --------------------
 
