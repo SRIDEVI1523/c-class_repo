@@ -68,10 +68,10 @@ common_verilog:
   checkout: 2.0.0
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 5.0.1
+  checkout: 81-upstream-rv-tests
   recursive: True
   patch:
-    - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
+    - [riscv-tests/env , verification/patches/cclass-env.patch]
 benchmarks:
   url: https://gitlab.com/shaktiproject/cores/benchmarks
   checkout: c-class-chnages
