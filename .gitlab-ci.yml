@@ -75,12 +75,12 @@ check-mr-build:
         - schedules
     script:
         - echo -e "section_start:`date +%s`:source_tools\r\e[0KSetup Initialization"
-        - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
+        - export PATH="/home/lavanya/.pyenv/bin:$PATH"
         - eval "$(pyenv init -)"
         - eval "$(pyenv init --path)"
         - eval "$(pyenv virtualenv-init -)"
-        - pyenv activate venv
-        - source /tools/setup_cclass_new_spike.sh
+        - pyenv activate py310
+        - source /tools/setup_local.sh
         - pip install --upgrade pip
         - pip uninstall -r requirements.txt -y
         - pip install -r requirements.txt
@@ -118,7 +118,7 @@ check-mr-build:
         - merge_requests
     when: manual
     tags:
-        - core-runner
+        - cclass-runner
 
 # checks if the changelog has been updated and the version has also been upgraded
 check-mr-compliance:
