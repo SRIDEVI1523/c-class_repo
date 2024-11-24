@@ -9,7 +9,7 @@ bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
 
 bsc_defines = ''
 
-verilator_cmd = ''' -O3 -LDFLAGS "-static" --x-assign fast \
+verilator_cmd = ''' --no-timing -O3 -LDFLAGS "-static" --x-assign fast \
  --x-initial fast --noassert sim_main.cpp --bbox-sys -Wno-STMTDLY \
  -Wno-UNOPTFLAT -Wno-WIDTH -Wno-lint -Wno-COMBDLY -Wno-INITIALDLY \
  --autoflush {0} {1} --threads {2} -DBSV_RESET_FIFO_HEAD \
