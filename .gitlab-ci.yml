@@ -75,8 +75,7 @@ check-mr-build:
         - schedules
     script:
         - echo -e "section_start:`date +%s`:source_tools\r\e[0KSetup Initialization"
-        - export PATH=/home/gitlab-runner/.pyenv/bin:$PATH
-        - echo $USER
+        - export PATH=/home/$USER/.pyenv/bin:$PATH
         - eval "$(pyenv init -)"
         - eval "$(pyenv init --path)"
         - eval "$(pyenv virtualenv-init -)"
