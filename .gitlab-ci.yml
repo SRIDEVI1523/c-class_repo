@@ -150,7 +150,7 @@ check-mr-compliance:
     only:
         - merge_requests
     tags:
-        - core-runner
+        - cclass_runner
 
 release:
     stage: release
@@ -160,6 +160,6 @@ release:
         refs:
             - master
     tags:
-        - core-runner
+        - cclass_runner
     except:
         - schedules
