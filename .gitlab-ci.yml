@@ -118,7 +118,7 @@ check-mr-build:
         - merge_requests
     when: manual
     tags:
-        - cclass-runner
+        - cclass_runner
 
 # checks if the changelog has been updated and the version has also been upgraded
 check-mr-compliance:
