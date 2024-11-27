@@ -96,7 +96,7 @@ check-mr-build:
         #- make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
         #- make benchmarks
         - echo -e "section_end:`date +%s`:csmith\r\e[0Ksection_start:`date +%s`:riscv-test\r\e[0KRISC-V Tests Regression"
-        - make regress opts='--filter=rv64 --test_opts="--timeout=120s" --sub' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
+        - make regress opts='--filter=rv64 --test_opts="--timeout=120s" --sub --parallel 10' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
         - make regress opts='--filter=rv64 --final'
         - make clean_verif
         - echo -e "section_end:`date +%s`:riscv-test\r\e[0Ksection_start:`date +%s`:aapg\r\e[0KAAPG Regression"
