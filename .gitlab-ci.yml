@@ -21,25 +21,23 @@ c-class:
         - python -m configure.main  -ispec sample_config/c64/rv64i_isa.yaml   -customspec sample_config/c64/rv64i_custom.yaml   -cspec sample_config/c64/core64.yaml   -gspec sample_config/c64/csr_grouping64.yaml   -dspec sample_config/c64/rv64i_debug.yaml   --verbose debug
         - echo -e "section_end:`date +%s`:source_tools\r\e[0Ksection_start:`date +%s`:generate_verilog\r\e[0KGenerate Verilog and Verilate"
         - make -j8 generate_verilog; make link_verilator generate_boot_files 
+        - echo -e "section_end:`date +%s`:design build\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
+        - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
         - echo -e "section_end:`date +%s`:csmith\r\e[0Ksection_start:`date +%s`:riscv-test\r\e[0KRISC-V Tests Regression"
-        - make regress opts='--filter=rv64 --test_opts="--timeout=120s" --sub --parallel 10' CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--filter=rv64 --test_opts="--timeout=120s" --sub --parallel 10' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
         - make regress opts='--filter=rv64 --final'
         - make clean_verif
-        - echo -e "section_end:`date +%s`:riscv-test\r\e[0Ksection_start:`date +%s`:aapg\r\e[0KAAPG Regression"
-        - make aapg opts='--config=rv64imafdc* --test_count=1' CONFIG_ISA=RV64IMAFDC
-        - make regress opts='--list=aapg.list --sub --test_opts="--timeout=15m"' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
-        - make regress opts='--list=aapg.list --final' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
-        - make clean_verif
-        - echo -e "section_end:`date +%s`:benchmarks\r\e[0Ksection_start:`date +%s`:torture\r\e[0KTORTURE Regression"
+        - echo -e "section_end:`date +%s`:rv tests\r\e[0Ksection_start:`date +%s`:torture\r\e[0KTORTURE Regression"
         - make torture opts='--config=bringup --test_count=1' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
         - make torture opts='--config=rv64imafdc --test_count=1' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
         - make regress opts='--list=riscv-torture.list --test_opts="--timeout=60m" --sub' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
         - make regress opts='--list=riscv-torture.list --final'
-        - echo -e "section_end:`date +%s`:torture\r\e[0Ksection_start:`date +%s`:cleanup\r\e[0KCleanup"
+        - echo -e "section_end:`date +%s`:torture\r\e[0Ksection_start:`date +%s`:aapg\r\e[0KAAPG Regression"
+        - make aapg opts='--config=rv64imafdc* --test_count=1' CONFIG_ISA=RV64IMAFDC
+        - make regress opts='--list=aapg.list --sub --test_opts="--timeout=15m"' CONFIG_ISA=RV64IMAFDCZicsr_Zifencei
+        - make regress opts='--list=aapg.list --final' CONFIG_ISA=RV64IMAFDC
         - make clean_verif
-        - echo -e "section_end:`date +%s`:torture\r\e[0Ksection_start:`date +%s`:benchmarks\r\e[0KBenchmarks Regression"
-        - make regress opts="--list=cclass-benchmark-tests.list --sub --test_opts='--nospike --timeout=120s'" CONFIG_ISA=RV64IMAFDC
-        - echo -e "section_end:`date +%s`:benchmarks\r\e[0Ksection_start:`date +%s`:cleanup\r\e[0KCleanup"
+        - echo -e "section_end:`date +%s`:torture\r\e[0Ksection_start:`date +%s`:cleanup\r\e[0KCleanup"
         - echo -e "section_end:`date +%s`:cleanup\r\e[0K"
     only:
         - master
