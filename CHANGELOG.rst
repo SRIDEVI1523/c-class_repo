@@ -9,7 +9,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 
 - Updated for static_check support
 - Upstreamed verification
-
+- Fixed bug in dcache (caches_mmu): fixes for declining ptw requests when cache is busy (dmem) , rewrites of register read/writes in fill buffer and store buffer (dcache_lib) and ecc compilation (dcache1rw).
 
 [3.0.5] - 2024-11-12
 --------------------
