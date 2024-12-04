@@ -708,6 +708,12 @@ bsc_compile_options:
       type: string
     cocotb_sim:
       type: boolean
+    static_check:
+      type: boolean
+      default: False
+    verbosity:
+      type: integer
+      default: 2
   default:
     test_memory_size: 33554432
     assertions: True
@@ -722,7 +728,8 @@ bsc_compile_options:
     open_ocd: False
     compile_target: 'sim'
     cocotb_sim: False
-
+    static_check: False
+    verbosity: 2
 
 ###
 #

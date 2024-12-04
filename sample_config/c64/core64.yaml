@@ -50,7 +50,7 @@ dcache_configuration:
 reset_pc: 4096
 bus_protocol: AXI4
 bsc_compile_options:
-  test_memory_size: 33554432
+  test_memory_size: 67108864
   assertions: true
   ovl_assertions: False
   sva_assertions: False
@@ -65,6 +65,8 @@ bsc_compile_options:
   top_dir: test_soc
   open_ocd: False
   cocotb_sim: False
+  static_check: True
+  verbosity: 0
 verilator_configuration:
   coverage: none
   trace: false

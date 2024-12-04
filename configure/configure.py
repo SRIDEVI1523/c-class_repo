@@ -205,6 +205,11 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
     if foo['bsc_compile_options']['sva_assertions']:
         macros += ' sva_assert'
 
+    if foo['bsc_compile_options']['static_check']:
+        macros += ' static_check'
+        verbos = foo['bsc_compile_options']['verbosity']
+        macros += ' VERBOSITY='+str(verbos)
+
     for isb,isb_val in foo['isb_sizes'].items():
         macros += ' {0}={1}'.format(isb,isb_val)
 

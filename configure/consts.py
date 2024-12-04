@@ -9,7 +9,7 @@ bsc_cmd = '''bsc -u -verilog -elab -vdir {0} -bdir {1} -info-dir {1} \
 
 bsc_defines = ''
 
-verilator_cmd = ''' -O3 -LDFLAGS "-static" --x-assign fast \
+verilator_cmd = ''' --no-timing -O3 -LDFLAGS "-static" --x-assign fast \
  --x-initial fast --noassert sim_main.cpp --bbox-sys -Wno-STMTDLY \
  -Wno-UNOPTFLAT -Wno-WIDTH -Wno-lint -Wno-COMBDLY -Wno-INITIALDLY \
  --autoflush {0} {1} --threads {2} -DBSV_RESET_FIFO_HEAD \
@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: 14.2.5
+  checkout: 14.2.6
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: 2.0.0
@@ -68,10 +68,10 @@ common_verilog:
   checkout: 2.0.0
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
-  checkout: 5.0.1
+  checkout: 5.0.2
   recursive: True
   patch:
-    - [riscv-tests/env , verification/patches/riscv-tests-shakti-signature.patch]
+    - [riscv-tests/env , verification/patches/cclass-env.patch]
 benchmarks:
   url: https://gitlab.com/shaktiproject/cores/benchmarks
   checkout: c-class-chnages

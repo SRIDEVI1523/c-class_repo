@@ -4,6 +4,13 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.0.6] - 2024-12-04
+--------------------
+
+- Updated for static_check support
+- Upstreamed verification
+- Fixed bug in dcache (caches_mmu): fixes for declining ptw requests when cache is busy (dmem) , rewrites of register read/writes in fill buffer and store buffer (dcache_lib) and ecc compilation (dcache1rw).
+
 [3.0.5] - 2024-11-12
 --------------------
 
@@ -12,7 +19,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 [3.0.4] - 2024-11-11
 --------------------
 
-- Fixed bug in icache
+- Fixed bug in icache: fix to handle interleaved io and mem responses from axi4 correctly
 - Update to new verification tag
 
 [3.0.3] - 2024-11-07
