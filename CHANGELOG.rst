@@ -19,7 +19,7 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
 [3.0.4] - 2024-11-11
 --------------------
 
-- Fixed bug in icache
+- Fixed bug in icache: fix to handle interleaved io and mem responses from axi4 correctly
 - Update to new verification tag
 
 [3.0.3] - 2024-11-07
