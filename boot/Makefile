@@ -34,7 +34,11 @@ append16:
 .PHONY: create_hex
 create_hex:
 	@dtc -O dtb -o c-class.dtb -b 0 c-class.dts
+ifeq ($(XXD_VERSION),2023)
+	@xxd -R never -e -c $(width) c-class.dtb config.c-class
+else
 	@xxd -e -c $(width) c-class.dtb config.c-class
+endif
 	@head -n -1 config.c-class > 1
 	@mv 1 config.c-class
 ifeq ($(XLEN),128)
