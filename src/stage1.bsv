@@ -48,7 +48,11 @@ package stage1;
 	endinterface:Ifc_stage1
 
 `ifdef stage1_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
   module mkstage1#(parameter Bit#(`xlen) hartid) (Ifc_stage1);
 

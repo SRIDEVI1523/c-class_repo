@@ -102,7 +102,11 @@ package gshare_fa;
   endinterface
 
 `ifdef bpu_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
   module mkbpu#(parameter Bit#(`xlen) hartid) (Ifc_bpu);
 

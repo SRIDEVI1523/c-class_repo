@@ -92,13 +92,11 @@ typedef enum {Load = 0, Store = 1, Fence = 3, FenceI = 4
 
 /*doc:enum: This enum indicates the type of the operand-1 used for execution 
  * min size: 1 max size: 2 */
-typedef enum {`ifdef spfpu FloatingRF = 2, `endif 
-                           IntegerRF = 0, PC = 1} Op1type deriving(Bits, Eq, FShow);
+typedef enum {IntegerRF = 0, PC = 1 , `ifdef spfpu FloatingRF = 2, `endif  Dummy1_Op1type = 3} Op1type deriving(Bits, Eq, FShow);
 
 /*doc:enum: This enum indicates the type of the operand-2 used for execution 
  * min size: 2 max size: 3 */
-typedef enum {`ifdef spfpu FloatingRF = 4, `endif 
-                           IntegerRF = 0, Immediate = 1, Constant4 = 2, Constant2 = 3}
+typedef enum {IntegerRF = 0, Immediate = 1, Constant4 = 2, Constant2 = 3 , `ifdef spfpu FloatingRF = 4, `endif  Dummy1_Op2type = 5, Dummy2_Op2type = 6, Dummy3_Op2type = 7}
                            Op2type deriving(Bits, Eq, FShow);
 
 /*doc:enum: This enum indicates in which rf the destination register needs to be updated
@@ -724,6 +722,7 @@ typedef struct{
         Bit#(3) funct3;
         Bit#(2) imm;
         Bool    issp;
+        Bit#(3) fsr;
 }Input_Packet deriving (Bits,Eq);
 
 typedef struct{

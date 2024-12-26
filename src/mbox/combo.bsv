@@ -23,7 +23,11 @@ interface Ifc_combo_mul;
 endinterface
 
 `ifdef mbox_mul_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `endif
 module mkcombo_mul(Ifc_combo_mul);
 

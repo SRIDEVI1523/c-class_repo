@@ -68,7 +68,11 @@ package stage0;
   endinterface: Ifc_stage0
 
 `ifdef stage0_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
   module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid) (Ifc_stage0);
     String stage0 = "";

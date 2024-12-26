@@ -93,7 +93,9 @@ interface Ifc_ccore_axi4;
   /*doc:method: This method indicates to the debugger is the core is available for debugging*/
   method Bit#(1) mv_core_debugenable;
 
+`ifndef core_clkgate
   (*always_enabled*)
+`endif
   /*doc:method: This action method indicates the core that a debugger is connected and available for
    * carrying our debug operations*/
   method Action ma_debugger_available (Bit#(1) avail);
@@ -106,7 +108,11 @@ interface Ifc_ccore_axi4;
 `endif
 endinterface : Ifc_ccore_axi4
 
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `ifdef supervisor
 (*preempts="rl_dtlb_req_to_ptwalk, rl_itlb_req_to_ptwalk"*)
   (*preempts="core_req_mkConnectionGetPut, ptwalk_req_mkConnectionGetPut"*)
@@ -116,12 +122,14 @@ endinterface : Ifc_ccore_axi4
   (*conflict_free="handle_itim_write_resp, handle_nc_write_resp"*)
 `endif
 (*mutually_exclusive ="rl_handle_io_read_response, rl_handle_io_write_resp"*)
-module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_ccore_axi4);
+module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid `ifdef testmode ,Bool test_mode `endif )(Ifc_ccore_axi4);
   String core = "";
   /*doc:mod: instatiate the riscv pipeline */
-  Ifc_riscv riscv <- mkriscv(resetpc, hartid);
+  Ifc_riscv riscv <- mkriscv(resetpc, hartid `ifdef testmode ,test_mode `endif );
 
+  `ifdef supervisor
     Reg#(PTWState) rg_ptw_state <- mkReg(None);
+  `endif
     `ifdef hypervisor
     Ifc_ptwalk ptwalk <- mkptwalk;
   `elsif supervisor
@@ -138,10 +146,10 @@ module mkccore_axi4#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_cco
 `endif
 
   /*doc:mod: instantiate the instruction memory subsystem*/
-	Ifc_imem imem <- mkimem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif );
+	Ifc_imem imem <- mkimem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif  `ifdef testmode ,test_mode `endif );
 
   /*doc:mod: instantiate the data memory subsystem*/
-	Ifc_dmem dmem <- mkdmem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif );
+	Ifc_dmem dmem <- mkdmem(truncate(hartid) `ifdef pmp ,lv_pmp_cfg, lv_pmp_adr `endif  `ifdef testmode ,test_mode `endif );
 
 `ifdef dcache
   /*doc:reg: This register is used to keep track of the beats/bursts occurring during the write

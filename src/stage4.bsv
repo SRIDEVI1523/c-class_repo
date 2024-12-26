@@ -45,7 +45,11 @@ package stage4;
   endinterface:Ifc_stage4
 
 `ifdef stage4_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
 // the following attributes are only required in simulation mode. They basically allows a rule to
 // fire which indicates that a stall is observed.

@@ -80,7 +80,11 @@ interface Ifc_restoring_div;
 endinterface
 
 `ifdef mbox_div_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 (*conflict_free="single_step_div, ma_inputs"*)
 (*conflict_free="single_step_div, mv_output"*)
 `endif

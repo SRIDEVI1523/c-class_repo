@@ -12,6 +12,7 @@ package riscv;
   import Connectable  :: * ;
   import GetPut       :: * ;
   import DReg         :: * ;
+  import Clocks       :: * ;
   `include "Logger.bsv"
 
 `ifdef muldiv
@@ -98,7 +99,9 @@ package riscv;
     method Action ma_debug_interrupt(Bit#(1) _int);
     method Bit#(1) mv_core_is_reset;
     method Bit#(1) mv_core_debugenable;
+  `ifndef core_clkgate
     (*always_enabled*)
+  `endif
     method Action ma_debugger_available (Bit#(1) avail);
     method Bit#(1) mv_stop_timer;
     method Bit#(1) mv_stop_count;
@@ -110,9 +113,13 @@ package riscv;
   endinterface: Ifc_riscv
 
 `ifdef riscv_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
 `endif
-module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
+`endif
+module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid `ifdef testmode ,Bool test_mode `endif )(Ifc_riscv);
     Ifc_stage0  stage0 <- mkstage0(resetpc, hartid);
     Ifc_stage1  stage1 <- mkstage1(hartid);
     Ifc_stage2  stage2 <- mkstage2(hartid);
@@ -202,7 +209,13 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     Wire#(Bit#(1)) wr_debugger_available <- mkWire();
   `endif
   `ifdef spfpu
-    Ifc_fpu fbox <- mkfpu();
+  `ifdef fpu_clockgate 
+  GatedClockIfc fpu_clk_gated <- mkGatedClockFromCC(False);
+
+    Ifc_fpu fbox <- mkfpu(clocked_by fpu_clk_gated.new_clk);
+  `else
+  Ifc_fpu fbox <- mkfpu;
+  `endif
     FIFOF#(XBoxOutput) ff_fbox_out <- mkSizedBypassFIFOF(`isb_s3s4);
   `endif
 
@@ -266,6 +279,11 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     mkConnection(stage3.float.mv_fbox_inputs, fbox._start);
     mkConnection(fbox.tx_output, ff_fbox_out);
     mkConnection(ff_fbox_out, stage4.s4_fbox.rx_fbox_output);
+    `ifdef fpu_clockgate
+    rule fpu_clock_en;    
+      fpu_clk_gated.setGateCond(unpack(stage5.csrs.mv_cacheenable[5]));	         
+    endrule
+    `endif
     `ifdef arith_trap
       rule rl_fbox_arith_en;
         fbox.rd_arith_excep_en(unpack(stage5.csrs.mv_cacheenable[3]));
@@ -352,7 +370,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     interface s5_cache = stage5.cache;
     interface csrs = interface Ifc_riscv_csrs
       method mv_csr_mstatus = stage5.csrs.mv_csr_mstatus;
-      method mv_cacheenable = stage5.csrs.mv_cacheenable;
+      method mv_cacheenable = truncate(stage5.csrs.mv_cacheenable);
       method mv_curr_priv = stage5.csrs.mv_curr_priv;
   	`ifdef supervisor
   		method mv_csr_satp = stage5.csrs.mv_csr_satp;

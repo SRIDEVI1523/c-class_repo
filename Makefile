@@ -20,7 +20,7 @@ link_verilator: ## Generate simulation executable using Verilator
 	@echo "#define TOPMODULE V$(TOP_MODULE)" > sim_main.h
 	@echo '#include "V$(TOP_MODULE).h"' >> sim_main.h
 	verilator $(VERILATOR_FLAGS) --cc $(TOP_MODULE).v -y $(VERILOGDIR) \
-		-y $(BS_VERILOG_LIB) -y common_verilog --exe
+		-y $(BS_VERILOG_LIB) -y common_verilog -y src/fpu/hardfloat/verilog_src  --exe
 	@ln -f -s ../test_soc/sim_main.cpp obj_dir/sim_main.cpp
 	@ln -f -s ../sim_main.h obj_dir/sim_main.h
 	make $(VERILATOR_SPEED) VM_PARALLEL_BUILDS=1 -j4 -C obj_dir -f V$(TOP_MODULE).mk
@@ -37,7 +37,7 @@ link_verilator_gdb: ## Generate simulation executable using Verilator and VPI fo
 	      devices/jtagdtm/vpi_sv.v \
 	      tmp1.v                         > $(VERILOGDIR)/$(TOP_MODULE)_edited.v
 	@rm   -f  tmp1.v
-	verilator $(VERILATOR_FLAGS) --threads-dpi all --cc $(TOP_MODULE)_edited.v --exe sim_main.cpp devices/jtagdtm/RBB_Shakti.c -y $(VERILOGDIR) -y $(BS_VERILOG_LIB) -y common_verilog 
+	verilator $(VERILATOR_FLAGS) --threads-dpi all --cc $(TOP_MODULE)_edited.v --exe sim_main.cpp devices/jtagdtm/RBB_Shakti.c -y $(VERILOGDIR) -y $(BS_VERILOG_LIB) -y common_verilog -y src/fpu/hardfloat/verilog_src 
 	@ln -f -s ../test_soc/sim_main.cpp obj_dir/sim_main.cpp
 	@ln -f -s ../sim_main.h obj_dir/sim_main.h
 	@ln -f -s ./devices/jtagdtm/RBB_Shakti.c obj_dir/RBB_Shakti.c

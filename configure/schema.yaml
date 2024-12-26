@@ -137,6 +137,20 @@ waw_stalls: {type: boolean, default: False}
 
 ###
 #
+#hardfloat
+#^^^^^^^^^^
+#
+# **Description**: Indicates if berkley hardfloat modules are to be used, or to
+# use float modules wriiten in bluespec fully.
+#
+# **Examples**:
+#
+# .. code-block:: yaml
+#
+#   hardfloat: False
+hardfloat: {type: boolean, default: False}
+###
+#
 #iepoch_size
 #^^^^^^^^^^^
 #
