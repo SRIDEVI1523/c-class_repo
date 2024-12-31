@@ -211,8 +211,10 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid `ifdef testmo
   `ifdef spfpu
   `ifdef fpu_clockgate 
   GatedClockIfc fpu_clk_gated <- mkGatedClockFromCC(False);
+  let curr_reset<-exposeCurrentReset;   
+  Reset fpu_internal_reset <- mkAsyncReset(2,curr_reset,fpu_clk_gated.new_clk);
 
-    Ifc_fpu fbox <- mkfpu(clocked_by fpu_clk_gated.new_clk);
+    Ifc_fpu fbox <- mkfpu(clocked_by fpu_clk_gated.new_clk, reset_by fpu_internal_reset);
   `else
   Ifc_fpu fbox <- mkfpu;
   `endif
