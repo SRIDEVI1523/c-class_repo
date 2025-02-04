@@ -44,7 +44,11 @@ package stage0;
   // -- library imports
   import FIFO           :: * ;
   import FIFOF          :: * ;
-  import SpecialFIFOs   :: * ;
+  `ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
   import GetPut         :: * ;
   import TxRx           :: * ;
   import icache_types   :: * ;

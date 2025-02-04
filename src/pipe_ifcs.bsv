@@ -7,7 +7,11 @@ Created on: Friday 18 June 2021 05:13:19 PM
 package pipe_ifcs ;
 import FIFOF        :: * ;
 import Vector       :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
 import SpecialFIFOs :: * ;
+`endif
 import FIFOF        :: * ;
 import GetPut       :: * ;
 import Connectable  :: * ;

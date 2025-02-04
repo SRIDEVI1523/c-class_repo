@@ -16,7 +16,11 @@ import ccore_types::*;
 `include "fpu.defines"
 import RegFile::*;
 import FIFO::*;
-import SpecialFIFOs::*;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
 import ConfigReg::*;
 typedef struct{
 	Bit#(TMul#(TAdd#(fpman,3),2)) mantissa;        //Holds the extended mantissa 

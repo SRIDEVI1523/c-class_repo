@@ -70,7 +70,11 @@ package stage3 ;
 // -- package imports --//
 import GetPut         :: * ;
 import FIFOF          :: * ;
-import SpecialFIFOs   :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
 import DReg           :: * ;
 import TxRx           :: * ;
 import Vector         :: * ;

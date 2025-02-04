@@ -6,7 +6,11 @@ import ccore_types    :: *;
 
 import combo          :: * ;
 import restoring_div  :: * ;
-import SpecialFIFOs   :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
 import FIFOF          :: * ;
 import TxRx           :: * ;
 import Assert         :: * ;
