@@ -11,7 +11,11 @@ handling.
 package stage1;
   // -- package imports --//
   import FIFOF::*;
-  import SpecialFIFOs::*;
+  `ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
   import FIFO::*;
   import GetPut::*;
   import Assert::*;

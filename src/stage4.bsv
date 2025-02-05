@@ -19,7 +19,11 @@ package stage4;
 
   import FIFOF        :: * ;
   import Vector       :: * ;
-  import SpecialFIFOs :: * ;
+  `ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
   import FIFOF        :: * ;
   import TxRx         :: * ;
   import GetPut       :: * ;

@@ -7,7 +7,11 @@ Created on: Thursday 17 June 2021 09:27:28 PM
 package riscv;
   import FIFOF        :: * ;
   import Vector       :: * ;
-  import SpecialFIFOs :: * ;
+  `ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
   import FIFOF        :: * ;
   import Connectable  :: * ;
   import GetPut       :: * ;
@@ -212,9 +216,8 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid `ifdef testmo
   `ifdef fpu_clockgate 
   GatedClockIfc fpu_clk_gated <- mkGatedClockFromCC(False);
   let curr_reset<-exposeCurrentReset;   
-  Reset fpu_internal_reset <- mkAsyncReset(2,curr_reset,fpu_clk_gated.new_clk);
 
-    Ifc_fpu fbox <- mkfpu(clocked_by fpu_clk_gated.new_clk, reset_by fpu_internal_reset);
+    Ifc_fpu fbox <- mkfpu(clocked_by fpu_clk_gated.new_clk);
   `else
   Ifc_fpu fbox <- mkfpu;
   `endif
