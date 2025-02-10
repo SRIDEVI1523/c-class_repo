@@ -74,7 +74,7 @@ verification:
     - [riscv-tests/env , verification/patches/cclass-env.patch]
 benchmarks:
   url: https://gitlab.com/shaktiproject/cores/benchmarks
-  checkout: c-class-chnages
+  checkout: 1.0.0
 csrbox:
   url: https://gitlab.com/shaktiproject/cores/csrbox
   checkout: perfmonitor_fix
