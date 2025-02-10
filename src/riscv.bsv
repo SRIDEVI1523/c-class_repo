@@ -133,7 +133,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
 
 `ifdef perfmonitors
     /*doc:wire: */
-    Wire#(Bit#(31)) wr_total_count <- mkDWire(0);
+    Reg#(Bit#(31)) wr_total_count <- mkReg(0);
   `ifdef icache
     Wire#(Bit#(5)) wr_icache_counters <- mkDWire(0);
   `endif
