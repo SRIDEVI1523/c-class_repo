@@ -77,7 +77,7 @@ benchmarks:
   checkout: 1.0.0
 csrbox:
   url: https://gitlab.com/shaktiproject/cores/csrbox
-  checkout: perfmonitor_fix
+  checkout: 1.9.0
 riscv-config:
   url: https://gitlab.com/shaktiproject/cores/riscv-config
   checkout: 3.6.0
