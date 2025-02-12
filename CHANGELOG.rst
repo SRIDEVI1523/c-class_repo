@@ -4,6 +4,16 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.1.0] - 2025-02-10
+--------------------
+- csrbox fix for performance monitors
+- benchmarks floating point print fix
+
+[3.0.8] - 2024-12-24
+--------------------
+
+- xxd fix for boot
+
 [3.0.7] - 2024-12-04
 --------------------
 
