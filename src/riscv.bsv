@@ -133,7 +133,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
 
 `ifdef perfmonitors
     /*doc:wire: */
-    Reg#(Bit#(31)) wr_total_count <- mkReg(0);
+    Reg#(Bit#(TSub#(`mhpm_eventcount,1))) wr_total_count <- mkReg(0);
   `ifdef icache
     Wire#(Bit#(5)) wr_icache_counters <- mkDWire(0);
   `endif
@@ -285,7 +285,7 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid)(Ifc_riscv);
     endrule:rl_connect_events
 
     rule rl_connect_events1;
-      stage5.perf.ma_events(wr_total_count);
+      stage5.perf.ma_events({wr_total_count,1'b0});
     endrule
   `endif
     
