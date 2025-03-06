@@ -4,6 +4,13 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[3.1.0] - 2025-03-06
+--------------------
+- Fixed bug in csrs : hpmcounters were not shadow registers of mhpmcounters
+- Performance counter event numbering started from 1 instead of 0
+- Performance counter event encodings listed in perf-counters.rst
+
+
 [3.1.0] - 2025-02-10
 --------------------
 - csrbox fix for performance monitors
