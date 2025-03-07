@@ -718,7 +718,7 @@ hart0:
                 warl:
                     dependency_fields: []
                     legal:
-                      - "mhpmcounter4[63:0] in [0x0000000000000000:0xFFFFFFFFFFFFFFFF]"
+                      - "mhpmcounter5[63:0] in [0x0000000000000000:0xFFFFFFFFFFFFFFFF]"
                     wr_illegal:
                       - Unchanged
         reset-val: 0
@@ -731,9 +731,41 @@ hart0:
                 warl:
                     dependency_fields: []
                     legal:
-                      - "mhpmcounter4[63:0] in [0x0000000000000000:0xFFFFFFFFFFFFFFFF]"
+                      - "mhpmcounter6[63:0] in [0x0000000000000000:0xFFFFFFFFFFFFFFFF]"
                     wr_illegal:
                       - Unchanged
+        reset-val: 0
+    hpmcounter3:
+        rv32:
+            accessible: false
+        rv64:
+            accessible: true
+            shadow: mhpmcounter3
+            shadow_type: ro
+        reset-val: 0
+    hpmcounter4:
+        rv32:
+            accessible: false
+        rv64:
+            accessible: true
+            shadow: mhpmcounter4
+            shadow_type: ro
+        reset-val: 0
+    hpmcounter5:
+        rv32:
+            accessible: false
+        rv64:
+            accessible: true
+            shadow: mhpmcounter5
+            shadow_type: ro
+        reset-val: 0
+    hpmcounter6:
+        rv32:
+            accessible: false
+        rv64:
+            accessible: true
+            shadow: mhpmcounter6
+            shadow_type: ro
         reset-val: 0
     mhpmevent3:
         rv32:
