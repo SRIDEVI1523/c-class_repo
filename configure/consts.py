@@ -53,7 +53,7 @@ include depends.mk
 dependency_yaml='''
 caches_mmu:
   url: https://gitlab.com/shaktiproject/uncore/caches_mmu
-  checkout: 14.2.9
+  checkout: 14.3.0
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
   checkout: 2.0.0
@@ -62,7 +62,7 @@ devices:
   checkout: 8.0.1
 fabrics:
   url: https://gitlab.com/shaktiproject/uncore/fabrics
-  checkout: 1.2.0
+  checkout: 1.3.0
 common_verilog:
   url: https://gitlab.com/shaktiproject/common_verilog
   checkout: 2.0.0
