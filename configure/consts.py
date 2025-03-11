@@ -80,5 +80,5 @@ csrbox:
   checkout: 1.9.0
 riscv-config:
   url: https://gitlab.com/shaktiproject/cores/riscv-config
-  checkout: 3.6.0
+  checkout: 3.7.0
 '''
