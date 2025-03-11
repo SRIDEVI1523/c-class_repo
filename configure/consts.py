@@ -56,16 +56,16 @@ caches_mmu:
   checkout: 14.3.0
 common_bsv:
   url: https://gitlab.com/shaktiproject/common_bsv
-  checkout: 2.0.0
+  checkout: 3.0.0
 devices:
   url: https://gitlab.com/shaktiproject/uncore/devices
   checkout: 8.0.1
 fabrics:
   url: https://gitlab.com/shaktiproject/uncore/fabrics
-  checkout: 1.3.0
+  checkout: 1.3.3
 common_verilog:
   url: https://gitlab.com/shaktiproject/common_verilog
-  checkout: 2.0.0
+  checkout: 3.0.0
 verification:
   url: https://gitlab.com/shaktiproject/verification_environment/verification
   checkout: 5.0.2
