@@ -59,7 +59,7 @@ common_bsv:
   checkout: 3.0.0
 devices:
   url: https://gitlab.com/shaktiproject/uncore/devices
-  checkout: dma_fix
+  checkout: 109-32bit_with_clock_gating
 fabrics:
   url: https://gitlab.com/shaktiproject/uncore/fabrics
   checkout: 1.3.3
