@@ -109,12 +109,12 @@ interface Ifc_ccore_axi4;
 endinterface : Ifc_ccore_axi4
 
 `ifdef core_clkgate
-(*synthesize,gate_all_clocks*)
+  (*synthesize,gate_all_clocks*)
 `else
-(*synthesize*)
+  (*synthesize*)
 `endif
 `ifdef supervisor
-(*preempts="rl_dtlb_req_to_ptwalk, rl_itlb_req_to_ptwalk"*)
+  (*preempts="rl_dtlb_req_to_ptwalk, rl_itlb_req_to_ptwalk"*)
   (*preempts="core_req_mkConnectionGetPut, ptwalk_req_mkConnectionGetPut"*)
 `endif
 

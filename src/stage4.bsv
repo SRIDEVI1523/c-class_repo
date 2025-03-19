@@ -50,7 +50,7 @@ package stage4;
 
 `ifdef stage4_noinline
 `ifdef core_clkgate
-(*synthesize,gate_all_clocks*)
+  (*synthesize,gate_all_clocks*)
 `else
   (*synthesize*)
 `endif

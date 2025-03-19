@@ -32,7 +32,7 @@ package registerfile;
 	endinterface
 `ifdef registerfile_noinline
 `ifdef core_clkgate
-(*synthesize,gate_all_clocks*)
+  (*synthesize,gate_all_clocks*)
 `else
 	(*synthesize*)
 `endif
