@@ -1,3 +1,4 @@
+// See LICENSE.iitm for license details
 package tb_fpu;
 
 import RegFile::*;

@@ -1,3 +1,4 @@
+// See LICENSE.iitm for license details
 /*
 Author: Sugandha Tiwari
 Description: Float to Int Module using Hardfloat

@@ -1,3 +1,5 @@
+// See LICENSE.iitm for license details
+
 `define FP_OPCODE       'b0100
 `define FMADD           'b0000
 `define FMSUB           'b0001

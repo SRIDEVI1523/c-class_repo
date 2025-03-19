@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 package three_plus_multiplier;
 
 import Utils :: *;

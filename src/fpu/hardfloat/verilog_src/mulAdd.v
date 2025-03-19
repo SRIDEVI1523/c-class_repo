@@ -1,3 +1,4 @@
+// See LICENSE.iitm for license details
 /*
 Author: Sugandha Tiwari
 Description: FMA Module using Hardfloat

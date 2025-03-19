@@ -1,3 +1,5 @@
+// See LICENSE.iitm for license details
+
 interface Ifc_ftof#(numeric type expWidthIn, numeric type sigWidthIn, numeric type expWidthOut, numeric type sigWidthOut);
 	(*always_enabled*)
 	method Bit#(TAdd#(expWidthOut, sigWidthOut)) oout ();

@@ -1,3 +1,4 @@
+// See LICENSE.iitm for license details
 /*
 Author: Arjun Menon 
 Description: Wrapper for HardFloat ftof Module

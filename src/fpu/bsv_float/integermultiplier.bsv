@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 Module Name   	: Sequential Integer Multiplier Unit
 Author's Name 	: IIT Madras

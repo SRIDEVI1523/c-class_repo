@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author      : IIT Madras
@@ -59,7 +59,7 @@ module mkfpu_bsvfloat(Ifc_fpu);
   // ============================================
   //  Decode and Maintenance Registers
   // ============================================
-  //Reg#(XBoxOutput) rg_result <- mkDReg(XBoxOutput{valid: False, data:?, fflags: 0
+  // Reg#(XBoxOutput) rg_result <- mkDReg(XBoxOutput{valid: False, data:?, fflags: 0
   //                                      `ifdef arith_trap ,arith_trap_en:False `endif });
   TX#(XBoxOutput) tx_fbox_out <- mkTX;
   FIFOF# (Input_Packet) ff_input   <- mkFIFOF1;
@@ -516,7 +516,7 @@ module mkfpu_bsvfloat(Ifc_fpu);
 		end
  endrule
 
-  //rule to get output from spfpu divider
+  // rule to get output from spfpu divider
   rule rl_get_output_from_spfpu_divider(!wr_flush && rg_multicycle_op);
     `ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from spfpu divider"))  `endif
     let x= inst_spfpu_divider.final_result_;
@@ -526,25 +526,25 @@ module mkfpu_bsvfloat(Ifc_fpu);
     `else
         y.data=zeroExtend(x.final_result);
     `endif
-    //rg_result <= y;
+    // rg_result <= y;
     tx_fbox_out.u.enq(y);
 	  rg_multicycle_op<=False;
   endrule
 
  `ifdef dpfpu
-  //rule to get output from spfpu divider
+  // rule to get output from spfpu divider
   rule rl_get_output_from_dpfpu_divider(!wr_flush && rg_multicycle_op);
     `ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from spfpu divider"))  `endif
     let x= inst_dpfpu_divider.final_result_;
-    //rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
+    // rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
     tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 	  rg_multicycle_op<=False;
   endrule
  `endif
 
-	//rule to give inputs to spfpu square root module
+	// rule to give inputs to spfpu square root module
 
-  //rule to get output spfpu square root module
+  // rule to get output spfpu square root module
   rule rl_get_output_from_spfpu_sqrt(inst_spfpu_sqrt.get_result matches tagged Valid .res &&& !wr_flush &&& rg_multicycle_op); // TODO check for inexact and underflow
     `ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from spfpu sqrt"))  `endif
     let x = res;
@@ -554,24 +554,24 @@ module mkfpu_bsvfloat(Ifc_fpu);
 		`else
 			y.data=zeroExtend(x.final_result);
 		`endif
-    //rg_result <= y;
+    // rg_result <= y;
     tx_fbox_out.u.enq(y);
 	  rg_multicycle_op<=False;
   endrule
 
 `ifdef dpfpu
-  //rule to get output spfpu square root module
+  // rule to get output spfpu square root module
  rule rl_get_output_from_dpfpu_sqrt(inst_dpfpu_sqrt.get_result matches tagged Valid .res &&& !wr_flush &&& rg_multicycle_op); // TODO check for inexact and underflow
     `ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from spfpu sqrt"))  `endif
     let x = res;
-    //rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
+    // rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
     tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 	  rg_multicycle_op<=False;
   endrule
 `endif
 
 
-  //rule to get output from fused multiply add sub
+  // rule to get output from fused multiply add sub
 	 rule rl_get_output_from_fm_add_sub(!wr_flush && rg_multicycle_op);
 		`ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from sp fused multiple add conversion Module")) `endif
 		let x= inst_spfm_add_sub.get_result;
@@ -581,18 +581,18 @@ module mkfpu_bsvfloat(Ifc_fpu);
 		`else
 			y.data=zeroExtend(x.final_result);
 		`endif
-    //rg_result <= y;
+    // rg_result <= y;
     tx_fbox_out.u.enq(y);
      `ifdef spfpu `logLevel( fpu, 0, $format("FPU:FMA Result : %16h", y.data)) `endif
 	  rg_multicycle_op<=False;
 	 endrule
 
   `ifdef dpfpu
-     //rule to get output from fused multiply add sub
+     // rule to get output from fused multiply add sub
 	 rule rl_get_output_from_dpfm_add_sub(!wr_flush && rg_multicycle_op);
 		`ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from sp fused multiple add conversion Module")) `endif
 		let x= inst_dpfm_add_sub.get_result;
-    //rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
+    // rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
     tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
      `ifdef spfpu `logLevel( fpu, 0, $format("FPU:FMA Result : %16h", x.final_result)) `endif
 	  rg_multicycle_op<=False;
@@ -602,7 +602,8 @@ module mkfpu_bsvfloat(Ifc_fpu);
 	rule flush_fifo(wr_flush);
 		rg_multicycle_op<=False;
 	endrule
-     //rule to give inputs to spfloating multiplier
+
+  // rule to give inputs to spfloating multiplier
 
 	// input method to start the floating point operation
 
