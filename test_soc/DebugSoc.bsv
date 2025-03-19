@@ -7,10 +7,10 @@ Created on: Wednesday 29 April 2020 10:09:32 AM IST
 package DebugSoc ;
   import FIFOF        :: * ;
   import Vector       :: * ;
-  `ifdef async_rst
-import SpecialFIFOs_Modified :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
 `else
-import SpecialFIFOs :: * ;
+  import SpecialFIFOs :: * ;
 `endif
   import FIFOF        :: * ;
   import Soc          :: * ;

@@ -7,10 +7,10 @@ Created on: Wednesday 16 June 2021 09:53:08 PM
 package combo ;
   import FIFOF        :: * ;
   import Vector       :: * ;
-  `ifdef async_rst
-import SpecialFIFOs_Modified :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
 `else
-import SpecialFIFOs :: * ;
+  import SpecialFIFOs :: * ;
 `endif
 
   import signedmul      :: * ;

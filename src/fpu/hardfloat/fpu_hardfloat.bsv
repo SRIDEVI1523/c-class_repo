@@ -31,10 +31,10 @@ Details:
 package fpu_hardfloat;
   import FIFO :: * ;
   import FIFOF :: * ;
-  `ifdef async_rst
-import SpecialFIFOs_Modified :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
 `else
-import SpecialFIFOs :: * ;
+  import SpecialFIFOs :: * ;
 `endif
   import DReg :: * ;
   import wrapper_fma :: * ;

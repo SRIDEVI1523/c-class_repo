@@ -58,10 +58,10 @@ package bimodal_nc;
 	/*===== Pacakge imports ===== */
 	import FIFO::*;
 	import FIFOF::*;
-	`ifdef async_rst
-import SpecialFIFOs_Modified :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
 `else
-import SpecialFIFOs :: * ;
+  import SpecialFIFOs :: * ;
 `endif
 	import ConfigReg::*;
 	import Connectable::*;

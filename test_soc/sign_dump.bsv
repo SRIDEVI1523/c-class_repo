@@ -31,10 +31,10 @@ package sign_dump;
   import Vector::*;
   import FIFOF::*;
   import DReg::*;
-  `ifdef async_rst
-import SpecialFIFOs_Modified :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
 `else
-import SpecialFIFOs :: * ;
+  import SpecialFIFOs :: * ;
 `endif
   import BRAMCore::*;
   import FIFO::*;
