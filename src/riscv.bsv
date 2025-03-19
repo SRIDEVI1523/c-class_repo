@@ -214,12 +214,11 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid `ifdef testmo
   `endif
   `ifdef spfpu
   `ifdef fpu_clockgate 
-  GatedClockIfc fpu_clk_gated <- mkGatedClockFromCC(False);
-  let curr_reset<-exposeCurrentReset;   
-
+    GatedClockIfc fpu_clk_gated <- mkGatedClockFromCC(False);
+    let curr_reset<-exposeCurrentReset;   
     Ifc_fpu fbox <- mkfpu(clocked_by fpu_clk_gated.new_clk);
   `else
-  Ifc_fpu fbox <- mkfpu;
+    Ifc_fpu fbox <- mkfpu;
   `endif
     FIFOF#(XBoxOutput) ff_fbox_out <- mkSizedBypassFIFOF(`isb_s3s4);
   `endif
@@ -284,11 +283,12 @@ module mkriscv#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid `ifdef testmo
     mkConnection(stage3.float.mv_fbox_inputs, fbox._start);
     mkConnection(fbox.tx_output, ff_fbox_out);
     mkConnection(ff_fbox_out, stage4.s4_fbox.rx_fbox_output);
-    `ifdef fpu_clockgate
+    
+  `ifdef fpu_clockgate
     rule fpu_clock_en;    
       fpu_clk_gated.setGateCond(unpack(stage5.csrs.mv_cacheenable[5]));	         
     endrule
-    `endif
+  `endif
     `ifdef arith_trap
       rule rl_fbox_arith_en;
         fbox.rd_arith_excep_en(unpack(stage5.csrs.mv_cacheenable[3]));
