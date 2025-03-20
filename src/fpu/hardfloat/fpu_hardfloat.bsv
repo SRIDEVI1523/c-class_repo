@@ -1,7 +1,6 @@
 // See LICENSE.iitm for license details
 /* 
-Author: Arjun Menon, Neel Gala 
-Email id: c.arjunmenon@gmail.com, neelgala@gmail.com
+Author: IIT Madras
 Details:
 --------------------------------------------------------------------------------------------------
 */

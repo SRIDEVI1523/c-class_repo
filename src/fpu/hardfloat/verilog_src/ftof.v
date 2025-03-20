@@ -1,6 +1,6 @@
 // See LICENSE.iitm for license details
 /*
-Author: Arjun Menon 
+Author: IIT Madras 
 Description: Float to Float Module using Hardfloat
 */
 

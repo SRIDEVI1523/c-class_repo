@@ -49,6 +49,7 @@ Please refer to LICENSE.iitm for more details.
 - Sadhana S
 - Snehashri S
 - Aditya Terkar
+- Sugandha Tiwari
 
 For any queries, please contact shakti.iitm@gmail.com
 
