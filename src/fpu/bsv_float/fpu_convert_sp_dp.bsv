@@ -2,7 +2,6 @@
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017 
 
 Description:
 TODO

@@ -2,7 +2,6 @@
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017
 
 Description:
 This module performs the sign injection on the floating point value taken from the rs1 register.

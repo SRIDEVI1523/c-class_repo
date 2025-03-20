@@ -2,7 +2,6 @@
 /*
 Module Name   	: Sequential Integer Multiplier Unit
 Author's Name 	: IIT Madras
-Last updated on : 5th August 2016
 
 */
 

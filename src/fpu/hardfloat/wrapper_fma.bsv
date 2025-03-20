@@ -1,6 +1,6 @@
 // See LICENSE.iitm for license details
 /*
-Author: Sugandha Tiwari
+Author: IIT Madraas
 Description: Wrapper for HardFloat FMA Module
 */
 package wrapper_fma;

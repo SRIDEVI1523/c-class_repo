@@ -2,7 +2,6 @@
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017
 
 Implementation is based on a IEEE paper Titled:
 "Implementation of Single Precision Floating Point Square Root on FPGAs"
