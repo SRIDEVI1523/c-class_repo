@@ -1,10 +1,10 @@
 // See LICENSE.iitm for license details
 /*
 Author: Sugandha Tiwari
-Description: comparision Module
+Description: Floating point comparison Module
 */
 
-package comparision;
+package comparison;
 
   
   function Bit#(5) condFlags(Bit#(expWidth) exponent, Bit#(sigWidth) mantissa);
@@ -57,11 +57,11 @@ package comparision;
 	  end
   endfunction
   
-  interface Ifc_comparision#(numeric type expWidth, numeric type sigWidth);
+  interface Ifc_comparison#(numeric type expWidth, numeric type sigWidth);
     method ActionValue#(Tuple3#(Bool, Bit#(TAdd#(expWidth, sigWidth)), Bit#(5))) request(Bit#(TAdd#(expWidth, sigWidth)) a, Bit#(TAdd#(expWidth, sigWidth)) b, Bit#(3) which_cmp_instr, bit cmp_or_min_max);
   endinterface
   
-  module mkcomparision(Ifc_comparision#(expWidth, sigWidth))
+  module mkcomparison(Ifc_comparison#(expWidth, sigWidth))
     provisos (Add#(1, a__, TAdd#(expWidth, sigWidth)),
               Add#(expWidth, b__, a__))
               ;

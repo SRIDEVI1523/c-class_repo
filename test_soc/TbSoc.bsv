@@ -115,11 +115,7 @@ package TbSoc;
   `ifdef rtldump
   Reg#(Bit#(`xlen)) rg_prev_mstatus <- mkReg(0);
   Reg#(Bool) rg_prev_mstatus_valid <- mkReg(False);
-  `ifdef RV32
-  Reg#(Bit#(`xlen)) rg_prev_mstatush <- mkReg(0);
-  Reg#(Bool) rg_prev_mstatush_valid <- mkReg(False);
 
-   `endif
   Bit#(XLEN) lv_misa_init = 0;
   `ifdef RV64
     lv_misa_init[63:62] = 2'b10;

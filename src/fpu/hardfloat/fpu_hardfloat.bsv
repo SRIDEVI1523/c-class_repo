@@ -19,7 +19,7 @@ package fpu_hardfloat;
   import wrapper_itof :: * ;
   import wrapper_ftof :: * ;
   import bsvmkdiv_sqrt :: * ;
-  import comparision :: * ;
+  import comparison :: * ;
   import fclass :: * ;
   import sign_inject :: * ;
   import ccore_types::*;
@@ -105,16 +105,16 @@ package fpu_hardfloat;
   endmodule
   
   (*synthesize,gate_all_clocks*)
-  module mkspcmp_instance(Ifc_comparision#(8,24));
+  module mkspcmp_instance(Ifc_comparison#(8,24));
     let ifc();
-    mkcomparision cmp(ifc);
+    mkcomparison cmp(ifc);
     return (ifc);
   endmodule
   
   (*synthesize,gate_all_clocks*)
-  module mkdpcmp_instance(Ifc_comparision#(11,53));
+  module mkdpcmp_instance(Ifc_comparison#(11,53));
     let ifc();
-    mkcomparision cmp(ifc);
+    mkcomparison cmp(ifc);
     return (ifc);
   endmodule
   
@@ -299,7 +299,7 @@ package fpu_hardfloat;
       
 	  	//Compare Operations
     	if((f7[6:2]==`FCMP_f5 || f7[6:2] == `FMMAX_f5) && opcode == `FP_OPCODE) begin
-    	  `ifdef verbose $display($time,"\tfpu Input Comparision: op1: %h, op2: %h, f3: %b, f7: %b",op1, op2, f3, f7[2]); `endif
+    	  `ifdef verbose $display($time,"\tfpu Input comparison: op1: %h, op2: %h, f3: %b, f7: %b",op1, op2, f3, f7[2]); `endif
 			  if(issp) begin
     	   	let x <- spcmp.request(truncate(op1), truncate(op2), f3, f7[2]);
 				  Tuple3#(Bool, Bit#(ELEN), Bit#(5))  u = fn_ExtendFpuRes(x, `ifdef dpfpu (f7[2]==0) `else True `endif );
