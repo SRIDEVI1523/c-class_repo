@@ -2,7 +2,7 @@
 
 // Bluespec wrapper, created by Import BVI Wizard
 // Created on: Fri Dec 27 19:08:13 IST 2019
-// Created by: IIT Madraas
+// Created by: IIT Madras
 // Bluespec version: 2019.05.beta2 2019-05-24 a88bf40db
 
 

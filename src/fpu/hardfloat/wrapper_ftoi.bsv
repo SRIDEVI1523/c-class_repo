@@ -1,6 +1,6 @@
 // See LICENSE.iitm for license details
 /*
-Author: IIT Madraas
+Author: IIT Madras
 Description: Wrapper for HardFloat ftoi Module
 */
 package wrapper_ftoi;

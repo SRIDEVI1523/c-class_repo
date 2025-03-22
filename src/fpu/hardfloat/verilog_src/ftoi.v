@@ -1,6 +1,6 @@
 // See LICENSE.iitm for license details
 /*
-Author: IIT Madraas
+Author: IIT Madras
 Description: Float to Int Module using Hardfloat
 */
 

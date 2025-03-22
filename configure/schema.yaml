@@ -140,7 +140,7 @@ waw_stalls: {type: boolean, default: False}
 #hardfloat
 #^^^^^^^^^^
 #
-# **Description**: Indicates if berkeley hardfloat modules are to be used, or to
+# **Description**: Indicates if Berkeley hardfloat modules are to be used, or to
 # use float modules written in bluespec fully.
 #
 # **Examples**:
