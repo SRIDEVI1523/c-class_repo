@@ -722,18 +722,30 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
 	  	redirection = !trap;
   `else
     let nextpc = fromMaybe(?,wr_next_pc);
-
-    // In line 734, instead of nextpc!=jump_address, nextpc is modified as follows and nextpc!=base is computed
-    case ({base[0],offset[0]}) 
-	'b00: nextpc = nextpc - truncate(offset); 
-	'b01: nextpc =  (nextpc|{'0,1'b1}) -truncate(offset); 
-	'b10: nextpc = nextpc - ( truncate(offset) & {'1,1'b0}); 
-	'b11: nextpc = nextpc - truncate(offset); 
-    endcase
     let prediction = btbresponse.prediction;
     if(inst_type == BRANCH && btaken == 0)begin
       redirect_pc = nlogical_pc;
     end
+    
+    /*
+    The previous code was: 
+    if( (inst_type == BRANCH  && btaken != prediction[`statesize-1]) ||
+        ( (inst_type == JALR || inst_type == JAL ) && nextpc != jump_address) )begin
+	    redirection = !trap;
+    end
+    But nextpc != jump_address was in global critical path, 
+    since jump_address = base + offset,
+    we change it to (nextpc - offset) != base
+
+    nextpc - offset is calculated in the following way, because jump_address is 
+    aligned to 2 incase of JALR.
+    */
+    case ({base[0],offset[0]}) 
+	    'b00: nextpc = nextpc - truncate(offset); 
+	    'b01: nextpc =  (nextpc|{'0,pack(inst_type==JALR)}) -truncate(offset); 
+	    'b10: nextpc = nextpc - ( truncate(offset) & {'1,~(pack(inst_type==JALR))}); 
+	    'b11: nextpc = nextpc - truncate(offset); 
+    endcase
     if( (inst_type == BRANCH  && btaken != prediction[`statesize-1]) ||
         ( (inst_type == JALR || inst_type == JAL ) && nextpc != base) )begin
 	    redirection = !trap;

@@ -58,8 +58,7 @@ module mkfpu_bsvfloat(Ifc_fpu);
   // ============================================
   //  Decode and Maintenance Registers
   // ============================================
-  // Reg#(XBoxOutput) rg_result <- mkDReg(XBoxOutput{valid: False, data:?, fflags: 0
-  //                                      `ifdef arith_trap ,arith_trap_en:False `endif });
+
   TX#(XBoxOutput) tx_fbox_out <- mkTX;
   FIFOF# (Input_Packet) ff_input   <- mkFIFOF1;
 	Wire#(Bool) wr_flush<-mkDWire(False);
@@ -212,7 +211,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
  `endif
 
  rule start_stage;
-///		Bool issp = (funct7[0] == 0);
         let input_packet = ff_input.first;
         Bit#(ELEN) operand1 = input_packet.operand1;
         Bit#(ELEN) operand2 = input_packet.operand2;
@@ -238,18 +236,16 @@ module mkfpu_bsvfloat(Ifc_fpu);
 				`else
 					y.data=zeroExtend(x.final_result);
 				`endif
-        //rg_result <= y;
         tx_fbox_out.u.enq(y);
 			end
     `ifdef dpfpu
 			else begin
-            let {man3,man4,man5} <- getMant64.func(operand1, operand2,0);
-            let {exp3,exp4,exp5} <- getExp64.func(operand1,operand2,0);
-            let {f1,f2,f3}       <- condFlags64.func(tuple2(man3,exp3),tuple2(man4,exp4),tuple2(0,0));
-            let sign3 = operand1[63];
-            let sign4 = operand2[63];
-            let x<-inst_dpfpu_compare_min_max._start(operand1,operand2,funct3,funct7[2],tuple2(f1,f2));
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
+        let {man3,man4,man5} <- getMant64.func(operand1, operand2,0);
+        let {exp3,exp4,exp5} <- getExp64.func(operand1,operand2,0);
+        let {f1,f2,f3}       <- condFlags64.func(tuple2(man3,exp3),tuple2(man4,exp4),tuple2(0,0));
+        let sign3 = operand1[63];
+        let sign4 = operand2[63];
+        let x<-inst_dpfpu_compare_min_max._start(operand1,operand2,funct3,funct7[2],tuple2(f1,f2));
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 			end
     `endif
@@ -264,13 +260,11 @@ module mkfpu_bsvfloat(Ifc_fpu);
 				`else
 					y.data=zeroExtend(x.final_result);
 				`endif
-        //rg_result <= y;
         tx_fbox_out.u.enq(y);
 			end
     `ifdef dpfpu
 			else begin
 				let x<-inst_dpfpu_int_to_fp._start(operand1,imm[0],imm[1],funct3);
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 			end
     `endif
@@ -286,13 +280,11 @@ module mkfpu_bsvfloat(Ifc_fpu);
 			`else
 				y.data=zeroExtend(x.final_result);
 			`endif
-        //rg_result <= y;
         tx_fbox_out.u.enq(y);
       end
     `ifdef dpfpu
       else begin
 				let x<-inst_dpfpu_sign_injection._start(operand1,operand2,funct3);
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 			end
     `endif
@@ -305,7 +297,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 				let {exp1,exp2,exp3} <- getExp32.func(op1, 0,0);
 				let {flags1,flags2,flags3} <- condFlags32.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
 				let x <- inst_spfp_to_int._start(op1[31],exp1,man1, imm[0],imm[1],funct3,flags1);
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
       end
     `ifdef dpfpu
@@ -314,7 +305,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
       	  let {exp4,exp5,exp6} <- getExp64.func(operand1, 0,0);
       	  let {flags4,flags5,flags6} <- condFlags64.func(tuple2(man4,exp4),tuple2(0,0),tuple2(0,0));
       	  let x<-inst_dpfp_to_int._start(operand1[63],exp4,man4,imm[0],imm[1],funct3,flags4);
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
       end
     `endif
@@ -327,7 +317,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 				let {exp1,exp2,exp3}     <- getExp32.func(op1, 0,0);
 				let {x1,x2,x3}           <- condFlags32.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
 				let x<-inst_spfpu_fclass._start(op1[31],man1,exp1,x1);
-				//rg_result <= XBoxOutput{valid: True, data: zeroExtend(x.final_result), fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: zeroExtend(x.final_result), fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
        end
      `ifdef dpfpu
@@ -336,7 +325,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 				let {exp1,exp2,exp3} <- getExp64.func(operand1, 0,0);
 				let {x1,x2,x3}       <- condFlags64.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
 				let x<-inst_dpfpu_fclass._start(operand1[63],man1,exp1,x1);
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
        end
      `endif
@@ -351,7 +339,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
       	     let {exp1,exp2,exp3}     <- getExp32.func(op1, 0,0);
       	     let {x1,x2,x3}           <- condFlags32.func(tuple2(man1,exp1),tuple2(0,0),tuple2(0,0));
       	     let x<-inst_spfpu_cnvt._start(op1[31],exp1,man1,funct3,x1);
-				//rg_result <= XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags};
         tx_fbox_out.u.enq(XBoxOutput{valid: True, data: x.final_result, fflags: x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
       	end
       	else begin
@@ -366,7 +353,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 			  `else
 			  	y.data=(x.final_result);
 			  `endif
-          //rg_result<=y;
           tx_fbox_out.u.enq(y);
       	end
 		end
@@ -382,7 +368,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
   	 			`else
   	 				final_result= zeroExtend(operand1[31:0]);
   	 			`endif
-      //rg_result <= XBoxOutput{valid: True, data:final_result, fflags:0};
       tx_fbox_out.u.enq(XBoxOutput{valid: True, data:final_result, fflags:0 `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 		end
 		else if(((funct7 == `FMV_X_D_f7 || funct7 == `FMV_D_X_f7) && funct3 == 'b000) && opcode == `FP_OPCODE)begin // TODO merge with above condition
@@ -392,7 +377,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 				final_result = operand1;
 			else // integer to sp FMV.W.X
 						final_result= operand1;
-      //rg_result <= XBoxOutput{valid: True, data:final_result, fflags:0};
       tx_fbox_out.u.enq(XBoxOutput{valid: True, data:final_result, fflags:0 `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 		end
 		else if(((funct7[6:2] == `FADD_f5 || funct7[6:2] == `FSUB_f5) && opcode == `FP_OPCODE))begin // add sub
@@ -525,7 +509,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
     `else
         y.data=zeroExtend(x.final_result);
     `endif
-    // rg_result <= y;
     tx_fbox_out.u.enq(y);
 	  rg_multicycle_op<=False;
   endrule
@@ -535,7 +518,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
   rule rl_get_output_from_dpfpu_divider(!wr_flush && rg_multicycle_op);
     `ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from spfpu divider"))  `endif
     let x= inst_dpfpu_divider.final_result_;
-    // rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
     tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 	  rg_multicycle_op<=False;
   endrule
@@ -553,7 +535,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 		`else
 			y.data=zeroExtend(x.final_result);
 		`endif
-    // rg_result <= y;
     tx_fbox_out.u.enq(y);
 	  rg_multicycle_op<=False;
   endrule
@@ -563,7 +544,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
  rule rl_get_output_from_dpfpu_sqrt(inst_dpfpu_sqrt.get_result matches tagged Valid .res &&& !wr_flush &&& rg_multicycle_op); // TODO check for inexact and underflow
     `ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from spfpu sqrt"))  `endif
     let x = res;
-    // rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
     tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
 	  rg_multicycle_op<=False;
   endrule
@@ -580,7 +560,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 		`else
 			y.data=zeroExtend(x.final_result);
 		`endif
-    // rg_result <= y;
     tx_fbox_out.u.enq(y);
      `ifdef spfpu `logLevel( fpu, 0, $format("FPU:FMA Result : %16h", y.data)) `endif
 	  rg_multicycle_op<=False;
@@ -591,7 +570,6 @@ module mkfpu_bsvfloat(Ifc_fpu);
 	 rule rl_get_output_from_dpfm_add_sub(!wr_flush && rg_multicycle_op);
 		`ifdef spfpu `logLevel( fpu, 0, $format("FPU:Got output from sp fused multiple add conversion Module")) `endif
 		let x= inst_dpfm_add_sub.get_result;
-    // rg_result <= XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags};
     tx_fbox_out.u.enq(XBoxOutput{valid: True, data:x.final_result, fflags:x.fflags `ifdef arith_trap ,arith_trap_en: wr_arith_en `endif });
      `ifdef spfpu `logLevel( fpu, 0, $format("FPU:FMA Result : %16h", x.final_result)) `endif
 	  rg_multicycle_op<=False;
@@ -613,36 +591,37 @@ module mkfpu_bsvfloat(Ifc_fpu);
                                                                                 m.funct3,m.imm, m.issp))
     endmethod
 
-  //method TXe#(XBoxOutput) tx_output;
-  //  let res = tx_fbox_out.u.first;
-  //   /* Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
-  //   csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
-  //   written below */
-  // `ifdef arith_trap
-  //   if(wr_arith_en==1'b1) begin
-  //      if(res.fflags!=0)
-  //        res.trap = True;
-  //      if (res.fflags[4]==1)
-  //        res.cause =`FP_invalid; //Invalid
-  //      else if (res.fflags[3]==1)
-  //        res.cause=`FP_divide_by_zero; //Divide_by_zero_float
-  //      else if (res.fflags[2]==1)
-  //        res.cause=`FP_overflow; //Overflow
-  //      else if (res.fflags[1]==1)
-  //        res.cause=`FP_underflow; //Underflow
-  //      else if (res.fflags[0]==1)
-  //        res.cause=`FP_inexact; //Inexact
-  //     end
-  //   else
-  //     res.trap=False;
-	// `endif
-  //  return res;
+/*    method TXe#(XBoxOutput) tx_output;
+        let res = tx_fbox_out.u.first;
+        // Generating TRAPS for FPU exception flags is optional.....This can be configured by setting   
+        // csr_reg arith_excep...enabling bit generates traps for all FPU flags with cause values as 
+        // written below 
+        `ifdef arith_trap
+        if(wr_arith_en==1'b1) begin
+        if(res.fflags!=0)
+            res.trap = True;
+        if (res.fflags[4]==1)
+            res.cause =`FP_invalid; //Invalid
+        else if (res.fflags[3]==1)
+            res.cause=`FP_divide_by_zero; //Divide_by_zero_float
+        else if (res.fflags[2]==1)
+            res.cause=`FP_overflow; //Overflow
+        else if (res.fflags[1]==1)
+            res.cause=`FP_underflow; //Underflow
+        else if (res.fflags[0]==1)
+            res.cause=`FP_inexact; //Inexact
+        end
+        else
+        res.trap=False;
+        `endif
+        return res;
+    endmethod
+*/
 
-	// endmethod
-  method tx_output = tx_fbox_out.e;
-  method fpu_ready = pack(!(rg_multicycle_op || ff_input.notEmpty));
+    method tx_output = tx_fbox_out.e;
+    method fpu_ready = pack(!(rg_multicycle_op || ff_input.notEmpty));
 	method Action flush;
-		  wr_flush<=True;
+		wr_flush<=True;
         inst_spfpu_divider.flush();
         inst_spfpu_sqrt.flush();
         inst_spfm_add_sub.flush();
