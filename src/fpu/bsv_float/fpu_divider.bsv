@@ -2,9 +2,7 @@
 /*
 
 Author      : IIT Madras
-
-Description:
-TODO
+Description : Floating point divide module
 */
 package fpu_divider;
     import DReg::*;

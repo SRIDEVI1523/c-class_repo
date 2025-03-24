@@ -1,8 +1,7 @@
 // See LICENSE.iitm for license details
 /*
 Author      : IIT Madras
-Description:
-TODO
+Description : Floating point comparison module
 */
 
 

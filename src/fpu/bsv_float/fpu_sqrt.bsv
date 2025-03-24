@@ -5,8 +5,7 @@ Author      : IIT Madras
 
 Implementation is based on a IEEE paper Titled:
 "Implementation of Single Precision Floating Point Square Root on FPGAs"
-Description:
-TODO
+Description: Floating point square root module
 */
 
 package fpu_sqrt;

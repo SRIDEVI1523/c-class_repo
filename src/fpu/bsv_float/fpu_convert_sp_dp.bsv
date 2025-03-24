@@ -2,9 +2,7 @@
 /*
 
 Author      : IIT Madras
-
-Description:
-TODO
+Description : Floating point convert between single precision and double precision module
 */
 package fpu_convert_sp_dp;
 `define verbose

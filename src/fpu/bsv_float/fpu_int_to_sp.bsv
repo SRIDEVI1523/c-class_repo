@@ -1,8 +1,7 @@
 // See LICENSE.iitm for license details
 /*
 Authors     : IIT Madras
-Description:
-TODO
+Description : Integer to single precision floating point conversion module
 */
 package fpu_int_to_sp;
 

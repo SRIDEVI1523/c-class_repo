@@ -2,8 +2,7 @@
 /*
 
 Author      : IIT Madras
-Description:
-TODO
+Description : Integer to double precision floating point conversion module
 */
 package fpu_int_to_dp;
 import ccore_types ::*;

@@ -1,8 +1,7 @@
 // See LICENSE.iitm for license details
 /*
 Author      : IIT Madras
-Description:
-TODO
+Description : Integer divider module
 */
 
 package integer_divider;

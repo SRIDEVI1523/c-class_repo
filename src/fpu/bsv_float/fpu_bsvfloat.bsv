@@ -2,8 +2,9 @@
 /*
 
 Author      : IIT Madras
-Description:
-TODO
+Description : Top level file integrating all submodules of FPU
+              This module also interfaces with the core,
+              receives inputs from the stage3 and sends output to the stage4
 */
 package fpu_bsvfloat;
 /*==== Project imports ==== */
