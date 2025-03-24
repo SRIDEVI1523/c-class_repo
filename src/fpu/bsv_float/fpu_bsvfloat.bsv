@@ -91,6 +91,9 @@ module mkfpu_bsvfloat(Ifc_fpu);
          Ifc_fpu_fclass64                 inst_dpfpu_fclass          <- mkfpu_fclass64();
        `endif
      `else
+
+    // Single cycle modules, which don't need a flush signal are marked as No Flush
+    
          Ifc_fpu_compare_min_max#(32,23,8)	inst_fpu_compare_min_max  <- mkfpu_compare_min_max(); // No Flush
          Ifc_fpu_sign_injection#(32,23,8)		inst_spfpu_sign_injection <- mkfpu_sign_injection(); // No Flush
          Ifc_fpu_divider#(32,23,8)				  inst_spfpu_divider        <- mkfpu_divider();

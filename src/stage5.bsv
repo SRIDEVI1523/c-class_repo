@@ -491,7 +491,9 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
   interface interrupts = interface Ifc_s5_interrupts
     method ma_clint_msip = csr.ma_set_mip_msip;
     method ma_clint_mtip = csr.ma_set_mip_mtip;
-    `ifdef supervisor
+    // if time register is not needed, then mtime value is not required
+    // time register is used in user mode
+    `ifdef user
     method ma_clint_mtime = csr.ma_set_time;
     `endif
     method ma_plic_meip = csr.ma_set_mip_meip;
