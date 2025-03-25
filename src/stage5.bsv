@@ -36,7 +36,11 @@ package stage5 ;
 
 import FIFOF        :: * ;
 import Vector       :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
 import SpecialFIFOs :: * ;
+`endif
 import FIFOF        :: * ;
 import TxRx         :: * ;
 import DefaultValue :: * ;
@@ -70,7 +74,11 @@ endinterface:Ifc_stage5
 
 `ifdef stage5_noinline
 /*doc:module: */
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `endif
 `ifdef simulate
 (*preempts = "rl_writeback_memop, rl_no_op"*)
@@ -421,7 +429,7 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
           else begin
             wr_increment_minstret <= True;
             let commit_data = ioresp.word;
-            `ifdef spfpu if (memop.nanboxing) commit_data[63:32] = '1; `endif
+            `ifdef dpfpu if (memop.nanboxing) commit_data[63:32] = '1; `endif
             wr_commit <= CommitData{addr: fuid.rd, data: zeroExtend(commit_data), unlock_only:False
                                       `ifdef no_wawstalls , id: fuid.id `endif
                                       `ifdef spfpu ,rdtype: fuid.rdtype `endif };
@@ -483,7 +491,11 @@ module mkstage5#(parameter Bit#(`xlen) hartid) (Ifc_stage5);
   interface interrupts = interface Ifc_s5_interrupts
     method ma_clint_msip = csr.ma_set_mip_msip;
     method ma_clint_mtip = csr.ma_set_mip_mtip;
+    // if time register is not needed, then mtime value is not required
+    // time register is used in user mode
+    `ifdef user
     method ma_clint_mtime = csr.ma_set_time;
+    `endif
     method ma_plic_meip = csr.ma_set_mip_meip;
   `ifdef hypervisor
   	method ma_plic_vseip = csr.ma_set_vseip;

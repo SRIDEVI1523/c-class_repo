@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author : IIT Madras
@@ -31,7 +31,11 @@ package registerfile;
 		method Action commit_rd (CommitData c);
 	endinterface
 `ifdef registerfile_noinline
+`ifdef core_clkgate
+  (*synthesize,gate_all_clocks*)
+`else
 	(*synthesize*)
+`endif
 `endif
 	module mkregisterfile#(parameter Bit#(`xlen) hartid) (Ifc_registerfile);
     String regfile ="";

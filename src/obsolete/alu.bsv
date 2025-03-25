@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Module name : Riscv_arithmetic_unit.

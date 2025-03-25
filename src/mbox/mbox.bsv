@@ -6,7 +6,11 @@ import ccore_types    :: *;
 
 import combo          :: * ;
 import restoring_div  :: * ;
-import SpecialFIFOs   :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
 import FIFOF          :: * ;
 import TxRx           :: * ;
 import Assert         :: * ;
@@ -36,7 +40,11 @@ interface Ifc_mbox;
 endinterface: Ifc_mbox
 
 `ifdef mbox_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `endif
 module mkmbox#(parameter Bit#(`xlen) hartid) (Ifc_mbox);
   String mbox = "";

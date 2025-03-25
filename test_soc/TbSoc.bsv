@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 Author: IIT Madras
 Details:
@@ -115,6 +115,7 @@ package TbSoc;
   `ifdef rtldump
   Reg#(Bit#(`xlen)) rg_prev_mstatus <- mkReg(0);
   Reg#(Bool) rg_prev_mstatus_valid <- mkReg(False);
+
   Bit#(XLEN) lv_misa_init = 0;
   `ifdef RV64
     lv_misa_init[63:62] = 2'b10;
@@ -162,8 +163,8 @@ package TbSoc;
     endrule
   `endif
 
- 	  let dump1 <- mkReg(InvalidFile) ;
-    rule open_file_app(rg_cnt<1);
+ 	  let dump1 <- mkRegA(InvalidFile) ;
+    rule open_file_app(rg_cnt<5);
       String dumpFile1 = "app_log" ;
     	File lfh1 <- $fopen( dumpFile1, "w" ) ;
     	if (lfh1==InvalidFile )begin
@@ -212,9 +213,9 @@ package TbSoc;
         rg_inst_count <= rg_inst_count + 1;
 
         if (idump.instruction[1:0] == 'b11)
-        	$fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif " 0x%16h", idump.pc, " (0x%8h", idump.instruction, ")");
+        	$fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif `ifdef RV32 " 0x%8h" `else " 0x%16h" `endif , idump.pc, " (0x%8h", idump.instruction, ")");
         else
-          $fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif " 0x%16h", idump.pc, " (0x%4h", idump.instruction[15:0], ")");
+          $fwrite(dump, "core   0: ", idump.mode, `ifdef hypervisor " %1d", idump.v, `endif `ifdef RV32 " 0x%8h" `else " 0x%16h" `endif , idump.pc, " (0x%4h", idump.instruction[15:0], ")");
 
         if (idump.inst_type matches tagged REG .d) begin
 
@@ -289,8 +290,15 @@ package TbSoc;
             if (csr_address != `FCSR && csr_address != `MISA ) begin
             if (valueOf(`xlen) == 64) 
               $fwrite(dump, " ", fn_csr_to_str(csr_address), " 0x%16h", wdata);
-            if (valueOf(`xlen) == 32)
+            if (valueOf(`xlen) == 32) begin
+	     `ifdef RV32
+                if (csr_address == `MSTATUS && idump.instruction == 'h30200073 ) begin //mret
+		Bit#(`xlen) wdata1 = fn_probe_csr(`MSTATUSH);
+		$fwrite(dump, " " , fn_csr_to_str(`MSTATUSH), " 0x%8h", wdata1);
+	        end
+      	     `endif
               $fwrite(dump, " " , fn_csr_to_str(csr_address), " 0x%8h", wdata);
+		end
 
             if (csr_address == `MSTATUS) begin
               rg_prev_mstatus <= wdata;

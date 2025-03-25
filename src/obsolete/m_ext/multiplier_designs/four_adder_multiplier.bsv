@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 package four_adder_multiplier;
 
 import Utils :: *;

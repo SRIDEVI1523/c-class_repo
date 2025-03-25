@@ -7,7 +7,11 @@ Created on: Friday 18 June 2021 05:13:19 PM
 package pipe_ifcs ;
 import FIFOF        :: * ;
 import Vector       :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
 import SpecialFIFOs :: * ;
+`endif
 import FIFOF        :: * ;
 import GetPut       :: * ;
 import Connectable  :: * ;
@@ -139,27 +143,37 @@ endinterface: Ifc_s3_tx
 
 interface Ifc_s3_rf;
   /*doc:method: receive op1 and its meta info from previous stage (stage2/decode)*/
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_op1 (FwdType i);
   /*doc:method: receive op2 and its meta info from previous stage (stage2/decode)*/
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_op2 (FwdType i);
   /*doc:method: receive op2 and its meta info from previous stage (stage2/decode)*/
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_op3 (FwdType i);
 endinterface: Ifc_s3_rf
 
 interface Ifc_s3_cache;
   // interface to send memory requests to the dmem subsystem
   interface Get#(DMem_request#(`vaddr, `elen, 1)) mv_memory_request;
+`ifndef core_clkgate
   (*always_enabled*)
+`endif
   method Action ma_cache_is_available(Bool avail);
 endinterface:Ifc_s3_cache
 
 interface Ifc_s3_bypass;
   // methods to receive the operands from the proceeding stages. A max of three instructions can
   // exist in the pipe that will require to be looked up for bypass.
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_bypass (Vector#(`bypass_sources, FwdType) fwd);
 endinterface: Ifc_s3_bypass
 
@@ -182,7 +196,9 @@ interface Ifc_s3_muldiv;
   /*doc:method: this method send out the inputs required to the mbox unit*/
   method MBoxIn mv_mbox_inputs;
   
+`ifndef core_clkgate
   (*always_ready, always_enabled*)
+`endif
   /*doc:method: This method captures the ready signals from the mbox unit*/
   method Action ma_mbox_ready(MBoxRdy rdy);
 endinterface: Ifc_s3_muldiv
@@ -190,60 +206,88 @@ endinterface: Ifc_s3_muldiv
 
 `ifdef spfpu
 interface Ifc_s3_float;
-    method Input_Packet mv_fbox_inputs;
-    (*always_ready, always_enabled*)
+  method Input_Packet mv_fbox_inputs;
+`ifndef core_clkgate
+  (*always_ready, always_enabled*)
+`endif
   /*doc:method: This method captures the ready signals from the fbox unit*/
   method Action ma_fbox_ready(Bit#(1) rdy);
     
-  endinterface: Ifc_s3_float
+endinterface: Ifc_s3_float
 `endif
 
 `ifdef perfmonitors
 interface Ifc_s3_perfmonitors;
   /*doc:method: */
 `ifdef spfpu
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Bit#(1) mv_count_floats;
 `endif
 `ifdef muldiv
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Bit#(1) mv_count_muldiv;
 `endif
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Bit#(1) mv_count_jumps;
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Bit#(1) mv_count_branches;
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Bit#(1) mv_count_rawstalls ;
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Bit#(1) mv_count_exestalls ;
 endinterface: Ifc_s3_perfmonitors
 `endif
 
 interface Ifc_s3_common;
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   // method to update epochs on redirection from write - back stage
   method Action ma_update_wEpoch;
   // this method will send out the redirection caused by branches / jumps to all previous stages.
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   method Tuple2#(Bool, Bit#(`vaddr)) mv_flush;
   // method to receive the current status of the misa_c bit
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_csr_misa_c (Bit#(1) m);
   
   method Action ma_sb_release(CommitData commit);
 
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_priv (Bit#(2) priv);
   
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_mstatus (Bit#(`xlen) mstatus);
 
 `ifdef hypervisor
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_vs_mode (Bit#(1) vs);
 
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   method Action ma_hstatus (Bit#(`xlen) hstatus);
 `endif
 
@@ -282,15 +326,21 @@ interface Ifc_s2_tx;
 endinterface: Ifc_s2_tx
 
 interface Ifc_s2_rf;
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   /*doc:method: Latest value of operand1 from rf*/
   method FwdType mv_op1;
 
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   /*doc:method: Latest value of operand2 from rf*/
   method FwdType mv_op2;
 
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   /*doc:method: Latest value of operand3 from rf*/
   method FwdType mv_op3;
 
@@ -300,15 +350,21 @@ interface Ifc_s2_common;
   /*doc:method: input from commit stage (stage5) to update the regfile on instruction retirement*/
   method Action ma_commit_rd (CommitData commit);
 
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   /*doc:method: method to update epochs on redirection from execute stage*/
 	method Action ma_update_eEpoch;
 
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   /*doc:method method to update epochs on redirection from write - back stage*/
 	method Action ma_update_wEpoch;
 
+`ifndef core_clkgate
   (*always_ready*)
+`endif
   /*doc:method: input from the csr file containing all the required csrs to capture exceptions.*/
   method Action ma_csrs (CSRtoDecode csr);
 
@@ -316,7 +372,9 @@ interface Ifc_s2_common;
   thus the current stage can quit the stall that was initiated due to an exception generation */
   method Action ma_clear_stall (Bool upd);
 
+`ifndef core_clkgate
 	(*always_ready*)
+`endif
 	/*doc:method: method to indicate if the hart whould resume from a WFI*/
 	method Action ma_resume_wfi (Bool w);
 
@@ -324,7 +382,9 @@ endinterface:Ifc_s2_common
 
 `ifdef debug
 interface Ifc_s2_debug;
+`ifndef core_clkgate
   (*always_enabled, always_ready*)
+`endif
   /*doc:method debug related info checking interrupts */
   method Action debug_status (DebugStatus status);
 endinterface:Ifc_s2_debug
@@ -410,7 +470,7 @@ endinterface:Ifc_s5_interrupts
 
 `ifdef debug
 interface Ifc_s5_debug;
-  method Bit#(64) mv_csr_dcsr;
+  method Bit#(`xlen) mv_csr_dcsr;
   method Action ma_debug_interrupt (Bit#(1) _int);
   method Bit#(1) mv_debug_mode;
   method Bit#(1) mv_core_debugenable;
@@ -435,7 +495,7 @@ endinterface:Ifc_s5_cache
 
 interface Ifc_s5_csrs;
   method Bit#(1) mv_csr_misa_c;
-  method Bit#(4) mv_cacheenable;
+  method Bit#(6) mv_cacheenable;
   method Bit#(2) mv_curr_priv;
   method Bit#(`xlen) mv_csr_mstatus;
   method CSRtoDecode mv_csrs_to_decode;

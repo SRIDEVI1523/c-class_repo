@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 Author : IIT Madras
 Details: This module implements the multiplier for RISC-V. It expects the operands and funct3

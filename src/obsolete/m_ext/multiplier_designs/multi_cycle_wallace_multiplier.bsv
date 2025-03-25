@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 package multi_cycle_wallace_multiplier;
 
 	import LFSR         :: *;

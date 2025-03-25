@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 package booth_pipelined_64_8x8;
 
 import Utils :: *;

@@ -1,11 +1,19 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 package tage_bpu;
 
 import BRAMCore::*;
 import FIFO::*;
 import FIFOF::*;
-import SpecialFIFOs::*;
-import LFSR::*;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
+`ifdef async_rst
+import LFSR_Modified::*;
+`else
+import LFSR :: * ;
+`endif
 import ConfigReg::*;
 import DReg::*;
 import Connectable::*;

@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 Author: IIT Madras
 Created on: Saturday 12 June 2021 01:49:20 PM
@@ -13,7 +13,11 @@ compile-macros:
 package base_alu ;
   import FIFOF        :: * ;
   import Vector       :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
+`else
   import SpecialFIFOs :: * ;
+`endif
   import FIFOF        :: * ;
   import BUtils       :: * ;
 

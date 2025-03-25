@@ -70,7 +70,11 @@ package stage3 ;
 // -- package imports --//
 import GetPut         :: * ;
 import FIFOF          :: * ;
-import SpecialFIFOs   :: * ;
+`ifdef async_rst
+import SpecialFIFOs_Modified :: * ;
+`else
+import SpecialFIFOs :: * ;
+`endif
 import DReg           :: * ;
 import TxRx           :: * ;
 import Vector         :: * ;
@@ -132,7 +136,11 @@ interface Ifc_stage3;
 endinterface:Ifc_stage3
 
 `ifdef stage3_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `endif
 // the following attributes is used to detect when a structural hazard occurs. This is useful only
 // when perfmonitors is enabled or simulate is enabled at compile time. If neither is implemented
@@ -718,8 +726,28 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     if(inst_type == BRANCH && btaken == 0)begin
       redirect_pc = nlogical_pc;
     end
+    
+    /*
+    The previous code was: 
     if( (inst_type == BRANCH  && btaken != prediction[`statesize-1]) ||
         ( (inst_type == JALR || inst_type == JAL ) && nextpc != jump_address) )begin
+	    redirection = !trap;
+    end
+    But nextpc != jump_address was in global critical path, 
+    since jump_address = base + offset,
+    we change it to (nextpc - offset) != base
+
+    nextpc - offset is calculated in the following way, because jump_address is 
+    aligned to 2 incase of JALR.
+    */
+    case ({base[0],offset[0]}) 
+	    'b00: nextpc = nextpc - truncate(offset); 
+	    'b01: nextpc =  (nextpc|{'0,pack(inst_type==JALR)}) -truncate(offset); 
+	    'b10: nextpc = nextpc - ( truncate(offset) & {'1,~(pack(inst_type==JALR))}); 
+	    'b11: nextpc = nextpc - truncate(offset); 
+    endcase
+    if( (inst_type == BRANCH  && btaken != prediction[`statesize-1]) ||
+        ( (inst_type == JALR || inst_type == JAL ) && nextpc != base) )begin
 	    redirection = !trap;
     end
     let td = Training_data{pc : meta.pc,
@@ -872,8 +900,9 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
   let f7 = wr_op3.data[11:5];
   let opcode = meta.funct[6:3];
   let f3 = truncate(meta.funct);
+  Bool issp = True;
   `ifdef dpfpu
-    let issp = meta.word32;
+   issp = meta.word32;
   `endif
 
   // Bool spfma_rdy = (`ifdef dpfpu issp && `endif 
@@ -900,7 +929,7 @@ module mkstage3#(parameter Bit#(`xlen) hartid) (Ifc_stage3);
     if (wr_op1_avail && wr_op2_avail && wr_op3_avail) begin
       wr_float_inputs <= Input_Packet{operand1: truncate(wr_fwd_op1), operand2: truncate(wr_fwd_op2), operand3:truncate(wr_fwd_op3),
                                opcode: (meta.funct[6:3]), funct3: truncate(meta.funct), 
-                               funct7: wr_op3.data[11:5], imm: wr_op3.data[1:0],issp: issp 
+                               funct7: wr_op3.data[11:5], imm: wr_op3.data[1:0],issp: issp , fsr: truncate(meta.funct)
                               };
 
       // multicycle_alu.ma_inputs(fn, funct3, arg1, arg2, arg4

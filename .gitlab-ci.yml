@@ -129,7 +129,7 @@ release:
         - eval "$(pyenv init --path)"
         - eval "$(pyenv virtualenv-init -)"
         - pyenv activate py310
-        - python /scratch/version-update.py
+        - python /scratch/version-extract-rst.py
     only:
         refs:
             - master

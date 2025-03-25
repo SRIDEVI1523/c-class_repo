@@ -232,6 +232,8 @@ def capture_compile_cmd(foo, isa_node, debug_spec, grouping_spec):
         macros += ' wawid='+str(wawid)
     else:
         macros += ' wawid=0'
+    if foo.get('hardfloat', False):
+        macros += ' hardfloat common_bsv_TX_relaxed fpu_clockgate'
 
     if foo['bsc_compile_options']['compile_target'] == 'sim':
         macros += ' simulate'

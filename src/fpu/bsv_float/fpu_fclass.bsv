@@ -1,8 +1,7 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017
 See License for More Details
 Description:
 This module examines the floating point input and outputs the class of floating point number. The corresponding bit of the output register is set according to the class of instructions given by the table below,

@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author: IIT Madras
@@ -44,7 +44,11 @@ package stage0;
   // -- library imports
   import FIFO           :: * ;
   import FIFOF          :: * ;
-  import SpecialFIFOs   :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
+`else
+  import SpecialFIFOs :: * ;
+`endif
   import GetPut         :: * ;
   import TxRx           :: * ;
   import icache_types   :: * ;
@@ -68,7 +72,11 @@ package stage0;
   endinterface: Ifc_stage0
 
 `ifdef stage0_noinline
+`ifdef core_clkgate
+  (*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
   module mkstage0#(Bit#(`vaddr) resetpc, parameter Bit#(`xlen) hartid) (Ifc_stage0);
     String stage0 = "";

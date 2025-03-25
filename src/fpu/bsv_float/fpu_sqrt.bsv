@@ -1,13 +1,11 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017
 
 Implementation is based on a IEEE paper Titled:
 "Implementation of Single Precision Floating Point Square Root on FPGAs"
-Description:
-TODO
+Description: Floating point square root module
 */
 
 package fpu_sqrt;
@@ -16,7 +14,6 @@ import ccore_types::*;
 `include "fpu.defines"
 import RegFile::*;
 import FIFO::*;
-import SpecialFIFOs::*;
 import ConfigReg::*;
 typedef struct{
 	Bit#(TMul#(TAdd#(fpman,3),2)) mantissa;        //Holds the extended mantissa 

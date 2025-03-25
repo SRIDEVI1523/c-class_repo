@@ -1,6 +1,6 @@
 `define bypass_sources 2
 
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
   `define statesize 2
   
   `ifdef muldiv

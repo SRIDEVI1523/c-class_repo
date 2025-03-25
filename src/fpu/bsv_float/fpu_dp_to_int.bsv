@@ -1,9 +1,7 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 Author      : IIT Madras
-Last Update : 27th November 2017
-Description :
-TODO
+Description : Double precision floating point to integer conversion module
 */
 
 package fpu_dp_to_int;

@@ -1,11 +1,8 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017
-
-Description:
-TODO
+Description : Floating point divide module
 */
 package fpu_divider;
     import DReg::*;

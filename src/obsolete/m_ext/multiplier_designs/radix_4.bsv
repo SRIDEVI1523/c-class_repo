@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 
 /* Radix-4 Algorithm :
 - Check 3 bits of the multiplier and correspondingly 

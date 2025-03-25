@@ -1,10 +1,8 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 Author      : IIT Madras
-Last Update : 27th November 2017
-Paper Reference: Floating Point Fused Multiply-Add Architectures (http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=4487224)
-Description:
-TODO
+Paper Ref   : Floating Point Fused Multiply-Add Architectures (http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=4487224)
+Description : Floating point fused multiply-add module 
 */
 
 package fpu_fm_add_sub;

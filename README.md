@@ -44,11 +44,14 @@ Please refer to LICENSE.iitm for more details.
 - Aditya Govardhan
 - Mouna Krishna
 - Arjun Menon
+- Poovarasan M
+- Varun Parsai
 - Girinath P
 - Deepa N Sarma
 - Sadhana S
 - Snehashri S
 - Aditya Terkar
+- Sugandha Tiwari
 
 For any queries, please contact shakti.iitm@gmail.com
 

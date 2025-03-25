@@ -19,7 +19,11 @@ package stage4;
 
   import FIFOF        :: * ;
   import Vector       :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
+`else
   import SpecialFIFOs :: * ;
+`endif
   import FIFOF        :: * ;
   import TxRx         :: * ;
   import GetPut       :: * ;
@@ -45,7 +49,11 @@ package stage4;
   endinterface:Ifc_stage4
 
 `ifdef stage4_noinline
+`ifdef core_clkgate
+  (*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
 // the following attributes are only required in simulation mode. They basically allows a rule to
 // fire which indicates that a stall is observed.

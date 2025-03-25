@@ -7,7 +7,11 @@ Created on: Wednesday 16 June 2021 09:53:08 PM
 package combo ;
   import FIFOF        :: * ;
   import Vector       :: * ;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
+`else
   import SpecialFIFOs :: * ;
+`endif
 
   import signedmul      :: * ;
   import ccore_types    :: * ;
@@ -23,7 +27,11 @@ interface Ifc_combo_mul;
 endinterface
 
 `ifdef mbox_mul_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `endif
 module mkcombo_mul(Ifc_combo_mul);
 

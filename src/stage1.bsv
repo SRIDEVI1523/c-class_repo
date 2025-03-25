@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author : IIT Madras
@@ -11,7 +11,11 @@ handling.
 package stage1;
   // -- package imports --//
   import FIFOF::*;
-  import SpecialFIFOs::*;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
+`else
+  import SpecialFIFOs :: * ;
+`endif
   import FIFO::*;
   import GetPut::*;
   import Assert::*;
@@ -48,7 +52,11 @@ package stage1;
 	endinterface:Ifc_stage1
 
 `ifdef stage1_noinline
+`ifdef core_clkgate
+  (*synthesize,gate_all_clocks*)
+`else
   (*synthesize*)
+`endif
 `endif
   module mkstage1#(parameter Bit#(`xlen) hartid) (Ifc_stage1);
 

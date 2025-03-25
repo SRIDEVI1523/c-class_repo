@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /* 
 
 Author : IIT Madras
@@ -58,7 +58,11 @@ package bimodal_nc;
 	/*===== Pacakge imports ===== */
 	import FIFO::*;
 	import FIFOF::*;
-	import SpecialFIFOs::*;
+`ifdef async_rst
+  import SpecialFIFOs_Modified :: * ;
+`else
+  import SpecialFIFOs :: * ;
+`endif
 	import ConfigReg::*;
 	import Connectable::*;
 	import GetPut::*;

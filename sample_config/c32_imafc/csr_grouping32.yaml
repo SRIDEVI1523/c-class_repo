@@ -1,0 +1,29 @@
+grp1:
+    - MISA
+    - MSCRATCH
+    - MVENDORID
+    - MSTATUS
+    - MSTATUSH
+    - MIE
+    - MIP
+    - MTVEC
+    - MEPC
+    - MCAUSE
+    - MTVAL
+    - MCYCLE
+    - MCYCLEH
+    - MINSTRET
+    - MINSTRETH
+    - MHARTID
+    - MARCHID
+    - MIMPID
+    - MCOUNTINHIBIT
+    - FCSR
+    - FRM
+    - FFLAGS
+grp2:
+    - CUSTOMCONTROL
+    - DPC
+    - DSCRATCH0
+    - DSCRATCH1
+    - DCSR

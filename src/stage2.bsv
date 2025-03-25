@@ -1,4 +1,4 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author : IIT Madras
@@ -153,7 +153,11 @@ function Fmt fstage2(Bit#(`xlen) hartid, FwdType op1, Op1type op1type, FwdType o
 endfunction:fstage2
 
 `ifdef stage2_noinline
+`ifdef core_clkgate
+(*synthesize,gate_all_clocks*)
+`else
 (*synthesize*)
+`endif
 `endif
 module mkstage2#(parameter Bit#(`xlen) hartid) (Ifc_stage2);
 

@@ -1,10 +1,8 @@
-//See LICENSE.iitm for license details
+// See LICENSE.iitm for license details
 /*
 
 Author      : IIT Madras
-Last Update : 27th November 2017
-Description:
-TODO
+Description : Integer to double precision floating point conversion module
 */
 package fpu_int_to_dp;
 import ccore_types ::*;

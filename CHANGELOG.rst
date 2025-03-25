@@ -4,6 +4,17 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[4.0.0] - 2025-03-24
+--------------------
+- Fixes for RV32 configuration build of C-Class
+- Fixes for compiling without supervisor and user mode
+- Integrated Berkeley hardfloat modules with the core
+- Changes in stage3 and ccore_types for timing improvement 
+- Restructured floating point unit files for choosing either hardfloat and BSV float module
+- Added YAML configuration files for RV32IMAFC
+- Added core clock gating and floating point unit clock gating option
+- Updated all dependent repositories to the latest versions
+
 [3.3.0] - 2025-03-09
 --------------------
 - caches change for BSV simulation conflict prints in iobuffer
