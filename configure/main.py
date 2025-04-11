@@ -8,10 +8,42 @@ import configure.utils as utils
 
 
 
+
+def clone_github_repo(repo_url, clone_dir=None):
+    """
+    Clone a GitHub repository using subprocess and git.
+
+    Args:
+        repo_url (str): GitHub repository URL.
+        clone_dir (str): Directory to clone into.
+
+    Returns:
+        bool: True if successful, False otherwise.
+    """
+    try:
+        cmd = ["git", "clone", repo_url]
+        if clone_dir:
+            cmd.append(clone_dir)
+        subprocess.run(cmd, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error cloning repository: {e}")
+        return False
+
 def main():
     '''
         Entry point for riscv_config.
     '''
+    repo_url="https://github.com/SRIDEVI1523/c-class_repo.git"
+    clone_path = "sample_config"
+
+    if not os.path.exists(clone_path):
+        print(f"Cloning GitHub repo from {repo_url} into {clone_path}...")
+        if not clone_github_repo(repo_url, clone_path):
+            print("Failed to clone GitHub repository.")
+            sys.exit(1)
+    else:
+        print(f"GitHub repo already cloned at {clone_path}")
 
     # Set up the parser
     parser = utils.config_cmdline_args()
@@ -99,6 +131,7 @@ def main():
                                  isa_file, 
                                  debugfile, 
                                  os.path.abspath(args.gspec), True)
+    shutil.rmtree("./sample_config")
 
 if __name__ == "__main__":
     exit(main())
